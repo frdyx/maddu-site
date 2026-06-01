@@ -1,0 +1,80 @@
+---
+// Hard-rule card — used on the landing page summary and /hard-rules deep dive.
+export interface Props {
+  num: string | number;
+  title: string;
+  /** One-line enforcement note (shows as eyebrow). */
+  enforcedBy?: string;
+}
+const { num, title, enforcedBy } = Astro.props;
+---
+
+<article class="rule-card">
+  <header class="rule-head">
+    <span class="rule-num">#{num}</span>
+    <h3 class="rule-title">{title}</h3>
+  </header>
+  {enforcedBy && (
+    <p class="rule-enforced">
+      <span class="rule-enforced-label">Enforced by</span>
+      <code>{enforcedBy}</code>
+    </p>
+  )}
+  <div class="rule-body"><slot /></div>
+</article>
+
+<style>
+  .rule-card {
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent);
+    border-radius: var(--m-radius);
+    padding: var(--m-space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--m-space-3);
+    transition: border-color 120ms, box-shadow 120ms;
+  }
+  .rule-card:hover {
+    border-left-color: var(--m-accent);
+    box-shadow: var(--m-glow-accent);
+  }
+  .rule-head { display: flex; align-items: baseline; gap: var(--m-space-3); }
+  .rule-num {
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    color: var(--m-accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .rule-title {
+    font-family: var(--m-font-cond);
+    font-size: 16px;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    color: var(--m-fg-0);
+    margin: 0;
+  }
+  .rule-enforced {
+    margin: 0;
+    font-size: 11px;
+    color: var(--m-fg-3);
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+  .rule-enforced-label {
+    font-family: var(--m-font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .rule-enforced code {
+    background: var(--m-bg-3);
+    color: var(--m-accent-2);
+    border-color: var(--m-line-soft);
+    font-size: 11px;
+  }
+  .rule-body { color: var(--m-fg-1); font-size: 13.5px; line-height: 1.55; }
+  .rule-body :global(p) { margin: 0; }
+</style>

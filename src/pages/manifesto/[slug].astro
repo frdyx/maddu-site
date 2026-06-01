@@ -1,0 +1,78 @@
+---
+// Per-section stub pages for the manifesto. Same shape as the release
+// stubs at /changelog/[slug]: per-section og:image, robots noindex,
+// instant redirect to /manifesto#<slug>.
+
+interface Section {
+  slug: string;
+  n: string;
+  title: string;
+  sub: string;
+}
+
+export function getStaticPaths() {
+  const SECTIONS: Section[] = [
+    { slug: 'i',   n: 'I',   title: 'Capability gets the headlines',          sub: 'Accountability is the gap' },
+    { slug: 'ii',  n: 'II',  title: 'Construction-lawsuit chain of custody',  sub: 'The mental model that fits' },
+    { slug: 'iii', n: 'III', title: 'Local-first is a security posture',      sub: 'Where the trust boundary lives' },
+    { slug: 'iv',  n: 'IV',  title: 'Confidence costs a checkpoint',          sub: 'The gauntlet, in prose' },
+    { slug: 'v',   n: 'V',   title: 'Runtime-agnostic by survival',            sub: 'Orchestration outlives the agent' },
+    { slug: 'vi',  n: 'VI',  title: 'Discipline that scales with consequence', sub: 'Three tiers, one charter' },
+    { slug: 'vii', n: 'VII', title: 'Invariants you don’t argue about',    sub: 'The bet, in one sentence' },
+  ];
+  return SECTIONS.map((s) => ({ params: { slug: s.slug }, props: { section: s } }));
+}
+
+const { section } = Astro.props as { section: Section };
+const siteUrl = 'https://maddu.dev';
+const ogImage = `${siteUrl}/og/manifesto/${section.slug}.png`;
+// /manifesto sections render as <article>s without explicit anchor ids today,
+// so the redirect goes to /manifesto and the social card stands in for the
+// section context.
+const canonical = `${siteUrl}/manifesto`;
+const fullTitle = `§ ${section.n} — ${section.title} — Máddu manifesto`;
+const description = `Section ${section.n} of the Máddu manifesto: ${section.title}. ${section.sub}.`;
+---
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{fullTitle}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonical} />
+  <meta name="robots" content="noindex, follow" />
+
+  <meta property="og:title" content={fullTitle} />
+  <meta property="og:description" content={description} />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:image" content={ogImage} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={fullTitle} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogImage} />
+
+  <meta http-equiv="refresh" content={`0; url=/manifesto`} />
+  <style>
+    html, body { background: #050B17; color: #E8E6E3; margin: 0; padding: 0; font-family: 'IBM Plex Mono', monospace; }
+    .stub { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; text-align: center; }
+    .stub a { color: #F04E23; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <noscript><meta http-equiv="refresh" content={`0; url=/manifesto`} /></noscript>
+  <main class="stub">
+    <div>
+      <p>Máddu manifesto · § {section.n} — {section.title}</p>
+      <p><a href="/manifesto">Continue to the manifesto →</a></p>
+    </div>
+  </main>
+  <script is:inline>
+    window.location.replace('/manifesto');
+  </script>
+</body>
+</html>

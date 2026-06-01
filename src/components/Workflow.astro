@@ -1,0 +1,197 @@
+---
+// Workflow.astro — branded frame around any workflow / diagram block.
+// Replaces the bare Mermaid+caption pattern with a structured frame:
+//
+//   ┌─ EYEBROW · INDEX/N ──────────────── tone tag ─┐
+//   │ Title                                          │
+//   │ short subtitle                                 │
+//   ├────────────────────────────────────────────────┤
+//   │ <slot> — typically a <Mermaid /> or a chip row │
+//   ├────────────────────────────────────────────────┤
+//   │ outcome: <slot name="outcome">                 │
+//   └────────────────────────────────────────────────┘
+//
+// Tone drives the top border + glow color (mirrors cockpit panel pattern).
+export interface Props {
+  eyebrow?: string;
+  title: string;
+  subtitle?: string;
+  /** Optional small text on the right side of the eyebrow row */
+  meta?: string;
+  /** Visual tone — drives top border + glow */
+  tone?: 'accent' | 'accent-2' | 'warn' | 'danger' | 'ok' | 'brand';
+  /** Optional index / total badge — e.g. "01 / 06" */
+  index?: string;
+}
+
+const { eyebrow, title, subtitle, meta, tone = 'accent-2', index } = Astro.props;
+const hasOutcome = Astro.slots.has('outcome');
+const hasFoot = Astro.slots.has('foot');
+---
+
+<section class:list={['wf', `wf--${tone}`]} data-tone={tone}>
+  <header class="wf-head">
+    <div class="wf-eyebrow-row">
+      {eyebrow && <span class="wf-eyebrow">{eyebrow}</span>}
+      {index && <span class="wf-index">{index}</span>}
+      {meta && <span class="wf-meta">{meta}</span>}
+    </div>
+    <h3 class="wf-title">{title}</h3>
+    {subtitle && <p class="wf-subtitle">{subtitle}</p>}
+  </header>
+  <div class="wf-body"><slot /></div>
+  {hasOutcome && (
+    <footer class="wf-outcome">
+      <span class="wf-outcome-label">Outcome</span>
+      <div class="wf-outcome-body"><slot name="outcome" /></div>
+    </footer>
+  )}
+  {hasFoot && <footer class="wf-foot"><slot name="foot" /></footer>}
+</section>
+
+<style>
+  .wf {
+    position: relative;
+    margin: var(--m-space-8) 0;
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-top: 1px solid var(--m-accent-2);
+    border-radius: var(--m-radius);
+    overflow: hidden;
+  }
+  .wf::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at top right, var(--m-accent-2-glow-bg), transparent 55%),
+      radial-gradient(circle at bottom left, var(--m-accent-glow-bg), transparent 50%);
+    z-index: 0;
+  }
+  .wf > * { position: relative; z-index: 1; }
+
+  /* Tone variants — top border + glow tinting */
+  .wf--accent      { border-top-color: var(--m-accent); }
+  .wf--accent-2    { border-top-color: var(--m-accent-2); }
+  .wf--warn        { border-top-color: var(--m-warn); }
+  .wf--danger      { border-top-color: var(--m-danger); }
+  .wf--ok          { border-top-color: var(--m-ok); }
+  .wf--brand       { border-top-color: var(--m-brand); }
+
+  .wf--warn::before {
+    background:
+      radial-gradient(circle at top right, var(--m-warn-bg), transparent 55%),
+      radial-gradient(circle at bottom left, var(--m-accent-glow-bg), transparent 50%);
+  }
+  .wf--danger::before {
+    background:
+      radial-gradient(circle at top right, var(--m-danger-bg), transparent 55%),
+      radial-gradient(circle at bottom left, var(--m-accent-glow-bg), transparent 50%);
+  }
+  .wf--ok::before {
+    background:
+      radial-gradient(circle at top right, var(--m-ok-bg), transparent 55%),
+      radial-gradient(circle at bottom left, var(--m-accent-glow-bg), transparent 50%);
+  }
+
+  .wf-head {
+    padding: var(--m-space-4) var(--m-space-5) var(--m-space-3);
+    border-bottom: 1px solid var(--m-line-soft);
+    background: var(--m-bg-1);
+  }
+  .wf-eyebrow-row {
+    display: flex;
+    align-items: center;
+    gap: var(--m-space-3);
+    margin-bottom: var(--m-space-2);
+    flex-wrap: wrap;
+  }
+  .wf-eyebrow {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--m-accent);
+  }
+  .wf--warn   .wf-eyebrow { color: var(--m-warn); }
+  .wf--danger .wf-eyebrow { color: var(--m-danger); }
+  .wf--ok     .wf-eyebrow { color: var(--m-ok); }
+  .wf--brand  .wf-eyebrow { color: var(--m-brand); }
+  .wf--accent-2 .wf-eyebrow { color: var(--m-accent-2); }
+
+  .wf-index {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--m-fg-3);
+    padding: 2px 8px;
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius-pill);
+  }
+  .wf-meta {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--m-fg-3);
+    text-transform: uppercase;
+    margin-left: auto;
+  }
+  .wf-title {
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: 0.01em;
+    color: var(--m-fg-0);
+    margin: 0;
+    text-transform: none;
+  }
+  .wf-subtitle {
+    font-size: 13px;
+    color: var(--m-fg-2);
+    margin: 4px 0 0;
+    max-width: 70ch;
+  }
+
+  .wf-body { padding: var(--m-space-5); }
+  .wf-body > :global(.mermaid-figure):first-child { margin-top: 0; }
+  .wf-body > :global(.mermaid-figure):last-child  { margin-bottom: 0; }
+  .wf-body > :global(*):first-child { margin-top: 0; }
+  .wf-body > :global(*):last-child  { margin-bottom: 0; }
+
+  .wf-outcome {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: var(--m-space-4);
+    align-items: baseline;
+    padding: var(--m-space-3) var(--m-space-5);
+    border-top: 1px solid var(--m-line-soft);
+    background: var(--m-bg-1);
+  }
+  .wf-outcome-label {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+  }
+  .wf-outcome-body {
+    font-size: 13px;
+    color: var(--m-fg-0);
+    font-family: var(--m-font-mono);
+  }
+  .wf-outcome-body :global(p) { margin: 0; max-width: none; }
+
+  .wf-foot {
+    padding: var(--m-space-3) var(--m-space-5);
+    border-top: 1px solid var(--m-line-soft);
+    background: var(--m-bg-1);
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    color: var(--m-fg-3);
+  }
+
+  @media (max-width: 640px) {
+    .wf-outcome { grid-template-columns: 1fr; gap: 4px; }
+  }
+</style>

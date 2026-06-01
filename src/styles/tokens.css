@@ -1,0 +1,181 @@
+/* Máddu brand tokens — ported from the cockpit (cockpit.css :root).
+ * Scandinavian tech, sci-fi dark noir. Single source for site-wide color,
+ * type, spacing. Keep in sync with maddu/template/maddu/cockpit/cockpit.css
+ * when the framework brand evolves; tokens are deliberately mirrored, not
+ * imported, so the site can iterate independently.
+ */
+
+:root {
+  /* ─── SURFACES — navy noir, materialized ──────────────────────────── */
+  --m-bg-0: #050B17;
+  --m-bg-1: rgba(0, 8, 18, 0.54);
+  --m-bg-2: rgba(3, 14, 30, 0.28);
+  --m-bg-3: rgba(4, 18, 38, 0.34);
+  --m-bg-4: rgba(86, 184, 255, 0.055);
+  --m-bg-true-black: #000000;
+
+  /* ─── INK — cream on black, four legibility tiers ─────────────────── */
+  --m-fg-0: #E8E6E3;
+  --m-fg-1: #B8B2AA;
+  --m-fg-2: #8A8A8A;
+  --m-fg-3: #6a7079;
+  --m-fg-4: #3a3e45;
+
+  /* ─── LINES — blue-tinted dividers ────────────────────────────────── */
+  --m-line:      rgba(80, 113, 149, 0.36);
+  --m-line-soft: rgba(80, 113, 149, 0.18);
+
+  /* ─── ACCENT — dual-neon strategy ─────────────────────────────────── */
+  --m-accent:     #D0FF00;   /* lime — primary interactive */
+  --m-accent-2:   #56B8FF;   /* electric blue — secondary, halos */
+  --m-accent-dim: rgba(208, 255, 0, 0.45);
+  --m-brand:      #F04E23;   /* burnt orange — brand glyph only */
+
+  /* ─── STATUS TRIAD — traffic-light semantics ──────────────────────── */
+  --m-ok:     #61D394;
+  --m-warn:   #F2BD5C;
+  --m-danger: #FF5E7A;
+
+  --m-ok-bg:        rgba(97, 211, 148, 0.10);
+  --m-ok-border:    rgba(97, 211, 148, 0.36);
+  --m-warn-bg:      rgba(242, 189, 92, 0.10);
+  --m-warn-border:  rgba(242, 189, 92, 0.38);
+  --m-danger-bg:    rgba(255, 94, 122, 0.10);
+  --m-danger-border:rgba(255, 94, 122, 0.40);
+
+  --m-accent-glow-bg:    rgba(208, 255, 0, 0.05);
+  --m-accent-2-glow-bg:  rgba(86, 184, 255, 0.06);
+  --m-surface-row:       rgba(255, 255, 255, 0.018);
+
+  /* Event-type semantic colours (mirrors cockpit event-row classifications) */
+  --m-event-framework: #C8A8D4;
+  --m-event-session:   #9FCBD8;
+  --m-event-lane:      #A8D4B8;
+  --m-event-approval:  var(--m-warn);
+
+  /* ─── SHADOWS + GLOWS ─────────────────────────────────────────────── */
+  --m-shadow-sm:     0 1px 2px rgba(0, 0, 0, 0.35);
+  --m-shadow-md:     0 8px 24px rgba(0, 0, 0, 0.45);
+  --m-shadow-lg:     0 24px 64px rgba(0, 0, 0, 0.55);
+  --m-glow-accent:   0 0 24px rgba(208, 255, 0, 0.18);
+  --m-glow-accent-2: 0 0 24px rgba(86, 184, 255, 0.20);
+  --m-glow-brand:    0 0 24px rgba(240, 78, 35, 0.35);
+  --m-glow-warn:     0 0 16px rgba(242, 189, 92, 0.18);
+  --m-glow-danger:   0 0 16px rgba(255, 94, 122, 0.18);
+
+  /* ─── SPACING — 4 px baseline ─────────────────────────────────────── */
+  --m-space-1: 4px;
+  --m-space-2: 8px;
+  --m-space-3: 12px;
+  --m-space-4: 16px;
+  --m-space-5: 20px;
+  --m-space-6: 24px;
+  --m-space-8: 32px;
+  --m-space-10: 40px;
+  --m-space-12: 56px;
+  --m-space-16: 80px;
+  --m-space-20: 120px;
+
+  --m-radius-sm:   2px;
+  --m-radius:      4px;
+  --m-radius-lg:   8px;
+  --m-radius-pill: 999px;
+
+  /* ─── TYPOGRAPHY — IBM Plex everywhere ────────────────────────────── */
+  --m-font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --m-font-cond: 'IBM Plex Sans Condensed', 'IBM Plex Sans', system-ui, sans-serif;
+  --m-font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --m-type-xs:     11px;
+  --m-type-sm:     12px;
+  --m-type-body:   14px;
+  --m-type-row:    15px;
+  --m-type-h3:     18px;
+  --m-type-h2:     22px;
+  --m-type-h1:     34px;
+  --m-type-hero:   56px;
+  --m-type-metric: 30px;
+  --m-line-tight:  1.05;
+  --m-line-body:   1.55;
+
+  /* ─── METRICS — landing-site specific ─────────────────────────────── */
+  --m-nav-h:    64px;
+  --m-content-max:  960px;
+  --m-content-wide: 1180px;
+}
+
+/* ─── LIGHT THEME — warm paper variant ───────────────────────────────
+ * The brand is dark-noir by default. The light variant keeps the same
+ * accent system (lime / electric blue / burnt orange) but darkens each
+ * to meet AA contrast on a warm-paper surface, so the palette still
+ * reads as Máddu, not as a generic light theme.
+ *
+ * Activated by `<html data-theme="light">`, set by the pre-paint script
+ * in Layout.astro before first paint.
+ */
+:root[data-theme="light"] {
+  /* Surfaces — warm paper, not stark white. The slight warmth keeps the
+   * brand mood without making text fight a cold backdrop. */
+  --m-bg-0: #F4F0E6;
+  --m-bg-1: rgba(255, 252, 244, 0.78);
+  --m-bg-2: rgba(255, 252, 244, 0.55);
+  --m-bg-3: rgba(220, 213, 198, 0.62);
+  --m-bg-4: rgba(11, 109, 201, 0.07);
+  --m-bg-true-black: #FFFFFF;
+  --m-surface-row: rgba(0, 0, 0, 0.025);
+
+  /* Ink — deep navy on paper, four legibility tiers. */
+  --m-fg-0: #0E1726;
+  --m-fg-1: #3A4154;
+  --m-fg-2: #5A6173;
+  --m-fg-3: #888B99;
+  --m-fg-4: #B1B3BD;
+
+  /* Lines — slightly stronger so dividers hold on the paper surface. */
+  --m-line:      rgba(60, 78, 110, 0.32);
+  --m-line-soft: rgba(60, 78, 110, 0.16);
+
+  /* Accent — lime darkened for AA on paper; electric blue darkened.
+   * Burnt orange essentially unchanged — it already reads on both. */
+  --m-accent:     #5B8A00;
+  --m-accent-2:   #0A6DC9;
+  --m-accent-dim: rgba(91, 138, 0, 0.45);
+  --m-brand:      #C73A12;
+
+  /* Status triad — darkened so each carries on light without glare. */
+  --m-ok:     #1F8F4F;
+  --m-warn:   #B7800E;
+  --m-danger: #C7263F;
+
+  --m-ok-bg:        rgba(31, 143, 79, 0.10);
+  --m-ok-border:    rgba(31, 143, 79, 0.36);
+  --m-warn-bg:      rgba(183, 128, 14, 0.10);
+  --m-warn-border:  rgba(183, 128, 14, 0.36);
+  --m-danger-bg:    rgba(199, 38, 63, 0.10);
+  --m-danger-border:rgba(199, 38, 63, 0.36);
+
+  --m-accent-glow-bg:    rgba(91, 138, 0, 0.07);
+  --m-accent-2-glow-bg:  rgba(10, 109, 201, 0.07);
+
+  /* Event tones — adjusted for light surface */
+  --m-event-framework: #7B5394;
+  --m-event-session:   #2C7A95;
+  --m-event-lane:      #2D8A52;
+  --m-event-approval:  var(--m-warn);
+
+  /* Glows — softer on light */
+  --m-shadow-sm:     0 1px 2px rgba(0, 0, 0, 0.06);
+  --m-shadow-md:     0 8px 24px rgba(0, 0, 0, 0.10);
+  --m-shadow-lg:     0 24px 64px rgba(0, 0, 0, 0.14);
+  --m-glow-accent:   0 0 22px rgba(91, 138, 0, 0.18);
+  --m-glow-accent-2: 0 0 22px rgba(10, 109, 201, 0.18);
+  --m-glow-brand:    0 0 22px rgba(199, 58, 18, 0.22);
+  --m-glow-warn:     0 0 16px rgba(183, 128, 14, 0.18);
+  --m-glow-danger:   0 0 16px rgba(199, 38, 63, 0.18);
+}
+
+/* Atmospheric backdrop tweak — dial the colored vignette way back on
+ * paper so it stays a hint, not a wash. */
+:root[data-theme="light"] body::before {
+  opacity: 0.55;
+}

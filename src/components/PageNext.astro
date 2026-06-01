@@ -1,0 +1,139 @@
+---
+// PageNext.astro — "continue reading" footer link. One per page, near the
+// bottom, so the site reads as a guided arc rather than disconnected pages.
+export interface Props {
+  href: string;
+  eyebrow: string;
+  title: string;
+  /** Optional one-line teaser */
+  hint?: string;
+  /** Tone for the right-side bar — match the destination page's identity */
+  tone?: 'accent' | 'accent-2' | 'warn' | 'danger' | 'ok' | 'brand';
+}
+
+const { href, eyebrow, title, hint, tone = 'accent' } = Astro.props;
+---
+
+<section class="page-next-wrap">
+  <div class="container">
+    <a class:list={['page-next', `page-next--${tone}`]} href={href}>
+      <div class="page-next-text">
+        <span class="page-next-eyebrow">{eyebrow}</span>
+        <span class="page-next-title">{title}</span>
+        {hint && <span class="page-next-hint">{hint}</span>}
+      </div>
+      <div class="page-next-cta">
+        <span class="page-next-cta-label">Read next</span>
+        <span class="page-next-arrow" aria-hidden="true">→</span>
+      </div>
+    </a>
+  </div>
+</section>
+
+<style>
+  .page-next-wrap {
+    padding: var(--m-space-10) 0 var(--m-space-16);
+    border-top: 1px solid var(--m-line-soft);
+    margin-top: var(--m-space-10);
+  }
+  .page-next {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--m-space-6);
+    align-items: center;
+    padding: var(--m-space-6) var(--m-space-6) var(--m-space-6) var(--m-space-5);
+    background:
+      radial-gradient(circle at top right, var(--m-accent-2-glow-bg), transparent 55%),
+      radial-gradient(circle at bottom left, var(--m-accent-glow-bg), transparent 50%),
+      var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-right: 2px solid var(--m-accent);
+    border-radius: var(--m-radius);
+    color: var(--m-fg-1);
+    text-decoration: none;
+    border-bottom: 1px solid var(--m-line);
+    transition: border-color 120ms, transform 120ms, box-shadow 120ms, background 120ms;
+  }
+  .page-next:hover {
+    transform: translateY(-2px);
+    border-color: var(--m-accent);
+    box-shadow: var(--m-glow-accent);
+    color: var(--m-fg-1);
+  }
+  .page-next-text { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .page-next-eyebrow {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--m-accent);
+  }
+  .page-next-title {
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+    font-size: 22px;
+    letter-spacing: 0.01em;
+    color: var(--m-fg-0);
+    line-height: 1.15;
+  }
+  .page-next-hint { font-size: 13px; color: var(--m-fg-2); max-width: 60ch; }
+
+  .page-next-cta {
+    display: flex;
+    align-items: center;
+    gap: var(--m-space-3);
+    flex-shrink: 0;
+    padding-left: var(--m-space-5);
+    border-left: 1px solid var(--m-line-soft);
+  }
+  .page-next-cta-label {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+  }
+  .page-next-arrow {
+    font-family: var(--m-font-mono);
+    font-size: 28px;
+    color: var(--m-accent);
+    transition: transform 120ms;
+  }
+  .page-next:hover .page-next-arrow { transform: translateX(4px); }
+
+  /* Tone variants */
+  .page-next--accent     { border-right-color: var(--m-accent); }
+  .page-next--accent     .page-next-eyebrow,
+  .page-next--accent     .page-next-arrow { color: var(--m-accent); }
+  .page-next--accent:hover { border-color: var(--m-accent); box-shadow: var(--m-glow-accent); }
+
+  .page-next--accent-2   { border-right-color: var(--m-accent-2); }
+  .page-next--accent-2   .page-next-eyebrow,
+  .page-next--accent-2   .page-next-arrow { color: var(--m-accent-2); }
+  .page-next--accent-2:hover { border-color: var(--m-accent-2); box-shadow: var(--m-glow-accent-2); }
+
+  .page-next--warn       { border-right-color: var(--m-warn); }
+  .page-next--warn       .page-next-eyebrow,
+  .page-next--warn       .page-next-arrow { color: var(--m-warn); }
+  .page-next--warn:hover { border-color: var(--m-warn); box-shadow: var(--m-glow-warn); }
+
+  .page-next--danger     { border-right-color: var(--m-danger); }
+  .page-next--danger     .page-next-eyebrow,
+  .page-next--danger     .page-next-arrow { color: var(--m-danger); }
+  .page-next--danger:hover { border-color: var(--m-danger); box-shadow: var(--m-glow-danger); }
+
+  .page-next--ok         { border-right-color: var(--m-ok); }
+  .page-next--ok         .page-next-eyebrow,
+  .page-next--ok         .page-next-arrow { color: var(--m-ok); }
+
+  .page-next--brand      { border-right-color: var(--m-brand); }
+  .page-next--brand      .page-next-eyebrow,
+  .page-next--brand      .page-next-arrow { color: var(--m-brand); }
+  .page-next--brand:hover { border-color: var(--m-brand); box-shadow: var(--m-glow-brand); }
+
+  @media (max-width: 720px) {
+    .page-next { grid-template-columns: 1fr; gap: var(--m-space-4); }
+    .page-next-cta { padding-left: 0; border-left: 0; padding-top: var(--m-space-3); border-top: 1px solid var(--m-line-soft); }
+    .page-next-title { font-size: 18px; }
+  }
+</style>

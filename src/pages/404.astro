@@ -1,0 +1,177 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Callout from '../components/Callout.astro';
+---
+
+<Layout
+  title="Page not found"
+  pathname="/404"
+  description="The page you're looking for doesn't exist on maddu.dev. Try the search palette or one of the popular routes below."
+>
+  <section class="nf">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow eyebrow-danger">§ 404</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">page not found</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">spine still intact</span>
+      </div>
+      <h1 class="nf-title">
+        <span class="nf-code">404</span>
+        That route doesn't exist.<br />
+        <span class="nf-sub">The spine is fine.</span>
+      </h1>
+      <p class="nf-lede">
+        Whatever URL you tried isn't a thing on this site. Could be a stale share, a fat-fingered hash, or the route renamed before launch. The audit trail is intact either way.
+      </p>
+
+      <div class="nf-actions">
+        <a class="btn btn-primary" href="/">Back to the start <span aria-hidden="true">→</span></a>
+        <button class="btn" type="button" id="nfSearch">
+          Open search <kbd class="nf-kbd"><span id="nfMod">⌘</span>K</kbd>
+        </button>
+      </div>
+
+      <Callout tone="accent-2" title="Common entry points" tag="if you were looking for…">
+        <ul class="nf-jumps">
+          <li><a href="/how-it-works">How it works</a> — the canonical flow, stage by stage</li>
+          <li><a href="/architecture">Architecture</a> — the 13 layers, color-coded</li>
+          <li><a href="/threat-model">Threat model</a> — 7 defenses, residual risk named</li>
+          <li><a href="/hard-rules">Hard rules</a> — the 8+1 invariants</li>
+          <li><a href="/capabilities">Capabilities</a> — 53 verbs across 8 areas</li>
+          <li><a href="/manifesto">Manifesto</a> — why Máddu exists, in prose</li>
+          <li><a href="/changelog">Changelog</a> — 19 releases from v0.17.1 → v1.3.0</li>
+          <li><a href="/install">Install</a> — coming soon when the repo flips public</li>
+        </ul>
+      </Callout>
+
+      <div class="nf-event">
+        <span class="nf-event-glyph" aria-hidden="true">◆</span>
+        <div class="nf-event-body">
+          <span class="nf-event-type">ROUTE_NOT_FOUND</span>
+          <span class="nf-event-meta">timestamp=<span id="nfTime">…</span> · path=<span id="nfPath">/</span></span>
+        </div>
+        <span class="nf-event-tag">if this were a spine, you'd be reading the trace</span>
+      </div>
+    </div>
+  </section>
+
+  <script is:inline>
+    (function () {
+      const path = document.getElementById('nfPath');
+      const time = document.getElementById('nfTime');
+      const mod  = document.getElementById('nfMod');
+      const search = document.getElementById('nfSearch');
+      if (path) path.textContent = location.pathname + location.search + location.hash;
+      if (time) time.textContent = new Date().toISOString();
+      if (mod)  mod.textContent  = /Mac|iPhone|iPad|iPod/.test(navigator.platform) ? '⌘' : 'Ctrl ';
+      search?.addEventListener('click', () => window.__maddu_openSearch && window.__maddu_openSearch());
+    })();
+  </script>
+</Layout>
+
+<style>
+  .nf { padding: var(--m-space-16) 0 var(--m-space-12); }
+  .eyebrow-danger { color: var(--m-danger); }
+
+  .nf-title {
+    font-family: var(--m-font-cond);
+    font-size: clamp(34px, 5.5vw, 64px);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--m-fg-0);
+    margin: 0 0 var(--m-space-5);
+    max-width: 22ch;
+  }
+  .nf-code {
+    display: block;
+    font-size: 0.55em;
+    color: var(--m-danger);
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .nf-sub { color: var(--m-fg-3); font-weight: 400; }
+
+  .nf-lede {
+    font-size: 17px;
+    line-height: 1.55;
+    color: var(--m-fg-1);
+    max-width: 60ch;
+    margin: 0 0 var(--m-space-8);
+  }
+
+  .nf-actions {
+    display: flex;
+    gap: var(--m-space-3);
+    margin-bottom: var(--m-space-10);
+    flex-wrap: wrap;
+  }
+  .nf-kbd {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    padding: 1px 6px;
+    background: var(--m-bg-3);
+    border: 1px solid var(--m-line-soft);
+    border-radius: 3px;
+    color: var(--m-fg-2);
+    margin-left: 6px;
+  }
+
+  .nf-jumps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--m-space-2) var(--m-space-5);
+  }
+  @media (max-width: 640px) { .nf-jumps { grid-template-columns: 1fr; } }
+  .nf-jumps li { color: var(--m-fg-2); font-size: 13.5px; }
+  .nf-jumps a { color: var(--m-fg-0); font-weight: 600; border-bottom: 1px dashed var(--m-line); }
+  .nf-jumps a:hover { color: var(--m-accent); border-bottom-color: var(--m-accent); }
+
+  /* Fake spine event row — playful "if this were a spine" punchline */
+  .nf-event {
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    margin-top: var(--m-space-10);
+    padding: 12px 16px;
+    background: var(--m-bg-1);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-danger);
+    border-radius: var(--m-radius);
+    font-family: var(--m-font-mono);
+    font-size: 12px;
+  }
+  .nf-event-glyph { color: var(--m-danger); text-align: center; }
+  .nf-event-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .nf-event-type {
+    color: var(--m-danger);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .nf-event-meta {
+    color: var(--m-fg-3);
+    font-size: 10.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .nf-event-tag {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--m-fg-4);
+    text-transform: uppercase;
+    font-style: italic;
+  }
+  @media (max-width: 640px) {
+    .nf-event { grid-template-columns: 22px 1fr; }
+    .nf-event-tag { grid-column: 1 / -1; padding-left: 36px; }
+  }
+</style>

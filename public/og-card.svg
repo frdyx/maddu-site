@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" font-family="'IBM Plex Sans Condensed', system-ui, sans-serif">
+  <!-- Backdrop: navy noir with brand-tinted radial vignettes -->
+  <defs>
+    <radialGradient id="bg-accent2" cx="80%" cy="20%" r="55%">
+      <stop offset="0%" stop-color="#56B8FF" stop-opacity="0.14" />
+      <stop offset="100%" stop-color="#56B8FF" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="bg-accent" cx="20%" cy="90%" r="55%">
+      <stop offset="0%" stop-color="#D0FF00" stop-opacity="0.10" />
+      <stop offset="100%" stop-color="#D0FF00" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="bg-brand" cx="50%" cy="100%" r="60%">
+      <stop offset="0%" stop-color="#F04E23" stop-opacity="0.06" />
+      <stop offset="100%" stop-color="#F04E23" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="hairline" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#507195" stop-opacity="0" />
+      <stop offset="50%" stop-color="#507195" stop-opacity="0.5" />
+      <stop offset="100%" stop-color="#507195" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="#050B17" />
+  <rect width="1200" height="630" fill="url(#bg-accent2)" />
+  <rect width="1200" height="630" fill="url(#bg-accent)" />
+  <rect width="1200" height="630" fill="url(#bg-brand)" />
+
+  <!-- Top brand strip -->
+  <g transform="translate(72, 64)">
+    <!-- Brand mark approximation: a burnt-orange diamond glyph with glow -->
+    <g transform="translate(0, 0)">
+      <circle cx="14" cy="14" r="18" fill="#F04E23" fill-opacity="0.18" />
+      <path d="M14 0 L28 14 L14 28 L0 14 Z" fill="#F04E23" />
+    </g>
+    <text x="44" y="22" fill="#E8E6E3" font-size="22" font-weight="700" letter-spacing="2">MÁDDU</text>
+    <line x1="135" y1="14" x2="155" y2="14" stroke="#507195" stroke-opacity="0.5" stroke-width="1" />
+    <text x="166" y="20" fill="#6a7079" font-size="13" font-family="'IBM Plex Mono', monospace" letter-spacing="2">SOURCE OF LOCAL TRUTH</text>
+  </g>
+
+  <!-- Hairline divider under the strip -->
+  <rect x="72" y="124" width="1056" height="1" fill="url(#hairline)" />
+
+  <!-- Hero block -->
+  <g transform="translate(72, 200)">
+    <!-- Eyebrow chain -->
+    <text x="0" y="0" fill="#D0FF00" font-size="14" font-family="'IBM Plex Mono', monospace" letter-spacing="3">V1.3</text>
+    <text x="48" y="0" fill="#6a7079" font-size="14" font-family="'IBM Plex Mono', monospace">·</text>
+    <text x="62" y="0" fill="#8A8A8A" font-size="13" font-family="'IBM Plex Mono', monospace" letter-spacing="3">LOCAL-FIRST</text>
+    <text x="190" y="0" fill="#6a7079" font-size="14" font-family="'IBM Plex Mono', monospace">·</text>
+    <text x="204" y="0" fill="#8A8A8A" font-size="13" font-family="'IBM Plex Mono', monospace" letter-spacing="3">RUNTIME-AGNOSTIC</text>
+    <text x="372" y="0" fill="#6a7079" font-size="14" font-family="'IBM Plex Mono', monospace">·</text>
+    <text x="386" y="0" fill="#8A8A8A" font-size="13" font-family="'IBM Plex Mono', monospace" letter-spacing="3">FILES-ONLY</text>
+
+    <!-- Title (3 lines, condensed display weight) -->
+    <text x="0" y="74" fill="#E8E6E3" font-size="72" font-weight="700" letter-spacing="-1.2">The orchestration spine</text>
+    <text x="0" y="146" fill="#E8E6E3" font-size="72" font-weight="700" letter-spacing="-1.2">that <tspan fill="#D0FF00" font-style="italic">outlives</tspan> every</text>
+    <text x="0" y="218" fill="#E8E6E3" font-size="72" font-weight="700" letter-spacing="-1.2">agent that touches it.</text>
+  </g>
+
+  <!-- Bottom strip: stats + URL -->
+  <g transform="translate(72, 540)">
+    <!-- Stats -->
+    <g font-family="'IBM Plex Sans Condensed', system-ui, sans-serif">
+      <text x="0" y="0" fill="#6a7079" font-size="11" font-family="'IBM Plex Mono', monospace" letter-spacing="2">HARD RULES</text>
+      <text x="0" y="36" fill="#D0FF00" font-size="34" font-weight="700">8 + 1</text>
+    </g>
+    <g transform="translate(170, 0)">
+      <text x="0" y="0" fill="#6a7079" font-size="11" font-family="'IBM Plex Mono', monospace" letter-spacing="2">DOCTOR GATES</text>
+      <text x="0" y="36" fill="#D0FF00" font-size="34" font-weight="700">54</text>
+    </g>
+    <g transform="translate(330, 0)">
+      <text x="0" y="0" fill="#6a7079" font-size="11" font-family="'IBM Plex Mono', monospace" letter-spacing="2">STRESS SCENARIOS</text>
+      <text x="0" y="36" fill="#D0FF00" font-size="34" font-weight="700">12</text>
+    </g>
+    <g transform="translate(520, 0)">
+      <text x="0" y="0" fill="#6a7079" font-size="11" font-family="'IBM Plex Mono', monospace" letter-spacing="2">AUTO-REPAIR</text>
+      <text x="0" y="36" fill="#D0FF00" font-size="34" font-weight="700">0</text>
+    </g>
+
+    <!-- URL pill, right-aligned -->
+    <g transform="translate(880, 14)">
+      <rect x="0" y="0" width="170" height="36" rx="4" fill="#56B8FF" fill-opacity="0.10" stroke="#56B8FF" stroke-opacity="0.4" stroke-width="1" />
+      <text x="85" y="24" fill="#56B8FF" font-size="14" font-family="'IBM Plex Mono', monospace" text-anchor="middle" letter-spacing="2">maddu.dev</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,98 @@
+---
+// Per-release stub pages — one HTML per release. Exist solely so social
+// crawlers fetching /changelog/v1-2-0 see a release-specific og:image,
+// then humans get an immediate redirect to /changelog#v1-2-0 for the
+// real content.
+//
+// Note: getStaticPaths is hoisted and runs before the frontmatter
+// consts, so RELEASES must live inside it.
+
+interface Release {
+  slug: string;
+  v: string;
+  date: string;
+  type: string;
+  headline: string;
+}
+
+export function getStaticPaths() {
+  const RELEASES: Release[] = [
+    { slug: 'v1-3-0', v: 'v1.3.0', date: '2026-05-28', type: 'feature',   headline: 'Coherence realignment + completeness' },
+    { slug: 'v1-2-3', v: 'v1.2.3', date: '2026-05-24', type: 'polish',    headline: 'Entity drawer' },
+    { slug: 'v1-2-2', v: 'v1.2.2', date: '2026-05-24', type: 'polish',    headline: 'Cockpit path polish' },
+    { slug: 'v1-2-1', v: 'v1.2.1', date: '2026-05-24', type: 'polish',    headline: 'Multi-bridge polish' },
+    { slug: 'v1-2-0', v: 'v1.2.0', date: '2026-05-24', type: 'hardening', headline: 'Supply-chain hardening + Hermes' },
+    { slug: 'v1-1-2', v: 'v1.1.2', date: '2026-05-23', type: 'patch',     headline: 'Narrative refresh + P3 patches' },
+    { slug: 'v1-1-1', v: 'v1.1.1', date: '2026-05-22', type: 'patch',     headline: 'Burn-in patch · 12 fixes' },
+    { slug: 'v1-1-0', v: 'v1.1.0', date: '2026-05-22', type: 'feature',   headline: 'Autonomy + planning + tool gateway' },
+    { slug: 'v1-0-5', v: 'v1.0.5', date: '2026-05-22', type: 'patch',     headline: 'Docs sweep · Phase-X cleared' },
+    { slug: 'v1-0-4', v: 'v1.0.4', date: '2026-05-22', type: 'patch',     headline: 'Generic default lane catalog' },
+    { slug: 'v1-0-3', v: 'v1.0.3', date: '2026-05-22', type: 'patch',     headline: 'Framework-only routes' },
+    { slug: 'v1-0-2', v: 'v1.0.2', date: '2026-05-22', type: 'patch',     headline: 'Stage-scroll hotfix' },
+    { slug: 'v1-0-1', v: 'v1.0.1', date: '2026-05-22', type: 'patch',     headline: 'Cockpit UX patch' },
+    { slug: 'v1-0-0', v: 'v1.0.0', date: '2026-05-22', type: 'milestone', headline: 'Stable declaration' },
+    { slug: 'v0-19-2', v: 'v0.19.2', date: '2026-05-21', type: 'polish',  headline: 'UX polish · 6 cockpit routes' },
+    { slug: 'v0-19-1', v: 'v0.19.1', date: '2026-05-21', type: 'patch',   headline: 'Burn-in patch · 11 fixes' },
+    { slug: 'v0-19-0', v: 'v0.19.0', date: '2026-05-21', type: 'feature', headline: 'Completeness + hardening · Rule #9 permanent' },
+    { slug: 'v0-18-0', v: 'v0.18.0', date: '2026-05-21', type: 'feature', headline: 'OMC-inspired UX shell' },
+    { slug: 'v0-17-1', v: 'v0.17.1', date: '2026-05-20', type: 'milestone', headline: 'Arc starting point · baseline' },
+  ];
+  return RELEASES.map((r) => ({ params: { slug: r.slug }, props: { release: r } }));
+}
+
+const { release } = Astro.props as { release: Release };
+const siteUrl = 'https://maddu.dev';
+const ogImage = `${siteUrl}/og/changelog/${release.slug}.png`;
+const canonical = `${siteUrl}/changelog#${release.slug}`;
+const fullTitle = `${release.v} · ${release.headline} — Máddu changelog`;
+const description = `Máddu ${release.v} (${release.date}) — ${release.headline}. ${release.type.charAt(0).toUpperCase() + release.type.slice(1)} release.`;
+---
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{fullTitle}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonical} />
+  <meta name="robots" content="noindex, follow" />
+
+  <meta property="og:title" content={fullTitle} />
+  <meta property="og:description" content={description} />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:image" content={ogImage} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={fullTitle} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogImage} />
+
+  <!-- Send humans immediately to the rendered changelog at the right anchor.
+       Crawlers ignore meta-refresh and read og:image from this page. -->
+  <meta http-equiv="refresh" content={`0; url=/changelog#${release.slug}`} />
+  <link rel="prefetch" href={`/changelog`} />
+  <style>
+    html, body { background: #050B17; color: #E8E6E3; margin: 0; padding: 0; font-family: 'IBM Plex Mono', monospace; }
+    .stub { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; text-align: center; }
+    .stub a { color: #D0FF00; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <noscript>
+    <meta http-equiv="refresh" content={`0; url=/changelog#${release.slug}`} />
+  </noscript>
+  <main class="stub">
+    <div>
+      <p>Máddu changelog · {release.v} — {release.headline}</p>
+      <p><a href={`/changelog#${release.slug}`}>Continue to the changelog →</a></p>
+    </div>
+  </main>
+  <script is:inline define:vars={{ slug: release.slug }}>
+    // Belt-and-suspenders: JS redirect for browsers that ignore meta refresh.
+    window.location.replace('/changelog#' + slug);
+  </script>
+</body>
+</html>

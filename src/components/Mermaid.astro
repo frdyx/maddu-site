@@ -1,0 +1,700 @@
+---
+// Mermaid.astro — client-rendered mermaid diagram themed to Máddu tokens.
+// Each instance gets a unique id; the global init script picks them up on
+// DOMContentLoaded. Mermaid is loaded lazily once per page, only when at
+// least one <Mermaid /> exists.
+export interface Props {
+  caption?: string;
+  /** Optional aside (renders next to the caption, top-right) */
+  aside?: string;
+  /** Mermaid source. Indent will be stripped. */
+  code: string;
+  /** Fixed height (CSS value) before render — prevents layout shift. */
+  minHeight?: string;
+}
+
+const { caption, aside, code, minHeight = '320px' } = Astro.props;
+
+// Strip leading indent so callers can use template literals freely.
+const stripped = code.replace(/^\n+/, '').replace(/\n+$/, '');
+const lines = stripped.split('\n');
+const minIndent = Math.min(
+  ...lines.filter((l) => l.trim()).map((l) => l.match(/^ */)?.[0].length ?? 0),
+);
+let dedented = lines.map((l) => l.slice(minIndent)).join('\n');
+
+// Auto-inject Máddu brand palette into every flowchart/graph diagram so
+// nodes can use `:::tone` shorthand. Sequence/state diagrams skip this —
+// they're themed via the global themeVariables init only.
+const firstLine = dedented.split('\n').find((l) => l.trim()) || '';
+const isFlow = /^(flowchart|graph)\b/.test(firstLine.trim());
+
+if (isFlow) {
+  // 8-digit hex throughout — mermaid's classDef splits properties on commas,
+  // so rgba(…) literals are not safe. The trailing two hex digits encode
+  // alpha (1A=10% · 24=14% · 1F=12% · 14=8% · 29=16% · 66=40% · 8C=55%).
+  // No stroke-dasharray either — fragile to parse with values like "4 2".
+  const palette = `
+    classDef spine fill:#003049,stroke:#56B8FF,color:#E8E6E3,stroke-width:2px
+    classDef event fill:#56B8FF1A,stroke:#56B8FF,color:#56B8FF
+    classDef session fill:#9FCBD824,stroke:#9FCBD8,color:#9FCBD8
+    classDef lane fill:#A8D4B824,stroke:#A8D4B8,color:#A8D4B8
+    classDef framework fill:#C8A8D424,stroke:#C8A8D4,color:#C8A8D4
+    classDef approval fill:#F2BD5C24,stroke:#F2BD5C,color:#F2BD5C
+    classDef accent fill:#D0FF001F,stroke:#D0FF00,color:#D0FF00,stroke-width:2px
+    classDef accent2 fill:#56B8FF1F,stroke:#56B8FF,color:#56B8FF,stroke-width:2px
+    classDef danger fill:#FF5E7A1F,stroke:#FF5E7A,color:#FF5E7A,stroke-width:2px
+    classDef ok fill:#61D3941F,stroke:#61D394,color:#61D394
+    classDef warn fill:#F2BD5C1F,stroke:#F2BD5C,color:#F2BD5C
+    classDef worker fill:#FF5E7A14,stroke:#FF5E7A,color:#E8E6E3,stroke-width:2px
+    classDef gate fill:#F2BD5C1A,stroke:#F2BD5C,color:#F2BD5C,stroke-width:2px
+    classDef brand fill:#F04E2324,stroke:#F04E23,color:#F04E23,stroke-width:2px
+    classDef invariant fill:#F04E2314,stroke:#F04E23,color:#F04E23
+    classDef neutral fill:#030E1E66,stroke:#5071958C,color:#E8E6E3
+    classDef refuse fill:#FF5E7A29,stroke:#FF5E7A,color:#FF5E7A
+    classDef hidden fill:transparent,stroke:transparent,color:transparent
+  `.trim().split('\n').map((l) => l.trim()).join('\n  ');
+
+  // Insert palette right after the first directive line so mermaid parses cleanly.
+  const allLines = dedented.split('\n');
+  const firstIdx = allLines.findIndex((l) => l.trim());
+  allLines.splice(firstIdx + 1, 0, '  %% --- Máddu palette (auto-injected) ---', '  ' + palette);
+  dedented = allLines.join('\n');
+}
+
+const id = `m-${Math.random().toString(36).slice(2, 9)}`;
+---
+
+<figure class="mermaid-figure">
+  {(caption || aside) && (
+    <figcaption class="mermaid-caption">
+      {caption && <span class="mermaid-caption-text">{caption}</span>}
+      {aside && <span class="mermaid-caption-aside">{aside}</span>}
+    </figcaption>
+  )}
+  <div
+    class="mermaid-host"
+    data-mermaid-host
+    data-mermaid-id={id}
+    style={`min-height: ${minHeight};`}
+  >
+    <pre class="mermaid-source" data-mermaid-source>{dedented}</pre>
+    <div class="mermaid-fallback" aria-hidden="true">
+      <span class="mermaid-fallback-glyph">◆</span>
+      <span class="mermaid-fallback-text">Rendering diagram…</span>
+    </div>
+    <div class="mermaid-controls" data-mermaid-controls hidden aria-hidden="true">
+      <button class="mermaid-ctl" data-mermaid-zoom-out title="Zoom out" aria-label="Zoom out">−</button>
+      <span class="mermaid-ctl-pct" data-mermaid-pct>100%</span>
+      <button class="mermaid-ctl" data-mermaid-zoom-in title="Zoom in" aria-label="Zoom in">+</button>
+      <button class="mermaid-ctl mermaid-ctl-reset" data-mermaid-reset title="Reset view" aria-label="Reset view">⤺</button>
+    </div>
+    <div class="mermaid-hint" aria-hidden="true"></div>
+  </div>
+</figure>
+
+<style>
+  .mermaid-figure {
+    margin: var(--m-space-8) 0;
+    padding: 0;
+    background:
+      radial-gradient(circle at top right, var(--m-accent-2-glow-bg), transparent 55%),
+      radial-gradient(circle at bottom left, var(--m-accent-glow-bg), transparent 50%),
+      var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-top: 1px solid var(--m-accent-2);
+    border-radius: var(--m-radius);
+    overflow: hidden;
+  }
+  .mermaid-caption {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--m-space-4);
+    padding: var(--m-space-3) var(--m-space-5);
+    border-bottom: 1px solid var(--m-line-soft);
+    background: var(--m-bg-1);
+  }
+  .mermaid-caption-text {
+    font-family: var(--m-font-cond);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 12px;
+    color: var(--m-fg-0);
+  }
+  .mermaid-caption-aside {
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    color: var(--m-fg-3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .mermaid-host {
+    position: relative;
+    padding: var(--m-space-5);
+    overflow-x: auto;
+    color: var(--m-fg-1);
+  }
+  .mermaid-source {
+    display: none;
+  }
+  .mermaid-source.is-revealed {
+    display: block;
+    background: transparent;
+    border: 0;
+    border-left: 2px solid var(--m-warn);
+    color: var(--m-warn);
+    padding: var(--m-space-3) var(--m-space-4);
+    font-size: 12px;
+  }
+  .mermaid-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: var(--m-font-mono);
+    font-size: 12px;
+    color: var(--m-fg-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: var(--m-space-8) 0;
+  }
+  .mermaid-fallback-glyph {
+    color: var(--m-accent);
+    animation: mermaid-pulse 1.4s ease-in-out infinite;
+  }
+  .mermaid-host.is-rendered .mermaid-fallback { display: none; }
+
+  /* ── Pan + zoom layer ──────────────────────────────────────────── */
+  .mermaid-host[data-mermaid-host] {
+    overflow: hidden;
+    touch-action: none;
+    cursor: grab;
+    user-select: none;
+  }
+  .mermaid-host[data-mermaid-host].is-dragging { cursor: grabbing; }
+  .mermaid-host .mermaid-render {
+    transform-origin: 0 0;
+    will-change: transform;
+    transition: transform 80ms ease-out;
+  }
+  .mermaid-host.is-interacting .mermaid-render { transition: none; }
+
+  /* Zoom controls — anchored to the diagram by default, but promoted to
+   * viewport-fixed (.is-floating) by the global float controller below
+   * whenever the diagram is the most-visible one on screen. Faded at
+   * rest; the cluster is always interactive (no pointer-events: none)
+   * so the user can click without first hunting for it. */
+  .mermaid-controls {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    background: var(--m-bg-1);
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+    box-shadow: var(--m-shadow-sm);
+    opacity: 0.28;
+    pointer-events: auto;
+    transition: opacity 200ms ease, right 200ms ease, bottom 200ms ease, transform 200ms ease;
+    backdrop-filter: blur(6px) saturate(120%);
+    -webkit-backdrop-filter: blur(6px) saturate(120%);
+  }
+  .mermaid-host.is-rendered:hover .mermaid-controls,
+  .mermaid-host.is-rendered.is-zoomed .mermaid-controls,
+  .mermaid-host.is-rendered.is-interacting .mermaid-controls,
+  .mermaid-controls:hover,
+  .mermaid-controls:focus-within {
+    opacity: 1;
+  }
+
+  /* Floating mode — controls stay inside the diagram container. When
+   * the host extends below the viewport, JS sets --m-ctl-offset and we
+   * translate the cluster UP by exactly that amount, so it lands at
+   * the bottom of the visible portion of the diagram. The host's
+   * overflow:hidden keeps the cluster bounded to the diagram — it
+   * never escapes into surrounding page chrome. */
+  .mermaid-controls.is-floating {
+    opacity: 0.55;
+    box-shadow: var(--m-shadow-md);
+    transform: translateY(calc(var(--m-ctl-offset, 0px) * -1));
+    will-change: transform;
+  }
+  .mermaid-controls.is-floating:hover,
+  .mermaid-controls.is-floating:focus-within,
+  .mermaid-host.is-zoomed .mermaid-controls.is-floating {
+    opacity: 1;
+  }
+  @media (max-width: 720px) {
+    .mermaid-controls.is-floating { opacity: 0.7; }
+  }
+  .mermaid-ctl {
+    appearance: none;
+    background: var(--m-bg-2);
+    border: 1px solid transparent;
+    color: var(--m-fg-2);
+    font-family: var(--m-font-mono);
+    font-size: 13px;
+    line-height: 1;
+    width: 24px;
+    height: 24px;
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 100ms, background 100ms, border-color 100ms;
+  }
+  .mermaid-ctl:hover {
+    color: var(--m-accent);
+    border-color: var(--m-accent);
+    background: var(--m-bg-3);
+  }
+  .mermaid-ctl-reset { font-size: 14px; }
+  .mermaid-ctl-pct {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--m-fg-3);
+    padding: 0 6px;
+    min-width: 36px;
+    text-align: center;
+  }
+
+  /* Zoom-hint pill — fades in for a moment when the user wheels over
+   * the diagram without holding the modifier. Reminds them to hold
+   * Ctrl/⌘ and removes the surprise. */
+  .mermaid-hint {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 5px 10px;
+    background: var(--m-bg-1);
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+    font-family: var(--m-font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    color: var(--m-accent);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 160ms ease, transform 160ms ease;
+    box-shadow: var(--m-shadow-sm);
+  }
+  .mermaid-hint.is-shown { opacity: 1; transform: translateY(0); }
+  @keyframes mermaid-pulse {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.15); }
+  }
+  /* Diagram SVG styling — let mermaid theme handle most, but constrain width. */
+  .mermaid-host svg {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+</style>
+
+<script>
+  // Lazy-load mermaid the first time we see a host on the page, then render
+  // every host into its own container. Theme variables align with Máddu
+  // tokens for both dark (default) and light variants.
+  //
+  // The MutationObserver on data-theme re-renders all hosts whenever the
+  // operator toggles the site theme, so diagrams never get stranded in
+  // the wrong palette.
+
+  // Per-theme palettes — the only difference between dark/light is the
+  // surface ink and edge labels; tone classDefs (auto-injected per
+  // flowchart) already work on both because their alpha-fills are
+  // designed to read on either background.
+  const DARK = {
+    background: '#050B17',
+    mainBkg: '#030E1E80',
+    secondBkg: '#04122680',
+    tertiaryBkg: '#56B8FF10',
+    primaryBorderColor: '#50719580',
+    secondaryBorderColor: '#5071955C',
+    tertiaryBorderColor: '#D0FF0066',
+    lineColor: '#B8B2AA8C',
+    primaryColor: '#030E1E80',
+    secondaryColor: '#56B8FF14',
+    tertiaryColor: '#D0FF000F',
+    primaryTextColor: '#E8E6E3',
+    secondaryTextColor: '#B8B2AA',
+    tertiaryTextColor: '#E8E6E3',
+    noteBkgColor: '#D0FF000F',
+    noteBorderColor: '#D0FF0066',
+    noteTextColor: '#E8E6E3',
+    clusterBkg: '#00081259',
+    clusterBorder: '#50719580',
+    edgeLabelBackground: '#050B17',
+    actorBkg: '#030E1E80',
+    actorBorder: '#D0FF00',
+    actorTextColor: '#E8E6E3',
+    labelTextColor: '#E8E6E3',
+    classText: '#E8E6E3',
+    cScale0: '#56B8FF1F',
+    cScale1: '#D0FF001A',
+    cScale2: '#F04E231F',
+    cScale3: '#61D3941F',
+    cScale4: '#F2BD5C1F',
+    cScale5: '#FF5E7A1F',
+  };
+  const LIGHT = {
+    background: '#F4F0E6',
+    mainBkg: '#FFFCF4C7',
+    secondBkg: '#FFFCF4A0',
+    tertiaryBkg: '#0A6DC912',
+    primaryBorderColor: '#3C4E6E80',
+    secondaryBorderColor: '#3C4E6E5C',
+    tertiaryBorderColor: '#5B8A0066',
+    lineColor: '#3A41548C',
+    primaryColor: '#FFFCF4C7',
+    secondaryColor: '#0A6DC912',
+    tertiaryColor: '#5B8A0014',
+    primaryTextColor: '#0E1726',
+    secondaryTextColor: '#3A4154',
+    tertiaryTextColor: '#0E1726',
+    noteBkgColor: '#5B8A0014',
+    noteBorderColor: '#5B8A0080',
+    noteTextColor: '#0E1726',
+    clusterBkg: '#FFFCF466',
+    clusterBorder: '#3C4E6E80',
+    edgeLabelBackground: '#F4F0E6',
+    actorBkg: '#FFFCF4C7',
+    actorBorder: '#5B8A00',
+    actorTextColor: '#0E1726',
+    labelTextColor: '#0E1726',
+    classText: '#0E1726',
+    cScale0: '#0A6DC920',
+    cScale1: '#5B8A0020',
+    cScale2: '#C73A1220',
+    cScale3: '#1F8F4F20',
+    cScale4: '#B7800E20',
+    cScale5: '#C7263F20',
+  };
+
+  let mermaidMod: any = null;
+  let initLock = false;
+  let lastTheme = '';
+
+  async function ensureMermaid() {
+    if (!mermaidMod) {
+      const mod = await import('mermaid');
+      mermaidMod = mod.default;
+    }
+    return mermaidMod;
+  }
+
+  async function renderHosts(hosts: HTMLElement[], force = false) {
+    if (!hosts.length || initLock) return;
+    initLock = true;
+    try {
+      await ensureMermaid();
+      const theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+      const themeChanged = force || theme !== lastTheme;
+      if (themeChanged) {
+        lastTheme = theme;
+        const themeVariables = theme === 'light' ? LIGHT : DARK;
+        mermaidMod.initialize({
+          startOnLoad: false,
+          theme: 'base',
+          securityLevel: 'strict',
+          fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+          themeVariables,
+          flowchart: { curve: 'basis', padding: 14, useMaxWidth: true, htmlLabels: true },
+          sequence: { useMaxWidth: true, actorMargin: 60 },
+        });
+      }
+
+      for (const host of hosts) {
+        const source = host.querySelector<HTMLElement>('[data-mermaid-source]');
+        const id = host.dataset.mermaidId || 'm-' + Math.random().toString(36).slice(2);
+        if (!source) continue;
+        const code = source.textContent || '';
+        host.querySelectorAll('.mermaid-render').forEach((n) => n.remove());
+        try {
+          const { svg } = await mermaidMod.render(`${id}-svg`, code);
+          const wrap = document.createElement('div');
+          wrap.className = 'mermaid-render';
+          wrap.innerHTML = svg;
+          host.appendChild(wrap);
+          host.classList.add('is-rendered');
+          attachPanZoom(host);
+        } catch (err) {
+          console.error('[mermaid]', err);
+          source.classList.add('is-revealed');
+          host.classList.add('is-rendered');
+        }
+      }
+    } finally {
+      initLock = false;
+    }
+  }
+
+  async function renderAll(force = false) {
+    const hosts = Array.from(document.querySelectorAll<HTMLElement>('[data-mermaid-host]'));
+    await renderHosts(hosts, force);
+  }
+
+  // ── Pan + zoom controller ──────────────────────────────────────
+  // Hand-rolled, no dep. Wheel zoom (Ctrl/Cmd not required — wheel alone),
+  // drag pan via Pointer events, pinch zoom via two-finger touch, double
+  // click resets to fit. Controls overlay shows percent + reset button.
+  const ZOOM_MIN = 0.5;
+  const ZOOM_MAX = 4;
+
+  function attachPanZoom(host: HTMLElement) {
+    if ((host as any).__panZoomAttached) return;
+    (host as any).__panZoomAttached = true;
+
+    const render = host.querySelector<HTMLElement>('.mermaid-render');
+    const controls = host.querySelector<HTMLElement>('[data-mermaid-controls]');
+    const pctEl = host.querySelector<HTMLElement>('[data-mermaid-pct]');
+    const zoomIn = host.querySelector<HTMLElement>('[data-mermaid-zoom-in]');
+    const zoomOut = host.querySelector<HTMLElement>('[data-mermaid-zoom-out]');
+    const reset = host.querySelector<HTMLElement>('[data-mermaid-reset]');
+    if (!render || !controls) return;
+    controls.hidden = false;
+
+    const state = { x: 0, y: 0, scale: 1 };
+    function apply() {
+      render!.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
+      if (pctEl) pctEl.textContent = Math.round(state.scale * 100) + '%';
+      host.classList.toggle('is-zoomed', state.scale !== 1 || state.x !== 0 || state.y !== 0);
+    }
+    function setScale(next: number, anchorX: number, anchorY: number) {
+      const clamped = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, next));
+      // Zoom around the anchor (cursor / pinch midpoint), not the origin.
+      const ratio = clamped / state.scale;
+      state.x = anchorX - (anchorX - state.x) * ratio;
+      state.y = anchorY - (anchorY - state.y) * ratio;
+      state.scale = clamped;
+      apply();
+    }
+    function resetView() { state.x = 0; state.y = 0; state.scale = 1; apply(); }
+
+    // Wheel zoom — requires Ctrl (or Cmd on mac) to engage, otherwise
+    // pass through so the page scrolls normally over the diagram.
+    // Matches Figma / Google Maps / desktop image viewers. Without the
+    // modifier, hovering a tall diagram during page scroll trapped the
+    // scroll and zoomed unexpectedly.
+    let hintTimer = 0;
+    function flashHint(text) {
+      const el = host.querySelector('.mermaid-hint');
+      if (!el) return;
+      el.textContent = text;
+      el.classList.add('is-shown');
+      clearTimeout(hintTimer);
+      hintTimer = window.setTimeout(() => el.classList.remove('is-shown'), 1400);
+    }
+
+    host.addEventListener('wheel', (e) => {
+      if (Math.abs(e.deltaY) < 1) return;
+      const hasMod = e.ctrlKey || e.metaKey;
+      if (!hasMod) {
+        // No modifier — let the page scroll. Surface a one-shot hint so
+        // the user knows zoom is available.
+        flashHint(navigator.platform.includes('Mac') ? 'Hold ⌘ to zoom' : 'Hold Ctrl to zoom');
+        return;
+      }
+      e.preventDefault();
+      const r = host.getBoundingClientRect();
+      const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+      setScale(state.scale * factor, e.clientX - r.left, e.clientY - r.top);
+    }, { passive: false });
+
+    // Pointer drag pan.
+    let dragging = false;
+    let lastX = 0, lastY = 0;
+    let activePointers = new Map<number, { x: number; y: number }>();
+
+    host.addEventListener('pointerdown', (e) => {
+      // Ignore clicks on the controls themselves.
+      if ((e.target as HTMLElement).closest('.mermaid-controls')) return;
+      host.setPointerCapture(e.pointerId);
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (activePointers.size === 1) {
+        dragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        host.classList.add('is-dragging', 'is-interacting');
+      }
+    });
+
+    let pinchStartDist = 0;
+    let pinchStartScale = 1;
+
+    host.addEventListener('pointermove', (e) => {
+      if (!activePointers.has(e.pointerId)) return;
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (activePointers.size === 2) {
+        // Pinch zoom.
+        const pts = Array.from(activePointers.values());
+        const dx = pts[0].x - pts[1].x;
+        const dy = pts[0].y - pts[1].y;
+        const dist = Math.hypot(dx, dy);
+        const r = host.getBoundingClientRect();
+        const mx = (pts[0].x + pts[1].x) / 2 - r.left;
+        const my = (pts[0].y + pts[1].y) / 2 - r.top;
+        if (!pinchStartDist) {
+          pinchStartDist = dist;
+          pinchStartScale = state.scale;
+        } else {
+          setScale(pinchStartScale * (dist / pinchStartDist), mx, my);
+        }
+        dragging = false;
+      } else if (dragging && activePointers.size === 1) {
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
+        lastX = e.clientX; lastY = e.clientY;
+        state.x += dx; state.y += dy;
+        apply();
+      }
+    });
+
+    function endPointer(e: PointerEvent) {
+      activePointers.delete(e.pointerId);
+      if (activePointers.size < 2) { pinchStartDist = 0; }
+      if (activePointers.size === 0) {
+        dragging = false;
+        host.classList.remove('is-dragging', 'is-interacting');
+      }
+    }
+    host.addEventListener('pointerup', endPointer);
+    host.addEventListener('pointercancel', endPointer);
+    host.addEventListener('pointerleave', endPointer);
+
+    host.addEventListener('dblclick', (e) => {
+      if ((e.target as HTMLElement).closest('.mermaid-controls')) return;
+      resetView();
+    });
+
+    zoomIn?.addEventListener('click', () => {
+      const r = host.getBoundingClientRect();
+      setScale(state.scale * 1.25, r.width / 2, r.height / 2);
+    });
+    zoomOut?.addEventListener('click', () => {
+      const r = host.getBoundingClientRect();
+      setScale(state.scale / 1.25, r.width / 2, r.height / 2);
+    });
+    reset?.addEventListener('click', resetView);
+
+    apply();
+  }
+
+  // ── Container-bounded float controller ────────────────────────────
+  // One per page (not per Mermaid instance). For each rendered host
+  // that's currently visible, computes how far the host extends past
+  // the viewport bottom and writes that distance to the controls'
+  // --m-ctl-offset variable. CSS uses translateY() so the cluster
+  // hovers at the bottom of the diagram's visible portion — never
+  // escapes the host's overflow:hidden bounds, never pins to the
+  // page viewport edge.
+  function initFloatController() {
+    if ((window as any).__mermaidFloatInit) return;
+    (window as any).__mermaidFloatInit = true;
+    let raf = 0;
+    function update() {
+      raf = 0;
+      const hosts = document.querySelectorAll<HTMLElement>('[data-mermaid-host].is-rendered');
+      if (!hosts.length) return;
+      const vh = window.innerHeight;
+      const PAD = 12; // breathing room from viewport bottom
+      const CTRL_H = 48; // approximate cluster height + padding
+      hosts.forEach((h) => {
+        const c = h.querySelector<HTMLElement>('[data-mermaid-controls]');
+        if (!c) return;
+        const r = h.getBoundingClientRect();
+        // Entirely off-screen — strip float state, reset offset.
+        if (r.bottom <= 0 || r.top >= vh) {
+          c.classList.remove('is-floating');
+          c.style.setProperty('--m-ctl-offset', '0px');
+          return;
+        }
+        // Host extends below viewport — lift controls UP by exactly
+        // the overhang so they land just inside the visible cut line.
+        const overhang = Math.max(0, r.bottom - (vh - PAD));
+        if (overhang > 0) {
+          // Clamp so we never lift above the host's top edge
+          // (overflow:hidden would clip the cluster).
+          const maxLift = Math.max(0, r.height - CTRL_H);
+          const lift = Math.min(overhang, maxLift);
+          c.style.setProperty('--m-ctl-offset', lift + 'px');
+          c.classList.add('is-floating');
+        } else {
+          // Host fits in viewport — natural absolute position.
+          c.classList.remove('is-floating');
+          c.style.setProperty('--m-ctl-offset', '0px');
+        }
+      });
+    }
+    function schedule() { if (!raf) raf = requestAnimationFrame(update); }
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    // Recompute when a diagram renders or its theme flips.
+    new MutationObserver(schedule).observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class', 'data-theme'],
+      subtree: true,
+    });
+    // Initial pass — give renders a moment to settle.
+    setTimeout(schedule, 50);
+    setTimeout(schedule, 600);
+  }
+
+  function start() {
+    const hosts = Array.from(document.querySelectorAll<HTMLElement>('[data-mermaid-host]'));
+    if (!hosts.length) return;
+    initFloatController();
+
+    // Lazy load: defer the ~145KB mermaid bundle until the first diagram
+    // scrolls into the viewport (or a generous pre-load band around it).
+    // Once any one diagram becomes visible, render *every* host on the
+    // page in one go — keeps theme-toggle re-renders consistent and
+    // avoids per-host module loads. Falls back to immediate render if
+    // IntersectionObserver isn't available.
+    const rendered = new WeakSet<HTMLElement>();
+    let kicked = false;
+
+    function kick() {
+      if (kicked) return;
+      kicked = true;
+      renderAll(true);
+      // After the initial render lands, watch theme for re-renders.
+      new MutationObserver(() => renderAll()).observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme'],
+      });
+    }
+
+    if (typeof IntersectionObserver === 'function') {
+      const io = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            rendered.add(e.target as HTMLElement);
+            io.disconnect();
+            kick();
+            break;
+          }
+        }
+      }, { rootMargin: '400px 0px' /* prefetch when within 400px of viewport */ });
+      hosts.forEach((h) => io.observe(h));
+    } else {
+      kick();
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+</script>

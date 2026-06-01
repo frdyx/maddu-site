@@ -1,0 +1,24 @@
+/* TEAM */
+
+  Máddu — orchestration spine
+  Source · github.com/frdyx/maddu
+  Site   · maddu.dev
+
+/* THANKS */
+
+  Inspirations: OMC (oh-my-claudecode) for the operator UX bar.
+  Cockpit visual language: extends IBM Plex into a noir palette.
+
+/* SITE */
+
+  Last update: 2026
+  Standards: HTML5 · CSS3 · ES2024 · IBM Plex
+  Components: Astro static · vanilla JS
+  Diagrams: Mermaid (lazy-loaded, theme-aware)
+  Fonts: self-hosted IBM Plex woff2
+  Third parties at runtime: zero
+
+/* POSTURE */
+
+  No cookies. No analytics. No relay.
+  The site does what the framework does.

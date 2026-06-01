@@ -1,0 +1,153 @@
+---
+// Legend.astro — compact tone-key strip. Drop under any diagram to declare
+// what its colors mean. Only declare the tones actually used in that diagram
+// — the legend is for readers, not a full palette dump.
+//
+// Tones map 1:1 to the brand palette injected into mermaid by Mermaid.astro.
+export interface Item {
+  tone:
+    | 'spine'
+    | 'event'
+    | 'session'
+    | 'lane'
+    | 'framework'
+    | 'approval'
+    | 'accent'
+    | 'accent2'
+    | 'danger'
+    | 'ok'
+    | 'warn'
+    | 'worker'
+    | 'gate'
+    | 'brand'
+    | 'invariant'
+    | 'neutral'
+    | 'refuse';
+  label: string;
+}
+export interface Props {
+  items: Item[];
+  /** Eyebrow text on the left side */
+  label?: string;
+}
+
+const { items, label = 'Legend' } = Astro.props;
+---
+
+<aside class="legend" role="note">
+  <span class="legend-label">{label}</span>
+  <ul class="legend-items">
+    {items.map((i) => (
+      <li class:list={['legend-item', `legend-item--${i.tone}`]}>
+        <span class="legend-swatch" aria-hidden="true"></span>
+        <span class="legend-text">{i.label}</span>
+      </li>
+    ))}
+  </ul>
+</aside>
+
+<style>
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: var(--m-space-4);
+    margin: calc(var(--m-space-8) * -0.5) 0 var(--m-space-6);
+    padding: var(--m-space-3) var(--m-space-4);
+    background: var(--m-bg-1);
+    border: 1px solid var(--m-line);
+    border-top: 0;
+    border-radius: 0 0 var(--m-radius) var(--m-radius);
+    flex-wrap: wrap;
+  }
+  .legend-label {
+    font-family: var(--m-font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+    padding-right: var(--m-space-3);
+    border-right: 1px solid var(--m-line-soft);
+    flex-shrink: 0;
+  }
+  .legend-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--m-space-3);
+  }
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--m-font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    color: var(--m-fg-2);
+  }
+  .legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    border: 1px solid var(--m-line);
+    flex-shrink: 0;
+  }
+
+  /* Swatch + text colors map to the mermaid palette in Mermaid.astro */
+  .legend-item--spine     .legend-swatch { background: #003049; border-color: #56B8FF; }
+  .legend-item--spine     .legend-text   { color: #56B8FF; }
+
+  .legend-item--event     .legend-swatch { background: #56B8FF40; border-color: #56B8FF; }
+  .legend-item--event     .legend-text   { color: #56B8FF; }
+
+  .legend-item--session   .legend-swatch { background: #9FCBD840; border-color: #9FCBD8; }
+  .legend-item--session   .legend-text   { color: #9FCBD8; }
+
+  .legend-item--lane      .legend-swatch { background: #A8D4B840; border-color: #A8D4B8; }
+  .legend-item--lane      .legend-text   { color: #A8D4B8; }
+
+  .legend-item--framework .legend-swatch { background: #C8A8D440; border-color: #C8A8D4; }
+  .legend-item--framework .legend-text   { color: #C8A8D4; }
+
+  .legend-item--approval  .legend-swatch { background: #F2BD5C40; border-color: #F2BD5C; }
+  .legend-item--approval  .legend-text   { color: #F2BD5C; }
+
+  .legend-item--accent    .legend-swatch { background: #D0FF0040; border-color: #D0FF00; }
+  .legend-item--accent    .legend-text   { color: #D0FF00; }
+
+  .legend-item--accent2   .legend-swatch { background: #56B8FF40; border-color: #56B8FF; }
+  .legend-item--accent2   .legend-text   { color: #56B8FF; }
+
+  .legend-item--danger    .legend-swatch { background: #FF5E7A40; border-color: #FF5E7A; }
+  .legend-item--danger    .legend-text   { color: #FF5E7A; }
+
+  .legend-item--ok        .legend-swatch { background: #61D39440; border-color: #61D394; }
+  .legend-item--ok        .legend-text   { color: #61D394; }
+
+  .legend-item--warn      .legend-swatch { background: #F2BD5C40; border-color: #F2BD5C; }
+  .legend-item--warn      .legend-text   { color: #F2BD5C; }
+
+  .legend-item--worker    .legend-swatch { background: #FF5E7A30; border-color: #FF5E7A; }
+  .legend-item--worker    .legend-text   { color: #FF5E7A; }
+
+  .legend-item--gate      .legend-swatch { background: #F2BD5C40; border-color: #F2BD5C; border-style: dashed; }
+  .legend-item--gate      .legend-text   { color: #F2BD5C; }
+
+  .legend-item--brand     .legend-swatch { background: #F04E2340; border-color: #F04E23; }
+  .legend-item--brand     .legend-text   { color: #F04E23; }
+
+  .legend-item--invariant .legend-swatch { background: #F04E2330; border-color: #F04E23; }
+  .legend-item--invariant .legend-text   { color: #F04E23; }
+
+  .legend-item--neutral   .legend-swatch { background: #030E1E; border-color: #507195; }
+  .legend-item--neutral   .legend-text   { color: var(--m-fg-1); }
+
+  .legend-item--refuse    .legend-swatch { background: #FF5E7A50; border-color: #FF5E7A; border-style: dashed; }
+  .legend-item--refuse    .legend-text   { color: #FF5E7A; }
+
+  @media (max-width: 640px) {
+    .legend { flex-direction: column; align-items: flex-start; }
+    .legend-label { border-right: 0; padding-right: 0; }
+  }
+</style>

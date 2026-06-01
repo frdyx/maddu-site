@@ -1,0 +1,576 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Callout from '../components/Callout.astro';
+import TocIndex from '../components/TocIndex.astro';
+import PageNext from '../components/PageNext.astro';
+
+type ReleaseType = 'milestone' | 'feature' | 'hardening' | 'polish' | 'patch';
+
+interface Release {
+  version: string;
+  id: string;
+  date: string;
+  type: ReleaseType;
+  headline: string;
+  highlights: string[];
+  /** Optional context / "why this matters" */
+  note?: string;
+}
+
+const RELEASES: Release[] = [
+  {
+    version: 'v1.3.0',
+    id: 'v1-3-0',
+    date: '2026-05-28',
+    type: 'feature',
+    headline: 'Coherence realignment + completeness',
+    highlights: [
+      'Three default pipelines seeded by `maddu init`: `ship-a-feature` (default), `fix-a-bug`, `plan-and-delegate`',
+      '`maddu audit` charter-drift command + four new gates (event-types-reachable, command-surface-coherent, cockpit-routes-reachable, docs-indexed)',
+      '`docs/charter.md` published as the canonical north star; one canonical flow throughout the docs',
+      'Forgiving CLI verbs — `goal set "x"`, `task create "x"`, `plan add-phase "x"` now accept natural positional form',
+      'Slash on-ramp triage: 53 verbs tagged surface = agent | operator; 4 new agent slashes added',
+      '`makeId` consolidated into spine; `runWrapper` deduped across tools; ~180 LoC removed',
+    ],
+    note: 'Closed the audit-driven feature-sprawl diagnosis. Every cockpit route now reachable from the default flow.',
+  },
+  {
+    version: 'v1.2.3',
+    id: 'v1-2-3',
+    date: '2026-05-24',
+    type: 'polish',
+    headline: 'Entity drawer',
+    highlights: [
+      'Clickable plans + kanban cards open a right-side detail drawer',
+      'Reusable `openEntityDrawer({ title, subtitle, body, onClose })` primitive for future routes',
+      'New `GET /bridge/plans/<id>` endpoint',
+      'CSS `.entity-drawer*` slide-from-right animation with Esc / scrim / × dismissal',
+    ],
+  },
+  {
+    version: 'v1.2.2',
+    id: 'v1-2-2',
+    date: '2026-05-24',
+    type: 'polish',
+    headline: 'Cockpit path polish',
+    highlights: [
+      'Compact `<drive>/.../basename` display in the rail Path row',
+      'Click-to-copy with toast + keyboard activation',
+      'Scope-pill (`This workspace | All workspaces`) active-class now moves on click',
+    ],
+  },
+  {
+    version: 'v1.2.1',
+    id: 'v1-2-1',
+    date: '2026-05-24',
+    type: 'polish',
+    headline: 'Multi-bridge polish',
+    highlights: [
+      'Port-collision refusal with actionable copy (foreign-bridge detection)',
+      '`maddu bridges list` + `maddu bridges kill-all`',
+      'CWD-vs-workspace-registry triage at start time',
+      'Cockpit rail-foot Workspace + Path rows',
+      '`workspace add --path` argv alias',
+    ],
+  },
+  {
+    version: 'v1.2.0',
+    id: 'v1-2-0',
+    date: '2026-05-24',
+    type: 'hardening',
+    headline: 'Supply-chain hardening + Hermes adapter',
+    highlights: [
+      '`maddu trust audit / pin / verify / list / report`',
+      'MCP SHA256 provenance on every install',
+      'Worker env allowlist with default-deny for secret-keyed vars (enforced by `worker-env-policy-coherent` gate)',
+      'Secret scan in tool argv — AWS / OpenAI / Anthropic / GitHub / GitLab / Slack patterns; raw values never logged',
+      'Skill provenance enforcement, strict-mode approval enforcement',
+      'New Trust cockpit route + `docs/34-threat-model.md` (the operator security manual)',
+      'Hermes runtime adapter (boundary-respecting)',
+    ],
+    note: 'The release that made the 8+1 posture structurally enforced, not just architecturally stated.',
+  },
+  {
+    version: 'v1.1.2',
+    id: 'v1-1-2',
+    date: '2026-05-23',
+    type: 'patch',
+    headline: 'Narrative refresh + P3 patches',
+    highlights: [
+      'README badge + tour version refresh',
+      'Getting-started autonomy section',
+      'Python cross-stack detector (pytest / ruff / black / uv / pip)',
+      'Refusal text trim',
+      'Skill candidate threshold (N=2 high + N=1 soft with 24h cooldown)',
+    ],
+  },
+  {
+    version: 'v1.1.1',
+    id: 'v1-1-1',
+    date: '2026-05-22',
+    type: 'patch',
+    headline: 'Burn-in patch (12 fixes)',
+    highlights: [
+      'P0 Windows spawn EINVAL fix (`shell: true` for npm-family commands)',
+      'ralph verify exit-code, plan `--plan` argv collision, lanes-catalog-parseable gate',
+      'kanban phases aggregation, workspace activate bridge reroute warning',
+      '`maddu stop` + SIGINT handler, `--help` before flag validation everywhere',
+      'Install validation',
+    ],
+  },
+  {
+    version: 'v1.1.0',
+    id: 'v1-1-0',
+    date: '2026-05-22',
+    type: 'feature',
+    headline: 'Autonomy + planning + tool gateway',
+    highlights: [
+      'Nine phases shipped: default tools (git / test / format / lint / install), MCP template gallery, governance tiers (strict / standard / relaxed)',
+      'Receipt log + Operations feed',
+      'Kanban + plan persistence + auto-revision',
+      'Loops (ralph + plan-loop)',
+      '**Coordinator as Máddu primitive** — runtime-agnostic multi-phase driver, no longer tied to Claude Code\'s Agent tool',
+      'Blast + skills starter pack + autonomous skill curation',
+    ],
+    note: 'First release where autonomous orchestration works on Codex / Gemini / future runtimes for free.',
+  },
+  {
+    version: 'v1.0.5',
+    id: 'v1-0-5',
+    date: '2026-05-22',
+    type: 'patch',
+    headline: 'Docs sweep — Phase-X leakage cleared',
+    highlights: [
+      'Deleted `docs/maddu-v0.3-roadmap.md`',
+      'Cleaned Phase markers from 4 user docs',
+    ],
+  },
+  {
+    version: 'v1.0.4',
+    id: 'v1-0-4',
+    date: '2026-05-22',
+    type: 'patch',
+    headline: 'Generic default lane catalog',
+    highlights: [
+      'Replaced Máddu-internal lanes (cockpit-shell, bridge-server, Phase A1 / B6 / C1) with 7 generic lanes',
+      'architecture · frontend · backend · infra · tests · docs · general',
+    ],
+  },
+  {
+    version: 'v1.0.3',
+    id: 'v1-0-3',
+    date: '2026-05-22',
+    type: 'patch',
+    headline: 'Framework-only routes hidden on consumer installs',
+    highlights: [
+      '`frameworkOnly: true` flag in ROUTES',
+      'teststatus route hidden by default',
+      'Reusable affordance for any future framework-internal surface',
+    ],
+  },
+  {
+    version: 'v1.0.2',
+    id: 'v1-0-2',
+    date: '2026-05-22',
+    type: 'patch',
+    headline: 'Stage-scroll hotfix',
+    highlights: [
+      'CSS grid + overflow fix: `min-height: 0` on `.stage` + `.stage-body`',
+      'Composer no longer dragged below viewport on long route content',
+    ],
+  },
+  {
+    version: 'v1.0.1',
+    id: 'v1-0-1',
+    date: '2026-05-22',
+    type: 'patch',
+    headline: 'Cockpit UX patch',
+    highlights: [
+      'Anchor composer (page never scrolls; only internal panes do)',
+      'Collapse sidenav',
+      'Recent group with localStorage persistence',
+    ],
+  },
+  {
+    version: 'v1.0.0',
+    id: 'v1-0-0',
+    date: '2026-05-22',
+    type: 'milestone',
+    headline: 'Stable declaration',
+    highlights: [
+      'Public stability commit — no code change',
+      'Public-surface stability for: the 8+1 hard rules, the spine NDJSON format, the 13 slash command names, the cockpit routes, the CLI surface, the marker discipline',
+    ],
+    note: '"From here forward, breaking these is a major version bump."',
+  },
+  {
+    version: 'v0.19.2',
+    id: 'v0-19-2',
+    date: '2026-05-21',
+    type: 'polish',
+    headline: 'UX polish',
+    highlights: [
+      'Slash output re-print pattern',
+      '6 dedicated cockpit routes — Cost, Advisors, Skill Injections, Model Routing, Test Status, Pipelines',
+    ],
+  },
+  {
+    version: 'v0.19.1',
+    id: 'v0-19-1',
+    date: '2026-05-21',
+    type: 'patch',
+    headline: 'Burn-in patch (11 fixes)',
+    highlights: [
+      'Slash command marker regression',
+      'Display-vs-summarize discipline',
+      '`MADDU_SESSION_ID` env honoring',
+      'Slice-stop positional summary',
+      'Port-in-use gate false-positive',
+      'Missing bridge REST endpoints',
+      'claude-code transcript import',
+      '`/maddu-suggest` (13th slash)',
+    ],
+  },
+  {
+    version: 'v0.19.0',
+    id: 'v0-19-0',
+    date: '2026-05-21',
+    type: 'feature',
+    headline: 'Completeness + hardening',
+    highlights: [
+      'Token ledger emission via worker wrappers',
+      'Advisor subprocess spawn',
+      'Skill auto-injection',
+      'Model routing hints',
+      'Stress harness (8 scenarios)',
+      'Upgrade matrix (4 source versions)',
+      '7 new doctor gates',
+      '**Rule #9 — the auto-trigger gauntlet — becomes permanent**',
+    ],
+    note: 'The release where rule #9 graduated from "candidate" to "permanent + enforced."',
+  },
+  {
+    version: 'v0.18.0',
+    id: 'v0-18-0',
+    date: '2026-05-21',
+    type: 'feature',
+    headline: 'OMC-inspired UX shell',
+    highlights: [
+      '12 slash commands as the operator on-ramp',
+      'Intent routing wired in MADDU.md / CLAUDE.md / AGENTS.md',
+      '`maddu suggest` engine',
+      'Multi-runtime agnostic surface',
+    ],
+    note: 'The release that made "zero learning curve" the design north star — operators stopped needing the verbose CLI.',
+  },
+  {
+    version: 'v0.17.1',
+    id: 'v0-17-1',
+    date: '2026-05-20',
+    type: 'milestone',
+    headline: 'Arc starting point',
+    highlights: [
+      '18 doctor gates PASS · baseline before the v1.0 push',
+      'Layout-refusal at 4/4 (invariant preserved through the entire arc that followed)',
+    ],
+    note: 'The reference point. Every release after this had to keep doctor green and layout-refusal at 4/4.',
+  },
+];
+
+const indexItems = RELEASES.map((r) => ({
+  n: r.version,
+  id: r.id,
+  tone:
+    r.type === 'milestone' ? 'brand' :
+    r.type === 'feature' ? 'accent' :
+    r.type === 'hardening' ? 'danger' :
+    r.type === 'polish' ? 'accent-2' :
+    'warn',
+  label: r.headline,
+}));
+
+function typeMeta(t: ReleaseType) {
+  switch (t) {
+    case 'milestone': return { tone: 'brand', label: 'milestone' };
+    case 'feature':   return { tone: 'accent', label: 'feature' };
+    case 'hardening': return { tone: 'danger', label: 'hardening' };
+    case 'polish':    return { tone: 'accent-2', label: 'polish' };
+    case 'patch':     return { tone: 'warn', label: 'patch' };
+  }
+}
+---
+
+<Layout title="Changelog" pathname="/changelog">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Changelog</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">v0.17.1 → v1.3.0</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">{RELEASES.length} releases · ~9 days</span>
+      </div>
+      <h1>Nineteen releases. <span class="dim-h1">One charter held.</span></h1>
+      <p class="lede">
+        The arc that took Máddu from a private 18-gate baseline to the public-surface stable v1.3.0. Every release kept the layout-refusal invariant at 4/4, took the doctor from 18 → 54 gates, and never broke a posted invariant. Color-coded by release type — milestones, features, hardening, polish, patches.
+      </p>
+
+      <dl class="cl-stats">
+        <div><dt>Releases</dt><dd>{RELEASES.length}</dd></div>
+        <div><dt>Doctor gates added</dt><dd>+36</dd></div>
+        <div><dt>Stress scenarios added</dt><dd>+12</dd></div>
+        <div><dt>Invariants broken</dt><dd>0</dd></div>
+      </dl>
+
+      <ul class="cl-legend">
+        <li><span class="cl-dot cl-dot--brand"></span> Milestone</li>
+        <li><span class="cl-dot cl-dot--accent"></span> Feature</li>
+        <li><span class="cl-dot cl-dot--danger"></span> Hardening</li>
+        <li><span class="cl-dot cl-dot--accent-2"></span> Polish</li>
+        <li><span class="cl-dot cl-dot--warn"></span> Patch</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container-wide">
+      <div class="cl-layout">
+        <div class="cl-releases">
+          {RELEASES.map((r) => {
+            const meta = typeMeta(r.type);
+            return (
+              <article class:list={['cl-release', `cl-release--${meta.tone}`]} id={r.id}>
+                <header class="cl-head">
+                  <div class="cl-head-row">
+                    <span class="cl-version">{r.version}</span>
+                    <span class:list={['cl-type', `cl-type--${meta.tone}`]}>{meta.label}</span>
+                    <span class="cl-date">{r.date}</span>
+                  </div>
+                  <h3 class="cl-headline">{r.headline}</h3>
+                </header>
+                <ul class="cl-highlights">
+                  {r.highlights.map((h) => <li set:html={h.replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}></li>)}
+                </ul>
+                {r.note && (
+                  <p class="cl-note">{r.note}</p>
+                )}
+              </article>
+            );
+          })}
+        </div>
+        <TocIndex
+          eyebrow={`Releases · ${RELEASES.length}`}
+          items={indexItems}
+        />
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <Callout tone="ok" title="What never moved" tag="charter discipline">
+        <p>
+          Every release across this arc kept the layout-refusal gate at 4/4. The 8+1 hard rules graduated from "architectural" to "doctor-enforced" without a single rule ever loosening. The spine format, the slash names, the cockpit routes, the CLI surface, the marker discipline — all stable since v1.0.0.
+        </p>
+        <p>
+          The lesson: invariants you can't change become invariants you don't have to argue about. Velocity comes from the freedom <em>around</em> them, not from negotiating <em>them</em>.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="§ · Continue"
+    title="Install — the deferred path, and what to read meanwhile."
+    hint="Coming soon when the repo flips public. Until then, six pages of substantive content to walk."
+    href="/install"
+    tone="warn"
+  />
+</Layout>
+
+<style>
+  .page-head { padding: var(--m-space-16) 0 var(--m-space-8); }
+  .lede { font-size: 17px; color: var(--m-fg-0); max-width: 70ch; }
+  .dim-h1 { color: var(--m-fg-3); font-weight: 400; }
+
+  .cl-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--m-space-5);
+    border-top: 1px solid var(--m-line-soft);
+    padding-top: var(--m-space-5);
+    margin: var(--m-space-6) 0 var(--m-space-5);
+    max-width: 720px;
+  }
+  .cl-stats div { display: flex; flex-direction: column; gap: 4px; }
+  .cl-stats dt {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+  }
+  .cl-stats dd {
+    margin: 0;
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+    font-size: 28px;
+    color: var(--m-accent);
+    line-height: 1;
+  }
+
+  /* Legend */
+  .cl-legend {
+    display: flex;
+    gap: var(--m-space-4);
+    flex-wrap: wrap;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+  }
+  .cl-legend li { display: flex; align-items: center; gap: 6px; }
+  .cl-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    border: 1px solid currentColor;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+  .cl-dot--brand    { color: var(--m-brand); }
+  .cl-dot--accent   { color: var(--m-accent); }
+  .cl-dot--danger   { color: var(--m-danger); }
+  .cl-dot--accent-2 { color: var(--m-accent-2); }
+  .cl-dot--warn     { color: var(--m-warn); }
+
+  /* Two-col layout with sticky TOC */
+  .cl-layout {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    gap: var(--m-space-6);
+    align-items: start;
+  }
+  @media (max-width: 920px) {
+    .cl-layout { grid-template-columns: 1fr; }
+    .cl-layout > :global(.toc) { display: none; }
+  }
+  .cl-releases { display: flex; flex-direction: column; gap: var(--m-space-4); min-width: 0; }
+
+  /* Release card */
+  .cl-release {
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-fg-4);
+    border-radius: var(--m-radius);
+    padding: var(--m-space-5) var(--m-space-6);
+    scroll-margin-top: 80px;
+  }
+  .cl-release--brand    { border-left-color: var(--m-brand); }
+  .cl-release--accent   { border-left-color: var(--m-accent); }
+  .cl-release--danger   { border-left-color: var(--m-danger); }
+  .cl-release--accent-2 { border-left-color: var(--m-accent-2); }
+  .cl-release--warn     { border-left-color: var(--m-warn); }
+
+  .cl-head { margin-bottom: var(--m-space-3); }
+  .cl-head-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--m-space-3);
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .cl-version {
+    font-family: var(--m-font-mono);
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--m-fg-0);
+  }
+  .cl-release--brand    .cl-version { color: var(--m-brand); }
+  .cl-release--accent   .cl-version { color: var(--m-accent); }
+  .cl-release--danger   .cl-version { color: var(--m-danger); }
+  .cl-release--accent-2 .cl-version { color: var(--m-accent-2); }
+  .cl-release--warn     .cl-version { color: var(--m-warn); }
+
+  .cl-type {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius-pill);
+    color: var(--m-fg-3);
+  }
+  .cl-type--brand    { color: var(--m-brand);    border-color: rgba(240, 78, 35, 0.4); }
+  .cl-type--accent   { color: var(--m-accent);   border-color: var(--m-accent-dim); }
+  .cl-type--danger   { color: var(--m-danger);   border-color: var(--m-danger-border); }
+  .cl-type--accent-2 { color: var(--m-accent-2); border-color: rgba(86, 184, 255, 0.4); }
+  .cl-type--warn     { color: var(--m-warn);     border-color: var(--m-warn-border); }
+
+  .cl-date {
+    margin-left: auto;
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    color: var(--m-fg-3);
+    letter-spacing: 0.04em;
+  }
+
+  .cl-headline {
+    margin: 0;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 20px;
+    color: var(--m-fg-0);
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+  }
+
+  .cl-highlights {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 6px;
+  }
+  .cl-highlights li {
+    position: relative;
+    padding-left: 22px;
+    color: var(--m-fg-1);
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+  .cl-highlights li::before {
+    content: '◦';
+    position: absolute;
+    left: 0;
+    color: var(--m-accent);
+    font-family: var(--m-font-mono);
+  }
+  .cl-release--brand    .cl-highlights li::before { color: var(--m-brand); }
+  .cl-release--danger   .cl-highlights li::before { color: var(--m-danger); }
+  .cl-release--accent-2 .cl-highlights li::before { color: var(--m-accent-2); }
+  .cl-release--warn     .cl-highlights li::before { color: var(--m-warn); }
+
+  .cl-note {
+    margin: var(--m-space-3) 0 0;
+    padding: var(--m-space-3) var(--m-space-4);
+    background: var(--m-bg-1);
+    border-left: 2px solid var(--m-fg-4);
+    border-radius: var(--m-radius-sm);
+    font-size: 13px;
+    color: var(--m-fg-2);
+    font-style: italic;
+    max-width: none;
+  }
+  .cl-release--brand    .cl-note { border-left-color: var(--m-brand); }
+  .cl-release--accent   .cl-note { border-left-color: var(--m-accent); }
+  .cl-release--danger   .cl-note { border-left-color: var(--m-danger); }
+  .cl-release--accent-2 .cl-note { border-left-color: var(--m-accent-2); }
+  .cl-release--warn     .cl-note { border-left-color: var(--m-warn); }
+</style>

@@ -1,0 +1,49 @@
+{
+  "name": "Máddu — The Source of local truth",
+  "short_name": "Máddu",
+  "description": "A local-first orchestration spine for AI agents. Files-only state, append-only event spine, no hosted backend.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "lang": "en",
+  "dir": "ltr",
+  "theme_color": "#050B17",
+  "background_color": "#050B17",
+  "categories": ["developer", "productivity", "utilities"],
+  "icons": [
+    { "src": "/brand-mark.svg",    "sizes": "any",     "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/favicon-32.png",    "sizes": "32x32",   "type": "image/png" },
+    { "src": "/favicon-128.png",   "sizes": "128x128", "type": "image/png" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Architecture",
+      "short_name": "Arch",
+      "description": "The 13 layers, color-coded",
+      "url": "/architecture",
+      "icons": [{ "src": "/brand-mark.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Threat model",
+      "short_name": "Threat",
+      "description": "7 structural defenses",
+      "url": "/threat-model",
+      "icons": [{ "src": "/brand-mark.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Changelog",
+      "short_name": "Changes",
+      "description": "Release history",
+      "url": "/changelog",
+      "icons": [{ "src": "/brand-mark.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Manifesto",
+      "short_name": "Why",
+      "description": "Why Máddu exists, in prose",
+      "url": "/manifesto",
+      "icons": [{ "src": "/brand-mark.svg", "sizes": "any" }]
+    }
+  ]
+}

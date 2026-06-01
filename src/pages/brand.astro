@@ -1,0 +1,379 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Callout from '../components/Callout.astro';
+
+// Brand tokens — kept in sync with src/styles/tokens.css. Hex values
+// declared here so they're literally readable on the page (not just
+// computed from CSS variables).
+const COLORS = [
+  { name: 'Brand · Burnt orange', hex: '#F04E23', role: 'Brand glyph only. Never chrome or interactive surface.' },
+  { name: 'Accent · Lime',         hex: '#D0FF00', role: 'Primary interactive · focus · selection · primary CTA.' },
+  { name: 'Accent-2 · Electric blue', hex: '#56B8FF', role: 'Secondary · halos · info · cockpit / observability surfaces.' },
+  { name: 'OK · Mint',             hex: '#61D394', role: 'Success · granted · doctor green.' },
+  { name: 'Warn · Sandy',          hex: '#F2BD5C', role: 'Warning · approval pending · governance medium.' },
+  { name: 'Danger · Pink-red',     hex: '#FF5E7A', role: 'Refusal · failure · destructive.' },
+];
+
+const SURFACES = [
+  { name: 'Navy canvas (bg-0)', hex: '#050B17', role: 'Visible stage in dark theme.' },
+  { name: 'Warm paper (bg-0 · light)', hex: '#F4F0E6', role: 'Visible stage in light theme.' },
+  { name: 'Ink (fg-0 · dark)', hex: '#E8E6E3', role: 'Cream on navy.' },
+  { name: 'Ink (fg-0 · light)', hex: '#0E1726', role: 'Deep navy on paper.' },
+];
+
+const TYPE = [
+  { name: 'IBM Plex Sans Condensed', weights: '400 · 500 · 600 · 700', role: 'Headings · display · uppercase labels · buttons.' },
+  { name: 'IBM Plex Sans',           weights: '400 · 500 · 600',       role: 'Body copy · long-form prose · UI text.' },
+  { name: 'IBM Plex Mono',           weights: '400 · 500 · 600',       role: 'Code · event types · metadata · kbd · numeric metrics.' },
+];
+
+const EVENT_TONES = [
+  { name: 'session',   hex: '#9FCBD8', role: 'Session lifecycle events' },
+  { name: 'lane',      hex: '#A8D4B8', role: 'Lane claim / release / mailbox' },
+  { name: 'framework', hex: '#C8A8D4', role: 'Slice · framework lifecycle · hindsight · memory' },
+  { name: 'approval',  hex: '#F2BD5C', role: 'Approval gate · slice-stop' },
+];
+---
+
+<Layout
+  title="Brand"
+  pathname="/brand"
+  description="Máddu brand assets and usage guide. Logo, color tokens, typography stack. For anyone writing about, integrating with, or extending Máddu."
+>
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Brand</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">assets · tokens · usage</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">three-layer boundary (Rule #7)</span>
+      </div>
+      <h1>The brand, named and downloadable.</h1>
+      <p class="lede">
+        For writeups, integrations, articles, slides. Everything below is yours to use under the same posture the framework keeps: <em>the brand-shell layer is Máddu's; app and content brands stay theirs</em> (that's Rule #7 of the charter). Don't mix the three.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── LOGO ─────────────────────────────────────────────────────── -->
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · Logo</span>
+        <h2>Mark, horizontal, and the rules they live by.</h2>
+        <p>The mark is the burnt-orange diamond; the horizontal is the diamond with the wordmark. Either reads as Máddu at every size.</p>
+      </header>
+
+      <div class="brand-logos">
+        <article class="brand-logo brand-logo--mark">
+          <div class="brand-logo-frame">
+            <img src="/brand-mark.svg" alt="Máddu brand mark" width="120" height="120" />
+          </div>
+          <header>
+            <h3>Mark</h3>
+            <span class="brand-tag">brand-mark.svg</span>
+          </header>
+          <p>Square diamond. Burnt-orange (#F04E23) with subtle glow. Use as favicon, app icon, nav glyph.</p>
+          <a class="btn" href="/brand-mark.svg" download>Download SVG</a>
+        </article>
+        <article class="brand-logo brand-logo--horizontal">
+          <div class="brand-logo-frame">
+            <img src="/brand-horizontal.svg" alt="Máddu horizontal logo" height="48" />
+          </div>
+          <header>
+            <h3>Horizontal</h3>
+            <span class="brand-tag">brand-horizontal.svg</span>
+          </header>
+          <p>Mark + wordmark on one line. Use as header, footer, byline, share preview.</p>
+          <a class="btn" href="/brand-horizontal.svg" download>Download SVG</a>
+        </article>
+      </div>
+
+      <Callout tone="warn" title="Usage rules" tag="don't mix layers">
+        <ul class="brand-rules">
+          <li><strong>The mark stays burnt orange.</strong> Don't recolor it to match your accent palette.</li>
+          <li><strong>The wordmark uses Plex Sans Condensed 700.</strong> Don't reset the typeface.</li>
+          <li><strong>Mark needs clear space</strong> equal to the diamond's height around it. No surface should crowd it.</li>
+          <li><strong>Three-layer boundary (Rule #7).</strong> Framework shell brand (Máddu) / app brand (your project) / content brand (whatever you ship) never mix. The cockpit's <code>tokens.css</code> is owned by Máddu and must not be referenced from app or content code.</li>
+        </ul>
+      </Callout>
+    </div>
+  </section>
+
+  <!-- ── COLOR TOKENS ──────────────────────────────────────────────── -->
+  <section class="section">
+    <div class="container-wide">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · Color tokens</span>
+        <h2>One palette · two themes · the same identity.</h2>
+        <p>The dark theme is the brand canon. Light is a warm-paper variant for reading mode — the accents darken for contrast but keep their identity.</p>
+      </header>
+
+      <h3 class="brand-h3">Accents + status</h3>
+      <div class="swatch-grid">
+        {COLORS.map((c) => (
+          <article class="swatch">
+            <div class="swatch-block" style={`background:${c.hex}`} role="img" aria-label={`${c.name} swatch, ${c.hex}`}></div>
+            <div class="swatch-body">
+              <h4>{c.name}</h4>
+              <code class="swatch-hex">{c.hex}</code>
+              <p>{c.role}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <h3 class="brand-h3">Surfaces + ink</h3>
+      <div class="swatch-grid swatch-grid--surfaces">
+        {SURFACES.map((c) => (
+          <article class="swatch">
+            <div class="swatch-block" style={`background:${c.hex}`}></div>
+            <div class="swatch-body">
+              <h4>{c.name}</h4>
+              <code class="swatch-hex">{c.hex}</code>
+              <p>{c.role}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <h3 class="brand-h3">Event-type semantic colors</h3>
+      <p class="brand-p">
+        The cockpit uses these for event-row classifications. Use them on tooling that mirrors Máddu semantics.
+      </p>
+      <div class="swatch-grid">
+        {EVENT_TONES.map((c) => (
+          <article class="swatch">
+            <div class="swatch-block" style={`background:${c.hex}`}></div>
+            <div class="swatch-body">
+              <h4>{c.name}</h4>
+              <code class="swatch-hex">{c.hex}</code>
+              <p>{c.role}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ── TYPOGRAPHY ───────────────────────────────────────────────── -->
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 03 · Typography</span>
+        <h2>IBM Plex everywhere. Three families. Strict roles.</h2>
+        <p>Self-host the woff2 weights. No font loading from third parties — that matches the no-third-party-network posture the framework keeps.</p>
+      </header>
+
+      <div class="type-stack">
+        {TYPE.map((t) => (
+          <article class="type-card">
+            <header>
+              <h3>{t.name}</h3>
+              <span class="brand-tag">{t.weights}</span>
+            </header>
+            <p>{t.role}</p>
+            <div class="type-sample" style={`font-family: '${t.name}'`}>
+              The orchestration spine outlives every agent that touches it.
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <Callout tone="accent" title="Self-host script" tag="one command">
+        <p>
+          The site uses <code>scripts/fetch-fonts.sh</code> to pull ten Plex woff2 weights from the @fontsource jsDelivr mirror. Run it once after install; from then on the site never touches a third-party CDN for fonts.
+        </p>
+        <pre><code>bash scripts/fetch-fonts.sh</code></pre>
+      </Callout>
+    </div>
+  </section>
+
+  <!-- ── NAME ─────────────────────────────────────────────────────── -->
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 04 · The name</span>
+        <h2>Máddu. <span class="dim">With the acute accent.</span></h2>
+      </header>
+      <ul class="dot-list">
+        <li><strong>Máddu</strong> · with the acute on the first <em>a</em>. Never <em>Maddu</em> in headings or first mention.</li>
+        <li>Plain ASCII <strong>maddu</strong> is fine for paths, CLIs, and identifiers (<code>npx maddu init</code>, <code>maddu.dev</code>, <code>.maddu/</code>).</li>
+        <li>Tagline · <em>"The Source of local truth."</em></li>
+        <li>One-liner · <em>"A local-first orchestration spine for AI agents."</em></li>
+      </ul>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .page-head { padding: var(--m-space-16) 0 var(--m-space-8); }
+  .lede { font-size: 17px; color: var(--m-fg-0); max-width: 64ch; }
+
+  .brand-h3 {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--m-accent);
+    margin: var(--m-space-8) 0 var(--m-space-4);
+  }
+  .brand-p { font-size: 13.5px; color: var(--m-fg-2); margin: 0 0 var(--m-space-4); }
+
+  /* Logo cards */
+  .brand-logos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--m-space-4);
+    margin-bottom: var(--m-space-6);
+  }
+  .brand-logo {
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-top: 2px solid var(--m-brand);
+    border-radius: var(--m-radius);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .brand-logo-frame {
+    padding: var(--m-space-10);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(circle at center, rgba(240, 78, 35, 0.08), transparent 60%),
+      var(--m-bg-1);
+    border-bottom: 1px solid var(--m-line-soft);
+  }
+  .brand-logo-frame img { display: block; }
+  .brand-logo header {
+    padding: var(--m-space-4) var(--m-space-5) 0;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--m-space-3);
+  }
+  .brand-logo h3 {
+    margin: 0;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 18px;
+    color: var(--m-fg-0);
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+  }
+  .brand-logo p {
+    margin: var(--m-space-2) var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+  }
+  .brand-logo .btn {
+    margin: 0 var(--m-space-5) var(--m-space-5);
+    align-self: flex-start;
+  }
+  .brand-tag {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--m-fg-3);
+    text-transform: uppercase;
+  }
+
+  .brand-rules { padding-left: 18px; }
+  .brand-rules li {
+    margin-bottom: 8px;
+    font-size: 13.5px;
+    color: var(--m-fg-1);
+  }
+  .brand-rules strong { color: var(--m-fg-0); }
+
+  /* Swatches */
+  .swatch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--m-space-3);
+    margin-bottom: var(--m-space-4);
+  }
+  .swatch {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+    overflow: hidden;
+  }
+  .swatch-block {
+    border-right: 1px solid var(--m-line);
+  }
+  .swatch-body { padding: var(--m-space-3) var(--m-space-4); }
+  .swatch-body h4 {
+    margin: 0 0 4px;
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--m-fg-0);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .swatch-hex {
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    color: var(--m-accent-2);
+    background: var(--m-bg-3);
+    border: 1px solid var(--m-line-soft);
+    padding: 1px 6px;
+    border-radius: 2px;
+  }
+  .swatch-body p {
+    margin: 6px 0 0;
+    font-size: 12.5px;
+    color: var(--m-fg-2);
+    line-height: 1.45;
+  }
+  .swatch-grid--surfaces .swatch-block { min-height: 80px; }
+
+  /* Typography */
+  .type-stack {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--m-space-3);
+    margin-bottom: var(--m-space-6);
+  }
+  .type-card {
+    padding: var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent);
+    border-radius: var(--m-radius);
+  }
+  .type-card header {
+    display: flex;
+    align-items: baseline;
+    gap: var(--m-space-3);
+    margin-bottom: 6px;
+  }
+  .type-card h3 {
+    margin: 0;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 17px;
+    color: var(--m-fg-0);
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+  }
+  .type-card p {
+    margin: 0 0 var(--m-space-3);
+    font-size: 13px;
+    color: var(--m-fg-2);
+  }
+  .type-sample {
+    font-size: 22px;
+    color: var(--m-fg-0);
+    line-height: 1.3;
+    padding-top: var(--m-space-3);
+    border-top: 1px solid var(--m-line-soft);
+  }
+</style>

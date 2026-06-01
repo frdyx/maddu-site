@@ -1,0 +1,137 @@
+---
+// Annotated.astro — three-column tuple block:
+//
+//   ACTION              EFFECT                 PROVENANCE
+//   maddu lane claim    no two agents          LANE_CLAIMED
+//                       hold a lane            event on spine
+//
+// Replaces dense paragraphs where "if you do X, the system does Y, and Z is
+// the audit signature." Color-coded by column intent: action = accent,
+// effect = body ink, provenance = mono blue/event-type.
+export interface Row {
+  action: string;
+  effect: string;
+  provenance: string;
+  /** Optional tone for the provenance chip */
+  provTone?: 'framework' | 'session' | 'lane' | 'approval' | 'accent' | 'accent-2' | 'warn' | 'danger' | 'ok';
+}
+export interface Props {
+  rows: Row[];
+  /** Optional column headings — default Action / Effect / Provenance */
+  columns?: [string, string, string];
+}
+
+const { rows, columns = ['Action', 'Effect', 'Provenance'] } = Astro.props;
+---
+
+<div class="annot">
+  <div class="annot-head">
+    <span class="annot-h">{columns[0]}</span>
+    <span class="annot-h">{columns[1]}</span>
+    <span class="annot-h annot-h-right">{columns[2]}</span>
+  </div>
+  {rows.map((r) => (
+    <div class="annot-row">
+      <div class="annot-action"><code>{r.action}</code></div>
+      <div class="annot-effect">{r.effect}</div>
+      <div class:list={['annot-prov', `annot-prov--${r.provTone || 'accent-2'}`]}>
+        <span class="annot-prov-glyph" aria-hidden="true">◆</span>
+        <code>{r.provenance}</code>
+      </div>
+    </div>
+  ))}
+</div>
+
+<style>
+  .annot {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(220px, 2fr) minmax(180px, 1.2fr);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+    overflow: hidden;
+  }
+  .annot-head {
+    display: contents;
+  }
+  .annot-h {
+    padding: 8px 14px;
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+    background: var(--m-bg-1);
+    border-bottom: 1px solid var(--m-line);
+  }
+  .annot-h-right { text-align: right; }
+
+  .annot-row {
+    display: contents;
+  }
+  .annot-row > * {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--m-line-soft);
+    font-size: 13px;
+    align-self: center;
+  }
+  .annot-row:last-child > * { border-bottom: 0; }
+  .annot-row:hover > * { background: var(--m-bg-3); }
+
+  .annot-action code {
+    font-family: var(--m-font-mono);
+    font-size: 12px;
+    color: var(--m-accent);
+    background: transparent;
+    border: 0;
+    padding: 0;
+  }
+  .annot-effect { color: var(--m-fg-1); line-height: 1.5; }
+  .annot-prov {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    color: var(--m-fg-3);
+  }
+  .annot-prov code {
+    font-family: var(--m-font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    background: var(--m-bg-3);
+    border: 1px solid var(--m-line-soft);
+    padding: 2px 8px;
+    border-radius: var(--m-radius-sm);
+  }
+  .annot-prov-glyph { font-size: 8px; }
+
+  .annot-prov--framework code { color: var(--m-event-framework); border-color: rgba(200, 168, 212, 0.4); }
+  .annot-prov--session   code { color: var(--m-event-session);   border-color: rgba(159, 203, 216, 0.4); }
+  .annot-prov--lane      code { color: var(--m-event-lane);      border-color: rgba(168, 212, 184, 0.4); }
+  .annot-prov--approval  code { color: var(--m-event-approval);  border-color: var(--m-warn-border); }
+  .annot-prov--accent    code { color: var(--m-accent);          border-color: var(--m-accent-dim); }
+  .annot-prov--accent-2  code { color: var(--m-accent-2);        border-color: rgba(86, 184, 255, 0.4); }
+  .annot-prov--warn      code { color: var(--m-warn);            border-color: var(--m-warn-border); }
+  .annot-prov--danger    code { color: var(--m-danger);          border-color: var(--m-danger-border); }
+  .annot-prov--ok        code { color: var(--m-ok);              border-color: var(--m-ok-border); }
+
+  .annot-prov--framework .annot-prov-glyph { color: var(--m-event-framework); }
+  .annot-prov--session   .annot-prov-glyph { color: var(--m-event-session); }
+  .annot-prov--lane      .annot-prov-glyph { color: var(--m-event-lane); }
+  .annot-prov--approval  .annot-prov-glyph { color: var(--m-event-approval); }
+  .annot-prov--accent    .annot-prov-glyph { color: var(--m-accent); }
+  .annot-prov--accent-2  .annot-prov-glyph { color: var(--m-accent-2); }
+  .annot-prov--warn      .annot-prov-glyph { color: var(--m-warn); }
+  .annot-prov--danger    .annot-prov-glyph { color: var(--m-danger); }
+  .annot-prov--ok        .annot-prov-glyph { color: var(--m-ok); }
+
+  @media (max-width: 760px) {
+    .annot { grid-template-columns: 1fr; }
+    .annot-head { display: none; }
+    .annot-row > * { border-bottom: 0; padding: 4px 14px; }
+    .annot-row > *:first-child { padding-top: 12px; }
+    .annot-row > *:last-child { padding-bottom: 12px; border-bottom: 1px solid var(--m-line-soft); }
+    .annot-row:last-child > *:last-child { border-bottom: 0; }
+    .annot-prov { justify-content: flex-start; }
+  }
+</style>

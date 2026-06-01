@@ -1,0 +1,12 @@
+# Máddu — local-first orchestration spine for AI agents.
+# Indexing welcome on every page. No trap routes, no hidden auth gates.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://maddu.dev/sitemap.xml
+
+# Feeds for discovery — also linked from every page's <head>.
+# Atom: https://maddu.dev/atom.xml
+# JSON: https://maddu.dev/feed.json
+# API:  https://maddu.dev/api/changelog.json

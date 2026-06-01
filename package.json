@@ -1,0 +1,23 @@
+{
+  "name": "maddu-site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Landing site for Máddu — the local-first orchestration spine for AI agents.",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "node scripts/gen-og.mjs && astro build && node scripts/strip-og-sources.mjs && node scripts/extract-headings.mjs",
+    "preview": "astro preview",
+    "og": "node scripts/gen-og.mjs",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "astro": "^5.0.0",
+    "mermaid": "^11.4.0"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "sharp": "^0.34.5",
+    "ws": "^8.21.0"
+  }
+}

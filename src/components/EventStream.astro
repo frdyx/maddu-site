@@ -1,0 +1,223 @@
+---
+// EventStream.astro — fake NDJSON spine viewer, styled like the cockpit's
+// live event row. Sells the "see the spine" idea visually. Color-coded by
+// event-type family (same palette as the rest of the site).
+//
+// Default sample is a fictional but plausible "ship a feature" slice trace.
+// Pass `entries` to customize.
+export interface Entry {
+  time: string;
+  type: string;
+  tone:
+    | 'framework' | 'session' | 'lane' | 'approval'
+    | 'accent' | 'accent2' | 'ok' | 'warn' | 'danger';
+  payload: string;
+  actor?: string;
+}
+export interface Props {
+  entries?: Entry[];
+  /** Optional file path label in the header */
+  source?: string;
+  /** Optional title */
+  title?: string;
+  /** Optional eyebrow on top */
+  eyebrow?: string;
+}
+
+const defaultEntries: Entry[] = [
+  { time: '14:02:18.012', type: 'BRIEF_RENDERED',           tone: 'framework', payload: 'turn=abc123 · cycle=12',                    actor: 'claude-code' },
+  { time: '14:02:18.044', type: 'SESSION_REGISTERED',       tone: 'session',   payload: 'role=implementer · lane=cockpit-shell',     actor: 'claude-code' },
+  { time: '14:02:18.061', type: 'LANE_CLAIMED',             tone: 'lane',      payload: 'lane=cockpit-shell · focus="entity drawer"', actor: 'claude-code' },
+  { time: '14:02:18.073', type: 'SLICE_STARTED',            tone: 'framework', payload: 'slice=ship-drawer-step-3',                  actor: 'claude-code' },
+  { time: '14:02:18.182', type: 'APPROVAL_REQUESTED',       tone: 'approval',  payload: 'tool=git_commit · tier=mutating',           actor: 'gauntlet' },
+  { time: '14:02:31.404', type: 'APPROVAL_GRANTED',         tone: 'ok',        payload: 'by=operator · cooldown=respected',          actor: 'operator' },
+  { time: '14:02:31.418', type: 'TRIGGER_FIRED',            tone: 'accent',    payload: 'name=git.commit · triggered_by=approval',   actor: 'gauntlet' },
+  { time: '14:02:31.660', type: 'TOKEN_USAGE_REPORTED',     tone: 'session',   payload: 'in=12440 · out=3128 · cache_hit=0.78',      actor: 'worker-1' },
+  { time: '14:02:31.701', type: 'SECRET_SCAN_BLOCKED',      tone: 'danger',    payload: 'pattern=anthropic_key · target=argv[2]',    actor: 'worker-1' },
+  { time: '14:02:31.844', type: 'REVIEW_RAN',               tone: 'ok',        payload: 'gates=58 pass · 0 warn · 0 fail',           actor: 'doctor' },
+  { time: '14:02:31.902', type: 'SLICE_STOPPED',            tone: 'approval',  payload: 'targets=cockpit.css,cockpit.js · gates=7',  actor: 'claude-code' },
+  { time: '14:02:31.918', type: 'LANE_RELEASED',            tone: 'lane',      payload: 'lane=cockpit-shell',                         actor: 'claude-code' },
+];
+
+const {
+  entries = defaultEntries,
+  source = '.maddu/events/2026-05-30.ndjson',
+  title = 'spine · live',
+  eyebrow = 'What the spine looks like',
+} = Astro.props;
+---
+
+<figure class="es">
+  {eyebrow && <span class="es-eyebrow">{eyebrow}</span>}
+  <div class="es-frame">
+    <header class="es-head">
+      <span class="es-dot es-dot--danger"></span>
+      <span class="es-dot es-dot--warn"></span>
+      <span class="es-dot es-dot--ok"></span>
+      <span class="es-title">{title}</span>
+      <span class="es-source">{source}</span>
+      <span class="es-live">
+        <span class="es-live-dot" aria-hidden="true"></span>
+        <span>LIVE</span>
+      </span>
+    </header>
+    <ol class="es-body">
+      {entries.map((e) => (
+        <li class:list={['es-row', `es-row--${e.tone}`]}>
+          <span class="es-time">{e.time}</span>
+          <span class="es-type">{e.type}</span>
+          <span class="es-payload">{e.payload}</span>
+          {e.actor && <span class="es-actor">{e.actor}</span>}
+        </li>
+      ))}
+    </ol>
+    <footer class="es-foot">
+      <span class="es-foot-glyph">◆</span>
+      <span>append-only · verifiable · never auto-repaired</span>
+    </footer>
+  </div>
+</figure>
+
+<style>
+  .es {
+    margin: var(--m-space-8) 0;
+    padding: 0;
+  }
+  .es-eyebrow {
+    display: block;
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--m-accent-2);
+    margin-bottom: var(--m-space-3);
+  }
+  .es-frame {
+    background: var(--m-bg-1);
+    border: 1px solid var(--m-line);
+    border-top: 1px solid var(--m-accent-2);
+    border-radius: var(--m-radius);
+    overflow: hidden;
+    box-shadow: var(--m-shadow-md);
+  }
+  .es-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--m-line);
+    background: var(--m-bg-2);
+  }
+  .es-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .es-dot--danger { background: var(--m-danger); }
+  .es-dot--warn   { background: var(--m-warn); }
+  .es-dot--ok     { background: var(--m-ok); }
+  .es-title {
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--m-fg-0);
+    margin-left: 8px;
+  }
+  .es-source {
+    font-family: var(--m-font-mono);
+    font-size: 10.5px;
+    color: var(--m-fg-3);
+    margin-left: auto;
+  }
+  .es-live {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--m-font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.16em;
+    color: var(--m-ok);
+  }
+  .es-live-dot {
+    width: 6px; height: 6px;
+    background: var(--m-ok);
+    border-radius: 50%;
+    box-shadow: 0 0 0 0 var(--m-ok);
+    animation: es-pulse 1.8s ease-out infinite;
+  }
+  @keyframes es-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(97, 211, 148, 0.6); }
+    70%  { box-shadow: 0 0 0 6px rgba(97, 211, 148, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(97, 211, 148, 0); }
+  }
+
+  .es-body {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 360px;
+    overflow-y: auto;
+    background: var(--m-bg-0);
+  }
+  .es-row {
+    display: grid;
+    grid-template-columns: 110px 200px 1fr 110px;
+    gap: 14px;
+    align-items: baseline;
+    padding: 5px 14px;
+    border-bottom: 1px solid var(--m-line-soft);
+    font-family: var(--m-font-mono);
+    font-size: 11.5px;
+    color: var(--m-fg-2);
+    transition: background 120ms;
+  }
+  .es-row:hover { background: var(--m-bg-2); }
+  .es-time { color: var(--m-fg-4); }
+  .es-type {
+    color: var(--m-fg-0);
+    letter-spacing: 0.04em;
+    font-weight: 500;
+  }
+  .es-payload { color: var(--m-fg-1); }
+  .es-actor {
+    color: var(--m-fg-4);
+    text-align: right;
+    font-size: 10.5px;
+  }
+
+  /* Event-type tones — only the type cell is re-tinted */
+  .es-row--framework .es-type { color: var(--m-event-framework); }
+  .es-row--session   .es-type { color: var(--m-event-session); }
+  .es-row--lane      .es-type { color: var(--m-event-lane); }
+  .es-row--approval  .es-type { color: var(--m-event-approval); }
+  .es-row--accent    .es-type { color: var(--m-accent); }
+  .es-row--accent2   .es-type { color: var(--m-accent-2); }
+  .es-row--ok        .es-type { color: var(--m-ok); }
+  .es-row--warn      .es-type { color: var(--m-warn); }
+  .es-row--danger    .es-type { color: var(--m-danger); font-weight: 600; }
+
+  .es-foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-top: 1px solid var(--m-line);
+    background: var(--m-bg-2);
+    font-family: var(--m-font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: var(--m-fg-3);
+  }
+  .es-foot-glyph { color: var(--m-accent-2); font-size: 9px; }
+
+  @media (max-width: 720px) {
+    .es-row { grid-template-columns: 80px 1fr; row-gap: 4px; }
+    .es-time { grid-column: 1; }
+    .es-type { grid-column: 2; }
+    .es-payload { grid-column: 1 / -1; padding-left: 96px; }
+    .es-actor { display: none; }
+    .es-source { display: none; }
+  }
+</style>

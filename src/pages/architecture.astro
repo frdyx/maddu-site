@@ -1,0 +1,520 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Mermaid from '../components/Mermaid.astro';
+import Workflow from '../components/Workflow.astro';
+import Callout from '../components/Callout.astro';
+import Legend from '../components/Legend.astro';
+import LayerIndex from '../components/LayerIndex.astro';
+import PageNext from '../components/PageNext.astro';
+
+// Each layer maps to one of the brand-token "purpose" tones so the page
+// reads as a color-coded ontology, not a flat list. Tones reused across
+// the framework's event-type palette.
+type Tone = 'invariant' | 'operator' | 'runtime' | 'execution' | 'substrate' | 'lane' | 'gauntlet' | 'worker' | 'spine' | 'projection' | 'security' | 'quality' | 'memory' | 'cockpit';
+
+interface Layer {
+  n: string;
+  id: string;
+  tone: Tone;
+  title: string;
+  short: string;
+  blurb: string;
+  chips: string[];
+}
+
+const layers: Layer[] = [
+  {
+    n: '00',
+    id: 'invariants',
+    tone: 'invariant',
+    title: 'Invariants — the identity',
+    short: 'Invariants',
+    blurb: 'The 8+1 hard rules. Files-only state, append-only spine, no hosted backend, no broad new deps, no provider SDKs in app code, no token export, brand boundary, lane ownership, auto-trigger gauntlet. Not policy on top of features — the things every feature has to be compatible with to exist.',
+    chips: ['8+1 rules', 'doctor-enforced', 'every install + upgrade'],
+  },
+  {
+    n: '01',
+    id: 'operator',
+    tone: 'operator',
+    title: 'Operator surface — zero learning curve',
+    short: 'Operator',
+    blurb: 'Operator types a slash command or a sentence. Verbose CLI stays for scripting. No one memorizes `maddu cmd subcmd --flag value`. The bar is OMC: a brand-new user ships a slice without ever opening the docs.',
+    chips: ['/slash', 'natural language', '13 on-ramps'],
+  },
+  {
+    n: '02',
+    id: 'runtime',
+    tone: 'runtime',
+    title: 'Agent runtime — runtime-agnostic',
+    short: 'Runtime',
+    blurb: 'Any agent CLI plugs in. The coordinator that fans work across phases is a Máddu primitive, not a Claude Code or Codex feature. That\'s what makes orchestration survive vendor pivots.',
+    chips: ['claude-code', 'codex', 'gemini', '+future'],
+  },
+  {
+    n: '03',
+    id: 'execution',
+    tone: 'execution',
+    title: 'Execution topology',
+    short: 'Execution',
+    blurb: 'Three default pipelines, the coordinator primitive, the team verb, and ad-hoc /maddu-autopilot for one-offs. Rule of thumb: prefer a pipeline. Ad-hoc is reserved for genuinely one-off changes.',
+    chips: ['pipelines × 3', 'coordinator', 'team', 'autopilot'],
+  },
+  {
+    n: '04',
+    id: 'substrate',
+    tone: 'substrate',
+    title: 'Substrate loop — the one mental model',
+    short: 'Substrate',
+    blurb: 'Register, claim, slice, stop, release, close. Every transition is one event. Pipelines, coordinator, autopilot — all reduce to this loop at higher altitudes.',
+    chips: ['6 transitions', '1 event each', 'replay deterministic'],
+  },
+  {
+    n: '05',
+    id: 'lanes',
+    tone: 'lane',
+    title: 'Lanes — concurrency without locks',
+    short: 'Lanes',
+    blurb: 'Claim a lane before editing its file area. No two agents hold the same lane. Cross-lane work goes through a mailbox NDJSON, never shared mutation. Force-claims leave a contested-claim audit. Rule #8 made operable.',
+    chips: ['rule #8', 'mailbox bus', 'force-claim audit'],
+  },
+  {
+    n: '06',
+    id: 'gauntlet',
+    tone: 'gauntlet',
+    title: 'The gauntlet — rule #9 made operable',
+    short: 'Gauntlet',
+    blurb: 'Read-only actions pass through (still logged). State-mutating actions must be allowlisted, must respect cooldowns, must satisfy the governance tier, and must emit a TRIGGER_FIRED event with provenance. The brake on confidently-wrong propagation.',
+    chips: ['rule #9', 'allowlist + cooldown', 'TRIGGER_FIRED'],
+  },
+  {
+    n: '07',
+    id: 'workers',
+    tone: 'worker',
+    title: 'Worker isolation — provider calls live here',
+    short: 'Workers',
+    blurb: 'Subprocess workers spawn per slice with a default-deny env allowlist. Creds injected at spawn, never written to the spine. Tool argv passes a secret scanner before logging. Token usage emitted as events. The framework itself never imports a provider SDK.',
+    chips: ['env allowlist', 'secret scan', 'creds at spawn'],
+  },
+  {
+    n: '08',
+    id: 'spine',
+    tone: 'spine',
+    title: 'The spine — single source of truth',
+    short: 'Spine',
+    blurb: 'Append-only NDJSON under .maddu/events/. ~30 event types covering session lifecycle, lane operations, slices, approvals, triggers, token usage, trust audits, MCP provenance, secret-scan blocks, governance changes, audit reports. Verified, never auto-repaired.',
+    chips: ['NDJSON', '~30 event types', 'no auto-repair'],
+  },
+  {
+    n: '09',
+    id: 'projections',
+    tone: 'projection',
+    title: 'Projections — rebuildable, never authoritative',
+    short: 'Projections',
+    blurb: 'Plans, kanban, receipts, cost, skills, trust ledger, governance state. All JSON projections under .maddu/state/. All rebuildable from the spine, none authoritative. Determinism enforced by gates.',
+    chips: ['plans', 'kanban', 'receipts', 'cost', 'skills'],
+  },
+  {
+    n: '10',
+    id: 'security',
+    tone: 'security',
+    title: 'Security & supply chain — structural, not advisory',
+    short: 'Security',
+    blurb: 'maddu trust pins dependencies with SHA256, MCP servers come from an allowlisted gallery, skill imports require the --trust flag, sources and approvals gate provenance, the threat model doc is the operator\'s security manual.',
+    chips: ['SHA256 pinning', 'MCP allowlist', 'threat model'],
+  },
+  {
+    n: '11',
+    id: 'quality',
+    tone: 'quality',
+    title: 'Quality & invariant enforcement',
+    short: 'Quality',
+    blurb: '54 doctor gates on every install and upgrade. Charter-drift audit. 12-scenario stress harness. Four-version upgrade matrix. Layout-refusal at every release boundary. Review, test, lint, format at slice level. Enforcement, not aspiration.',
+    chips: ['54 gates', '12 stress scenarios', '4 upgrade sources'],
+  },
+  {
+    n: '12',
+    id: 'memory',
+    tone: 'memory',
+    title: 'Memory & accounting — work outlives the agent',
+    short: 'Memory',
+    blurb: 'Hindsight skills auto-curate from slice-stops (threshold-gated, with cooldowns). Receipt log accounts for spend. Operator memory persists decisions and their rationale. Replay determinism means past state is reconstructible.',
+    chips: ['hindsight skills', 'receipt log', 'replay-derivable'],
+  },
+  {
+    n: '13',
+    id: 'cockpit',
+    tone: 'cockpit',
+    title: 'Cockpit — observe & replay, never command',
+    short: 'Cockpit',
+    blurb: 'Static local page. Any browser. Long-poll, no websocket, no cloud. 38+ routes grouped by intent: Decide, Operate, Verify, Connect, Reference. Entity drawer primitive for click-through detail.',
+    chips: ['static page', '38+ routes', 'observe-only'],
+  },
+];
+
+const indexItems = layers.map((l) => ({
+  n: l.n,
+  id: l.id,
+  tone: l.tone,
+  label: l.short,
+}));
+---
+
+<Layout title="Architecture" pathname="/architecture">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Architecture</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">ontology, not flow chart</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">14 layers</span>
+      </div>
+      <h1>Thirteen layers. <span class="dim-h1">One charter.</span></h1>
+      <p class="lede">
+        Máddu's architecture isn't a flow chart, it's an ontology: every feature is namespaced under a purpose, every purpose answers to an invariant, every invariant is doctor-enforced on every install and upgrade.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── FULL ONTOLOGY DIAGRAM ───────────────────────────────────── -->
+  <section class="section">
+    <div class="container-wide">
+      <Workflow
+        eyebrow="The whole map"
+        title="Operator → runtime → execution → substrate → lanes → gauntlet → worker → spine → projections → cockpit."
+        subtitle="Read top-down for the causal stack; the cross-cutting layers (invariants, security, quality, memory) bind across every column."
+        meta="14 layers · 1 charter"
+        tone="accent-2"
+      >
+        <Mermaid
+          caption="The full Máddu ontology · color-coded by purpose"
+          aside="invariants → operator → spine → cockpit"
+          minHeight="600px"
+          code={`
+flowchart TB
+    subgraph INV["LAYER 0 · INVARIANTS — 8+1 hard rules, doctor-enforced"]
+        direction LR
+        R1["#1 Files-only state"]:::invariant
+        R2["#2 Append-only spine"]:::invariant
+        R3["#3 No hosted backends"]:::invariant
+        R4["#4 No broad new deps"]:::invariant
+        R5["#5 No provider SDKs"]:::invariant
+        R6["#6 No token export"]:::invariant
+        R7["#7 Brand boundary"]:::invariant
+        R8["#8 Lane ownership"]:::invariant
+        R9["#9 Auto-trigger gauntlet"]:::invariant
+    end
+
+    subgraph OP["LAYER 1 · OPERATOR — zero learning curve"]
+        SL["/slash + NL"]:::accent
+        CLI["verbose CLI"]:::accent
+    end
+
+    subgraph RT["LAYER 2 · RUNTIME — agnostic"]
+        AGENT["any agent CLI"]:::session
+        ROUTE["intent routing"]:::session
+    end
+
+    subgraph EXEC["LAYER 3 · EXECUTION"]
+        PIPES["pipelines × 3"]:::accent
+        COORDP["coordinator"]:::accent
+    end
+
+    subgraph LOOP["LAYER 4 · SUBSTRATE LOOP"]
+        L["register · claim · slice · stop · release · close"]:::framework
+    end
+
+    subgraph LANES["LAYER 5 · LANES (Rule #8)"]
+        L1["Lane A"]:::lane
+        L2["Lane B"]:::lane
+        MBOX["mailbox"]:::lane
+        L1 <--> MBOX
+        L2 <--> MBOX
+    end
+
+    subgraph GAUNT["LAYER 6 · GAUNTLET (Rule #9)"]
+        G1{tier?}:::gate
+        G2{allowlist?}:::gate
+        G3{cooldown?}:::gate
+        G4{governance tier}:::gate
+        GFIRE["TRIGGER_FIRED + triggered_by"]:::approval
+        G1 -->|mutating| G2 --> G3 --> G4 --> GFIRE
+    end
+
+    subgraph WORK["LAYER 7 · WORKER ISOLATION"]
+        W["subprocess worker"]:::worker
+        WENV["env allowlist · default-deny"]:::danger
+        WSCAN["secret-scan argv"]:::danger
+    end
+
+    subgraph SPINE["LAYER 8 · THE SPINE"]
+        EV[("NDJSON · ~30 event types")]:::spine
+        VFY["spine verify · no auto-repair"]:::accent2
+    end
+
+    subgraph PROJ["LAYER 9 · PROJECTIONS"]
+        P["plans · kanban · receipts · cost · skills · trust · governance"]:::lane
+    end
+
+    subgraph SEC["LAYER 10 · SECURITY"]
+        T1["maddu trust · SHA256"]:::danger
+        T2["MCP gallery"]:::danger
+        T3["governance tiers"]:::warn
+    end
+
+    subgraph QA["LAYER 11 · QUALITY"]
+        DOC["doctor · 54 gates"]:::ok
+        AUDIT["audit · charter-drift"]:::ok
+    end
+
+    subgraph MEM["LAYER 12 · MEMORY"]
+        H1["hindsight skills"]:::framework
+        H2["receipt log · cost"]:::framework
+    end
+
+    subgraph COCK["LAYER 13 · COCKPIT"]
+        UI["static page · observe + replay"]:::accent2
+    end
+
+    OP --> RT
+    RT --> EXEC
+    EXEC --> LOOP
+    LOOP --> LANES
+    LANES --> GAUNT
+    GAUNT --> WORK
+    WORK --> SPINE
+    SPINE --> PROJ
+    PROJ --> COCK
+    SEC -. governs .-> GAUNT
+    SEC -. pins .-> WORK
+    SPINE --> MEM
+    MEM -. informs .-> RT
+    INV -. enforced by .-> QA
+    QA -. audits .-> SPINE
+    QA -. audits .-> GAUNT
+
+    %% Subgraph background tints — color-band the ontology by purpose
+    style INV   fill:#F04E230D,stroke:#F04E2366,color:#F04E23
+    style OP    fill:#D0FF000A,stroke:#D0FF0066,color:#D0FF00
+    style RT    fill:#9FCBD80F,stroke:#9FCBD866,color:#9FCBD8
+    style EXEC  fill:#D0FF000A,stroke:#D0FF0066,color:#D0FF00
+    style LOOP  fill:#C8A8D40F,stroke:#C8A8D466,color:#C8A8D4
+    style LANES fill:#A8D4B80F,stroke:#A8D4B866,color:#A8D4B8
+    style GAUNT fill:#F2BD5C0F,stroke:#F2BD5C66,color:#F2BD5C
+    style WORK  fill:#FF5E7A0F,stroke:#FF5E7A66,color:#FF5E7A
+    style SPINE fill:#56B8FF14,stroke:#56B8FF80,color:#56B8FF
+    style PROJ  fill:#A8D4B80F,stroke:#A8D4B866,color:#A8D4B8
+    style SEC   fill:#FF5E7A0F,stroke:#FF5E7A66,color:#FF5E7A
+    style QA    fill:#61D3940F,stroke:#61D39466,color:#61D394
+    style MEM   fill:#C8A8D40F,stroke:#C8A8D466,color:#C8A8D4
+    style COCK  fill:#56B8FF14,stroke:#56B8FF80,color:#56B8FF
+`}
+        />
+        <Fragment slot="outcome">
+          Vertical = causal flow. Side-channels (security, quality, memory) bind cross-layer.
+        </Fragment>
+      </Workflow>
+      <Legend
+        label="Color key"
+        items={[
+          { tone: 'invariant', label: 'invariants · the 8+1' },
+          { tone: 'accent',    label: 'operator + execution' },
+          { tone: 'session',   label: 'runtime + agents' },
+          { tone: 'framework', label: 'substrate + memory' },
+          { tone: 'lane',      label: 'lanes + projections' },
+          { tone: 'gate',      label: 'gauntlet · gates' },
+          { tone: 'worker',    label: 'workers + security' },
+          { tone: 'spine',     label: 'the spine' },
+          { tone: 'ok',        label: 'quality · doctor + audit' },
+          { tone: 'accent2',   label: 'cockpit · observe + replay' },
+        ]}
+      />
+    </div>
+  </section>
+
+  <!-- ── LAYERS ENUMERATED ───────────────────────────────────────── -->
+  <section class="section">
+    <div class="container-wide">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · The layers</span>
+        <h2>One at a time, color-coded by purpose.</h2>
+        <p>Scroll-spy in the right rail tracks where you are. Click a chip to jump.</p>
+      </header>
+
+      <div class="layers-grid">
+        <div class="layer-stack">
+          {layers.map((l) => (
+            <article class:list={['layer', `layer--${l.tone}`]} id={l.id}>
+              <div class="layer-rail">
+                <span class="layer-n">{l.n}</span>
+              </div>
+              <div class="layer-body">
+                <h3 class="layer-title">{l.title}</h3>
+                <p class="layer-blurb">{l.blurb}</p>
+                <ul class="layer-chips">
+                  {l.chips.map((c) => <li><code>{c}</code></li>)}
+                </ul>
+              </div>
+            </article>
+          ))}
+        </div>
+        <LayerIndex eyebrow="Layers · 14" items={indexItems} />
+      </div>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="§ 04 · Continue"
+    title="Security — the structural defenses, not the advisory ones."
+    hint="Worker isolation, env allowlist, secret scan, dependency pinning, MCP provenance, OAuth device-bound tokens, the threat model."
+    href="/security"
+    tone="danger"
+  />
+
+  <!-- ── DELIBERATELY ABSENT ─────────────────────────────────────── -->
+  <section class="section">
+    <div class="container">
+      <Callout tone="danger" title="The posture" tag="deliberate, not missing">
+        <p>
+          The layers above describe what Máddu <em>is</em>. The posture describes what it refuses to be, and that's the part that earns the trust the rest depends on.
+        </p>
+        <p>
+          No scheduler thread (the spine is the WAL). No worker queue (lane claims are the lock). No mutex layer. No websocket (long-poll is enough). No SaaS, no telemetry, no relay. No provider SDKs in app code. No auto-repair, ever. No cross-machine token sync. <strong>No Hermes pattern</strong> — a hosted webhook holding many users' tokens is the exact thing that won't be built.
+        </p>
+      </Callout>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .page-head { padding: var(--m-space-16) 0 var(--m-space-8); }
+  .lede { font-size: 17px; color: var(--m-fg-0); max-width: 64ch; }
+  .dim-h1 { color: var(--m-fg-3); font-weight: 400; }
+
+  .layers-grid {
+    display: grid;
+    grid-template-columns: 1fr 240px;
+    gap: var(--m-space-6);
+    align-items: start;
+  }
+  @media (max-width: 920px) {
+    .layers-grid { grid-template-columns: 1fr; }
+    .layers-grid > :global(.lx) { display: none; }
+  }
+
+  .layer-stack {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--m-space-3);
+    min-width: 0;
+    scroll-margin-top: 80px;
+  }
+  .layer { scroll-margin-top: 80px; }
+  .layer {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 3px solid var(--m-fg-4);
+    border-radius: var(--m-radius);
+    overflow: hidden;
+    transition: border-color 120ms, background 120ms;
+  }
+  .layer:hover { background: var(--m-bg-3); }
+
+  .layer-rail {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: var(--m-space-5);
+    background: var(--m-bg-1);
+    border-right: 1px solid var(--m-line-soft);
+  }
+  .layer-n {
+    font-family: var(--m-font-cond);
+    font-weight: 700;
+    font-size: 28px;
+    color: var(--m-fg-3);
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .layer-body { padding: var(--m-space-5); }
+  .layer-title {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 17px;
+    color: var(--m-fg-0);
+    margin: 0 0 var(--m-space-2);
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+  }
+  .layer-blurb { margin: 0 0 var(--m-space-3); color: var(--m-fg-1); font-size: 13.5px; max-width: 68ch; }
+  .layer-chips {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .layer-chips li { margin: 0; }
+  .layer-chips code {
+    font-family: var(--m-font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    background: var(--m-bg-3);
+    border: 1px solid var(--m-line-soft);
+    color: var(--m-fg-1);
+    border-radius: var(--m-radius-sm);
+  }
+
+  /* Tone variants — left bar + number + chips re-tinted */
+  .layer--invariant   { border-left-color: var(--m-brand); }
+  .layer--invariant   .layer-n { color: var(--m-brand); }
+
+  .layer--operator    { border-left-color: var(--m-accent); }
+  .layer--operator    .layer-n { color: var(--m-accent); }
+
+  .layer--runtime     { border-left-color: var(--m-event-session); }
+  .layer--runtime     .layer-n { color: var(--m-event-session); }
+
+  .layer--execution   { border-left-color: var(--m-accent); }
+  .layer--execution   .layer-n { color: var(--m-accent); }
+
+  .layer--substrate   { border-left-color: var(--m-event-framework); }
+  .layer--substrate   .layer-n { color: var(--m-event-framework); }
+
+  .layer--lane        { border-left-color: var(--m-event-lane); }
+  .layer--lane        .layer-n { color: var(--m-event-lane); }
+
+  .layer--gauntlet    { border-left-color: var(--m-warn); }
+  .layer--gauntlet    .layer-n { color: var(--m-warn); }
+
+  .layer--worker      { border-left-color: var(--m-danger); }
+  .layer--worker      .layer-n { color: var(--m-danger); }
+
+  .layer--spine       { border-left-color: var(--m-accent-2); }
+  .layer--spine       .layer-n { color: var(--m-accent-2); }
+
+  .layer--projection  { border-left-color: var(--m-event-lane); }
+  .layer--projection  .layer-n { color: var(--m-event-lane); }
+
+  .layer--security    { border-left-color: var(--m-danger); }
+  .layer--security    .layer-n { color: var(--m-danger); }
+
+  .layer--quality     { border-left-color: var(--m-ok); }
+  .layer--quality     .layer-n { color: var(--m-ok); }
+
+  .layer--memory      { border-left-color: var(--m-event-framework); }
+  .layer--memory      .layer-n { color: var(--m-event-framework); }
+
+  .layer--cockpit     { border-left-color: var(--m-accent-2); }
+  .layer--cockpit     .layer-n { color: var(--m-accent-2); }
+
+  @media (max-width: 640px) {
+    .layer { grid-template-columns: 1fr; }
+    .layer-rail { padding: var(--m-space-3); border-right: 0; border-bottom: 1px solid var(--m-line-soft); justify-content: flex-start; }
+    .layer-n { font-size: 18px; }
+  }
+</style>

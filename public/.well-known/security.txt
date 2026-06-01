@@ -1,0 +1,23 @@
+# security.txt (RFC 9116)
+# https://maddu.dev/.well-known/security.txt
+
+Contact: https://github.com/frdyx/maddu/security/advisories/new
+Contact: mailto:security@maddu.dev
+Expires: 2027-01-01T00:00:00Z
+Preferred-Languages: en
+Canonical: https://maddu.dev/.well-known/security.txt
+Policy: https://maddu.dev/threat-model
+
+# What to report:
+#   Vulnerabilities in the framework (CLI, bridge, cockpit), supply-chain
+#   issues affecting maddu trust pins, anything that lets an unauthorised
+#   actor read or mutate the .maddu/ spine.
+#
+# What's out of scope:
+#   Social-engineering attempts on individual operators, host-OS issues
+#   not introduced by Máddu, third-party dependencies covered by their
+#   own disclosure programs (file there, then notify us).
+#
+# Response time:
+#   Best-effort acknowledgement within 72h. Coordinated disclosure
+#   timeline negotiated per case.

@@ -1,0 +1,221 @@
+---
+// TocIndex.astro — generic sticky scroll-spy table of contents.
+// More general than LayerIndex (which has per-layer tone keys); this
+// takes the brand's standard tones, so it works for any long page.
+//
+// Each item: { n, id, tone, label, sub? }. Scroll-spy uses
+// IntersectionObserver; click smooth-scrolls and updates URL hash.
+export interface Item {
+  n: string;
+  id: string;
+  tone:
+    | 'accent' | 'accent-2' | 'warn' | 'danger' | 'brand' | 'ok'
+    | 'session' | 'lane' | 'framework' | 'approval' | 'neutral';
+  label: string;
+  /** Optional sub-label rendered beneath the main label */
+  sub?: string;
+}
+export interface Props {
+  items: Item[];
+  eyebrow?: string;
+}
+
+const { items, eyebrow = 'On this page' } = Astro.props;
+---
+
+<aside class="toc" aria-label="Table of contents">
+  <header class="toc-head">
+    <span class="toc-eyebrow">{eyebrow}</span>
+    <span class="toc-count">{items.length}</span>
+  </header>
+  <nav class="toc-nav">
+    {items.map((it) => (
+      <a
+        href={`#${it.id}`}
+        class:list={['toc-link', `toc-link--${it.tone}`]}
+        data-target={it.id}
+      >
+        <span class="toc-n">{it.n}</span>
+        <span class="toc-text">
+          <span class="toc-label">{it.label}</span>
+          {it.sub && <span class="toc-sub">{it.sub}</span>}
+        </span>
+        <span class="toc-glyph" aria-hidden="true">›</span>
+      </a>
+    ))}
+  </nav>
+</aside>
+
+<style>
+  .toc {
+    position: sticky;
+    top: calc(var(--m-nav-h) + var(--m-space-4));
+    align-self: start;
+    background: var(--m-bg-1);
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+    overflow: hidden;
+    max-height: calc(100vh - var(--m-nav-h) - var(--m-space-6));
+    display: flex;
+    flex-direction: column;
+  }
+  .toc-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--m-line-soft);
+    background: var(--m-bg-2);
+  }
+  .toc-eyebrow {
+    font-family: var(--m-font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+  }
+  .toc-count {
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    color: var(--m-accent);
+  }
+  .toc-nav {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 4px 0;
+  }
+  .toc-link {
+    display: grid;
+    grid-template-columns: 24px 1fr 12px;
+    gap: 10px;
+    align-items: center;
+    padding: 7px 12px;
+    border-left: 2px solid transparent;
+    color: var(--m-fg-2);
+    border-bottom: 0;
+    font-family: var(--m-font-cond);
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
+    transition: background 120ms, color 120ms;
+  }
+  .toc-link:hover {
+    background: var(--m-bg-2);
+    color: var(--m-fg-0);
+    border-bottom: 0;
+  }
+  .toc-link.is-active {
+    background: var(--m-bg-3);
+    color: var(--m-fg-0);
+  }
+
+  .toc-n {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    color: var(--m-fg-4);
+    letter-spacing: 0.06em;
+  }
+  .toc-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .toc-label { line-height: 1.2; }
+  .toc-sub {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    color: var(--m-fg-3);
+    letter-spacing: 0.04em;
+  }
+  .toc-glyph { color: var(--m-fg-4); opacity: 0; transition: opacity 120ms; }
+  .toc-link.is-active .toc-glyph { opacity: 1; }
+
+  /* Tone variants — left bar + active number/glyph color */
+  .toc-link--accent       { border-left-color: var(--m-accent); }
+  .toc-link--accent.is-active     { color: var(--m-accent); }
+  .toc-link--accent.is-active     .toc-n,
+  .toc-link--accent.is-active     .toc-glyph { color: var(--m-accent); }
+
+  .toc-link--accent-2     { border-left-color: var(--m-accent-2); }
+  .toc-link--accent-2.is-active   { color: var(--m-accent-2); }
+  .toc-link--accent-2.is-active   .toc-n,
+  .toc-link--accent-2.is-active   .toc-glyph { color: var(--m-accent-2); }
+
+  .toc-link--warn         { border-left-color: var(--m-warn); }
+  .toc-link--warn.is-active       { color: var(--m-warn); }
+  .toc-link--warn.is-active       .toc-n,
+  .toc-link--warn.is-active       .toc-glyph { color: var(--m-warn); }
+
+  .toc-link--danger       { border-left-color: var(--m-danger); }
+  .toc-link--danger.is-active     { color: var(--m-danger); }
+  .toc-link--danger.is-active     .toc-n,
+  .toc-link--danger.is-active     .toc-glyph { color: var(--m-danger); }
+
+  .toc-link--brand        { border-left-color: var(--m-brand); }
+  .toc-link--brand.is-active      { color: var(--m-brand); }
+  .toc-link--brand.is-active      .toc-n,
+  .toc-link--brand.is-active      .toc-glyph { color: var(--m-brand); }
+
+  .toc-link--ok           { border-left-color: var(--m-ok); }
+  .toc-link--ok.is-active         { color: var(--m-ok); }
+  .toc-link--ok.is-active         .toc-n,
+  .toc-link--ok.is-active         .toc-glyph { color: var(--m-ok); }
+
+  .toc-link--session      { border-left-color: var(--m-event-session); }
+  .toc-link--session.is-active    { color: var(--m-event-session); }
+  .toc-link--session.is-active    .toc-n,
+  .toc-link--session.is-active    .toc-glyph { color: var(--m-event-session); }
+
+  .toc-link--lane         { border-left-color: var(--m-event-lane); }
+  .toc-link--lane.is-active       { color: var(--m-event-lane); }
+  .toc-link--lane.is-active       .toc-n,
+  .toc-link--lane.is-active       .toc-glyph { color: var(--m-event-lane); }
+
+  .toc-link--framework    { border-left-color: var(--m-event-framework); }
+  .toc-link--framework.is-active  { color: var(--m-event-framework); }
+  .toc-link--framework.is-active  .toc-n,
+  .toc-link--framework.is-active  .toc-glyph { color: var(--m-event-framework); }
+
+  .toc-link--approval     { border-left-color: var(--m-event-approval); }
+  .toc-link--approval.is-active   { color: var(--m-event-approval); }
+  .toc-link--approval.is-active   .toc-n,
+  .toc-link--approval.is-active   .toc-glyph { color: var(--m-event-approval); }
+
+  .toc-link--neutral      { border-left-color: var(--m-line); }
+</style>
+
+<script>
+  // Same scroll-spy pattern as LayerIndex. Top-third weighting reads as
+  // "the section you're reading," not "the one barely peeking in."
+  const links = document.querySelectorAll<HTMLAnchorElement>('.toc-link');
+  if (links.length) {
+    const targets = Array.from(links)
+      .map((l) => ({ link: l, el: document.getElementById(l.dataset.target!) }))
+      .filter((x): x is { link: HTMLAnchorElement; el: HTMLElement } => !!x.el);
+
+    const setActive = (id: string) => {
+      links.forEach((l) => l.classList.toggle('is-active', l.dataset.target === id));
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible[0]?.target?.id) setActive(visible[0].target.id);
+      },
+      { rootMargin: '-20% 0px -60% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] }
+    );
+
+    targets.forEach((t) => observer.observe(t.el));
+
+    links.forEach((l) => {
+      l.addEventListener('click', (e) => {
+        const id = l.dataset.target;
+        const el = id ? document.getElementById(id) : null;
+        if (el) {
+          e.preventDefault();
+          const y = el.getBoundingClientRect().top + window.scrollY - 80;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+          history.replaceState(null, '', '#' + id);
+        }
+      });
+    });
+  }
+</script>

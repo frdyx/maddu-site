@@ -1,0 +1,359 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Callout from '../components/Callout.astro';
+import Workflow from '../components/Workflow.astro';
+import Stages from '../components/Stages.astro';
+import PageNext from '../components/PageNext.astro';
+---
+
+<Layout title="Install" pathname="/install">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Install</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim eyebrow-warn">repo private</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">public install opens when repo flips</span>
+      </div>
+      <h1>Install when it's ready. <span class="dim-h1">Read while you wait.</span></h1>
+      <p class="lede">
+        Máddu's source is currently private. A public install command is wired and tested but won't work for anonymous users until the repository flips public. The shape below is what it will be; the alternative below is what to do meanwhile.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── PUBLIC INSTALL (DEFERRED) ───────────────────────────────── -->
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · Public install · deferred</span>
+        <h2>The install command, once the repo opens.</h2>
+        <p>One-line install from npm or directly from GitHub. Both will work; both already produce identical doctor output (54 PASS / 0 WARN / 0 FAIL on a fresh foreign repo).</p>
+      </header>
+
+      <Workflow
+        eyebrow="When the repo flips public"
+        title="Two install paths. Same result."
+        meta="npm-pinned · git-shasum-pinned"
+        tone="accent"
+      >
+        <div class="install-grid">
+          <article class="install-card install-card--primary">
+            <header class="install-card-head">
+              <span class="install-card-n">A</span>
+              <h3>From npm <span class="install-card-soon">soon</span></h3>
+            </header>
+            <pre><code>npx maddu@latest init</code></pre>
+            <p>Pulls the latest tagged release from npm, runs the installer against the current repo. Recommended once the package ships.</p>
+          </article>
+          <article class="install-card">
+            <header class="install-card-head">
+              <span class="install-card-n">B</span>
+              <h3>From GitHub <span class="install-card-soon">when public</span></h3>
+            </header>
+            <pre><code>npx github:frdyx/maddu init</code></pre>
+            <p>Pulls directly from the GitHub repo. Useful when you want a specific commit or pre-release.</p>
+          </article>
+        </div>
+
+        <Stages
+          stages={[
+            { label: 'init',    sub: 'scaffold',  tone: 'accent' },
+            { label: 'doctor',  sub: '54 gates',  tone: 'ok' },
+            { label: 'start',   sub: 'localhost', tone: 'accent-2' },
+            { label: 'brief',   sub: 'orient',    tone: 'framework' },
+            { label: 'ship',    sub: 'pipeline',  tone: 'accent' },
+          ]}
+          numbered
+        />
+
+        <Fragment slot="outcome">
+          Five minutes from <code>init</code> to a green doctor and your first shipped slice.
+        </Fragment>
+      </Workflow>
+
+      <Callout tone="warn" title="Repository is currently private" tag="anonymous install will 404">
+        <p>
+          The <code>npx github:frdyx/maddu</code> path will fail with a 404 for anonymous users until the repo flips public. If you have authenticated access (collaborator), it works today.
+        </p>
+        <p>
+          npm publish + the repo flip are both on the pre-public checklist. No ETA published yet.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <!-- ── MEANWHILE ────────────────────────────────────────────────── -->
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · Meanwhile</span>
+        <h2>What to read while the install is gated.</h2>
+        <p>The site covers the full operator surface. None of it requires the install to make sense — the architecture, governance, threat model, and capability ontology are the whole product as far as understanding goes.</p>
+      </header>
+
+      <div class="meanwhile-grid">
+        <a class="meanwhile-card meanwhile-card--accent" href="/how-it-works">
+          <span class="meanwhile-eyebrow">§ How it works</span>
+          <h3>Walk the canonical flow</h3>
+          <p>Substrate loop, pipelines, the coordinator primitive, slice-stops, hindsight, replay determinism. ~6 min read.</p>
+          <span class="meanwhile-cta">Open →</span>
+        </a>
+        <a class="meanwhile-card meanwhile-card--accent-2" href="/architecture">
+          <span class="meanwhile-eyebrow">§ Architecture</span>
+          <h3>The 13 layers, one charter</h3>
+          <p>Color-coded ontology. Operator, runtime, execution, substrate, lanes, gauntlet, workers, spine, projections, security, quality, memory, cockpit. ~8 min read.</p>
+          <span class="meanwhile-cta">Open →</span>
+        </a>
+        <a class="meanwhile-card meanwhile-card--danger" href="/threat-model">
+          <span class="meanwhile-eyebrow">§ Threat model</span>
+          <h3>7 defenses, named</h3>
+          <p>Attack, defense, spine event, residual risk. Each defense gets a full section. Sticky right-rail TOC. ~10 min read.</p>
+          <span class="meanwhile-cta">Open →</span>
+        </a>
+        <a class="meanwhile-card meanwhile-card--warn" href="/governance">
+          <span class="meanwhile-eyebrow">§ Governance</span>
+          <h3>The gauntlet and three tiers</h3>
+          <p>Strict, standard, relaxed. What changes between them, what never does. ~5 min read.</p>
+          <span class="meanwhile-cta">Open →</span>
+        </a>
+        <a class="meanwhile-card meanwhile-card--brand" href="/hard-rules">
+          <span class="meanwhile-eyebrow">§ Hard rules</span>
+          <h3>The 8+1 invariants</h3>
+          <p>What they mean, what enforces them, what's deliberately absent because of them. ~6 min read.</p>
+          <span class="meanwhile-cta">Open →</span>
+        </a>
+        <a class="meanwhile-card meanwhile-card--accent" href="/capabilities">
+          <span class="meanwhile-eyebrow">§ Capabilities</span>
+          <h3>The verb ontology</h3>
+          <p>53 verbs across 8 purpose areas. Every one earns its place. ~4 min read.</p>
+          <span class="meanwhile-cta">Open →</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── WHAT TO DO TODAY ─────────────────────────────────────────── -->
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 03 · Today's actions</span>
+        <h2>If you want to be ready when it opens.</h2>
+      </header>
+
+      <ol class="ready-list">
+        <li>
+          <span class="ready-n">01</span>
+          <div class="ready-body">
+            <h3>Read the charter</h3>
+            <p>Start with <a href="/hard-rules">the 8+1 hard rules</a> and <a href="/threat-model">the threat model</a>. These two define what the framework will and won't do. If they don't match your posture, the install won't help — the rules don't loosen.</p>
+          </div>
+        </li>
+        <li>
+          <span class="ready-n">02</span>
+          <div class="ready-body">
+            <h3>Pick your agent runtime</h3>
+            <p>Máddu is runtime-agnostic — Claude Code, Codex, Gemini, others. The slash-command on-ramps ship for all three. Pick the one you already use; you don't need to switch.</p>
+          </div>
+        </li>
+        <li>
+          <span class="ready-n">03</span>
+          <div class="ready-body">
+            <h3>Decide your tier</h3>
+            <p>Strict, standard, or relaxed. <a href="/governance">Open the gauntlet doc</a> and choose before install — it sets the default <code>.maddu/config/governance.json</code>. You can change it later, but starting with the right posture is cheaper.</p>
+          </div>
+        </li>
+        <li>
+          <span class="ready-n">04</span>
+          <div class="ready-body">
+            <h3>Watch for the flip</h3>
+            <p>When the repo opens, this page will swap the deferred-install block for a live one-liner with copy buttons. No mailing list — bookmark <a href="/">the landing page</a>; the install path will be the first thing on it.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="§ 04 · Back to the start"
+    title="Overview — the redesigned hero and full mental model."
+    hint="If you came in here from a deep link, the landing page has the animated substrate loop and the summary that ties everything together."
+    href="/"
+    tone="accent-2"
+  />
+</Layout>
+
+<style>
+  .page-head { padding: var(--m-space-16) 0 var(--m-space-8); }
+  .lede { font-size: 17px; color: var(--m-fg-0); max-width: 64ch; }
+  .dim-h1 { color: var(--m-fg-3); font-weight: 400; }
+  .eyebrow-warn { color: var(--m-warn); }
+
+  /* Install path cards */
+  .install-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--m-space-3);
+    margin-bottom: var(--m-space-5);
+  }
+  .install-card {
+    background: var(--m-bg-1);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent-2);
+    border-radius: var(--m-radius);
+    padding: var(--m-space-4) var(--m-space-5);
+  }
+  .install-card--primary { border-left-color: var(--m-accent); }
+  .install-card-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--m-space-3);
+    margin-bottom: var(--m-space-3);
+  }
+  .install-card-n {
+    font-family: var(--m-font-cond);
+    font-weight: 700;
+    font-size: 24px;
+    color: var(--m-fg-3);
+    line-height: 1;
+  }
+  .install-card--primary .install-card-n { color: var(--m-accent); }
+  .install-card h3 {
+    margin: 0;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 16px;
+    color: var(--m-fg-0);
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .install-card-soon {
+    font-family: var(--m-font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 1px 7px;
+    border: 1px solid var(--m-warn-border);
+    color: var(--m-warn);
+    border-radius: var(--m-radius-pill);
+  }
+  .install-card pre { margin: 0 0 var(--m-space-3); padding: 10px 14px; }
+  .install-card p { margin: 0; font-size: 12.5px; color: var(--m-fg-2); }
+
+  /* Meanwhile grid */
+  .meanwhile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--m-space-3);
+  }
+  .meanwhile-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--m-space-2);
+    padding: var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-top: 2px solid var(--m-fg-4);
+    border-radius: var(--m-radius);
+    color: var(--m-fg-1);
+    border-bottom: 1px solid var(--m-line);
+    transition: border-color 120ms, transform 120ms, background 120ms, box-shadow 120ms;
+  }
+  .meanwhile-card:hover {
+    transform: translateY(-2px);
+    background: var(--m-bg-3);
+    color: var(--m-fg-1);
+    border-bottom-color: var(--m-line);
+  }
+  .meanwhile-eyebrow {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+  }
+  .meanwhile-card h3 {
+    margin: 0;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 17px;
+    color: var(--m-fg-0);
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+  }
+  .meanwhile-card p { margin: 0; font-size: 13px; color: var(--m-fg-2); }
+  .meanwhile-cta {
+    margin-top: auto;
+    font-family: var(--m-font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--m-accent-2);
+  }
+  .meanwhile-card--accent     { border-top-color: var(--m-accent); }
+  .meanwhile-card--accent     .meanwhile-eyebrow,
+  .meanwhile-card--accent     .meanwhile-cta { color: var(--m-accent); }
+  .meanwhile-card--accent:hover { border-color: var(--m-accent); box-shadow: var(--m-glow-accent); }
+
+  .meanwhile-card--accent-2   { border-top-color: var(--m-accent-2); }
+  .meanwhile-card--accent-2   .meanwhile-eyebrow,
+  .meanwhile-card--accent-2   .meanwhile-cta { color: var(--m-accent-2); }
+  .meanwhile-card--accent-2:hover { border-color: var(--m-accent-2); box-shadow: var(--m-glow-accent-2); }
+
+  .meanwhile-card--warn       { border-top-color: var(--m-warn); }
+  .meanwhile-card--warn       .meanwhile-eyebrow,
+  .meanwhile-card--warn       .meanwhile-cta { color: var(--m-warn); }
+  .meanwhile-card--warn:hover { border-color: var(--m-warn); box-shadow: var(--m-glow-warn); }
+
+  .meanwhile-card--danger     { border-top-color: var(--m-danger); }
+  .meanwhile-card--danger     .meanwhile-eyebrow,
+  .meanwhile-card--danger     .meanwhile-cta { color: var(--m-danger); }
+  .meanwhile-card--danger:hover { border-color: var(--m-danger); box-shadow: var(--m-glow-danger); }
+
+  .meanwhile-card--brand      { border-top-color: var(--m-brand); }
+  .meanwhile-card--brand      .meanwhile-eyebrow,
+  .meanwhile-card--brand      .meanwhile-cta { color: var(--m-brand); }
+  .meanwhile-card--brand:hover { border-color: var(--m-brand); box-shadow: var(--m-glow-brand); }
+
+  /* Today's actions list */
+  .ready-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: var(--m-space-3);
+  }
+  .ready-list li {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: var(--m-space-4);
+    align-items: start;
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent);
+    border-radius: var(--m-radius);
+  }
+  .ready-n {
+    font-family: var(--m-font-cond);
+    font-weight: 700;
+    font-size: 28px;
+    color: var(--m-accent);
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .ready-body h3 {
+    margin: 0 0 4px;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 16px;
+    color: var(--m-fg-0);
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+  }
+  .ready-body p { margin: 0; color: var(--m-fg-1); font-size: 13.5px; }
+</style>

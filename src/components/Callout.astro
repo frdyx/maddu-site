@@ -1,0 +1,77 @@
+---
+// Callout.astro — single tone-coded inline note. Replaces ad-hoc panels for
+// short emphasis points. Title is mono-uppercase eyebrow; body inherits ink.
+export interface Props {
+  tone?: 'accent' | 'accent-2' | 'warn' | 'danger' | 'ok';
+  title: string;
+  /** Optional right-aligned tag — e.g. "rule #9" */
+  tag?: string;
+}
+const { tone = 'accent-2', title, tag } = Astro.props;
+---
+
+<aside class:list={['callout', `callout--${tone}`]}>
+  <header class="callout-head">
+    <span class="callout-glyph" aria-hidden="true">◆</span>
+    <span class="callout-title">{title}</span>
+    {tag && <span class="callout-tag">{tag}</span>}
+  </header>
+  <div class="callout-body"><slot /></div>
+</aside>
+
+<style>
+  .callout {
+    display: flex;
+    flex-direction: column;
+    gap: var(--m-space-2);
+    margin: var(--m-space-5) 0;
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 3px solid var(--m-accent-2);
+    border-radius: var(--m-radius);
+  }
+  .callout-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--m-space-3);
+    flex-wrap: wrap;
+  }
+  .callout-glyph { font-size: 9px; line-height: 1; color: var(--m-accent-2); }
+  .callout-title {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--m-accent-2);
+  }
+  .callout-tag {
+    margin-left: auto;
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--m-fg-3);
+    padding: 1px 8px;
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius-pill);
+  }
+  .callout-body { color: var(--m-fg-1); font-size: 13.5px; line-height: 1.6; }
+  .callout-body :global(p) { margin: 0 0 var(--m-space-2); max-width: 64ch; }
+  .callout-body :global(p:last-child) { margin-bottom: 0; }
+
+  .callout--accent    { border-left-color: var(--m-accent); }
+  .callout--accent    .callout-glyph,
+  .callout--accent    .callout-title { color: var(--m-accent); }
+
+  .callout--warn      { border-left-color: var(--m-warn); background: linear-gradient(180deg, var(--m-warn-bg), transparent 60%), var(--m-bg-2); }
+  .callout--warn      .callout-glyph,
+  .callout--warn      .callout-title { color: var(--m-warn); }
+
+  .callout--danger    { border-left-color: var(--m-danger); background: linear-gradient(180deg, var(--m-danger-bg), transparent 60%), var(--m-bg-2); }
+  .callout--danger    .callout-glyph,
+  .callout--danger    .callout-title { color: var(--m-danger); }
+
+  .callout--ok        { border-left-color: var(--m-ok); background: linear-gradient(180deg, var(--m-ok-bg), transparent 60%), var(--m-bg-2); }
+  .callout--ok        .callout-glyph,
+  .callout--ok        .callout-title { color: var(--m-ok); }
+</style>

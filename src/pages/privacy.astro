@@ -1,0 +1,107 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Callout from '../components/Callout.astro';
+import Annotated from '../components/Annotated.astro';
+---
+
+<Layout
+  title="Privacy"
+  pathname="/privacy"
+  description="Máddu's site sets no cookies, runs no analytics, and loads no third-party scripts. This page documents that posture in formal terms."
+>
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Privacy</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">no cookies · no analytics · no third-party scripts</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">posture, not policy</span>
+      </div>
+      <h1>This site does what it says <span class="dim-h1">the framework does.</span></h1>
+      <p class="lede">
+        The framework's posture is local-first, no telemetry, no relay, no hosted backend. This site honors that posture by default: it sets no cookies, runs no analytics, loads no third-party scripts at runtime. That's not a privacy policy — it's the same architectural choice.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · What this site collects</span>
+        <h2>Nothing the operator didn't already log themselves.</h2>
+        <p>The site is static HTML / CSS / JS served from Cloudflare Pages. No server you control. No database you maintain. No analytics dashboard. No marketing pixel. No A/B test framework.</p>
+      </header>
+
+      <Annotated
+        columns={['Surface', 'What we collect', 'Where it goes']}
+        rows={[
+          { action: 'page view',           effect: 'nothing in our code',                                provenance: '(Cloudflare access log)',    provTone: 'framework' },
+          { action: 'cookies',             effect: 'none set by this site',                              provenance: '0 cookies',                  provTone: 'ok' },
+          { action: 'analytics',           effect: 'no script installed',                                provenance: '0 endpoints',                provTone: 'ok' },
+          { action: 'fonts',               effect: 'self-hosted Plex woff2 from same origin',             provenance: '/fonts/*.woff2',             provTone: 'accent' },
+          { action: 'mermaid diagrams',    effect: 'loaded from same origin only',                       provenance: '/_astro/*.js',               provTone: 'accent' },
+          { action: 'theme preference',    effect: 'one localStorage key, this device only',             provenance: 'maddu-site-theme',           provTone: 'session' },
+        ]}
+      />
+
+      <Callout tone="ok" title="The one piece of local state" tag="device-only">
+        <p>
+          When you toggle the site theme, your choice persists in <code>localStorage</code> under the key <code>maddu-site-theme</code>. That value stays in your browser and never travels anywhere — there's nowhere for it to go. Clear your browser storage and it's gone.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · What the host (Cloudflare Pages) logs</span>
+        <h2>The standard request log every web server keeps.</h2>
+        <p>The site is hosted on Cloudflare Pages, which keeps an access log (IP, timestamp, user-agent, requested path) for operational and abuse-detection purposes. That's the floor that any HTTP host requires — we don't collect it, the platform does.</p>
+      </header>
+
+      <ul class="dot-list">
+        <li>Cloudflare's privacy practices are documented at <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener noreferrer">cloudflare.com/privacypolicy</a>.</li>
+        <li>We don't enable Cloudflare Web Analytics, Bot Analytics, or any other add-on telemetry.</li>
+        <li>We don't run server-side code that reads, transforms, or stores the access log. The site is plain static HTML.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 03 · The framework, separately</span>
+        <h2>This page is about the marketing site. The framework's posture is the same, but documented separately.</h2>
+      </header>
+
+      <Callout tone="accent-2" title="Where the framework's posture lives" tag="single source of truth">
+        <p>
+          The framework's privacy posture is structural and operator-facing — <a href="/threat-model">/threat-model</a> documents the seven structural defenses and the residual risk each one doesn't cover. <a href="/hard-rules">/hard-rules</a> documents the 8+1 invariants that the framework's behavior derives from. Rule #3 (no hosted backends), Rule #6 (no token export), and the worker env allowlist are the operative ones for privacy.
+        </p>
+        <p>
+          When you run Máddu, nothing leaves your machine that you didn't explicitly send. When you read about Máddu on this site, nothing leaves your browser that the browser didn't already send to fetch the page itself.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 04 · Contact</span>
+        <h2>If you want to ask about this.</h2>
+      </header>
+      <p>
+        The site is part of the Máddu framework's public surface. There's no contact form on this page (a contact form would be a third-party integration). When the repo flips public, GitHub issues will be the canonical channel.
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .page-head { padding: var(--m-space-16) 0 var(--m-space-8); }
+  .lede { font-size: 17px; color: var(--m-fg-0); max-width: 64ch; }
+  .dim-h1 { color: var(--m-fg-3); font-weight: 400; }
+</style>

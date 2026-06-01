@@ -1,0 +1,492 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Workflow from '../components/Workflow.astro';
+import Mermaid from '../components/Mermaid.astro';
+import Annotated from '../components/Annotated.astro';
+import Callout from '../components/Callout.astro';
+import Legend from '../components/Legend.astro';
+import EventStream from '../components/EventStream.astro';
+import PageNext from '../components/PageNext.astro';
+import TocIndex from '../components/TocIndex.astro';
+
+// Each defense gets the same shape — easy to scan across all seven.
+interface Defense {
+  n: string;
+  id: string;
+  tone: 'accent' | 'accent-2' | 'warn' | 'danger' | 'brand';
+  title: string;
+  rule?: string;
+  attack: string;
+  defense: string;
+  spineEvent: string;
+  spineEventTone: 'session' | 'lane' | 'approval' | 'accent' | 'accent2' | 'ok' | 'warn' | 'danger' | 'framework';
+  rows: { action: string; effect: string; provenance: string; provTone: 'session' | 'lane' | 'approval' | 'accent' | 'accent-2' | 'warn' | 'danger' | 'ok' | 'framework' }[];
+  doesNotCover: string;
+}
+
+const defenses: Defense[] = [
+  {
+    n: '01',
+    id: 'worker-isolation',
+    tone: 'accent',
+    title: 'Worker subprocess isolation',
+    rule: 'Rule #5',
+    attack: 'A provider SDK imported into framework code is one prompt-injection or supply-chain compromise away from holding your credentials in scope. Every provider call that happens in the same process as your orchestration logic is a class of vulnerability you accept by writing it that way.',
+    defense: 'Every provider call lives in a subprocess worker. The bridge, the cockpit, the harness — none of them imports anthropic, openai, @google/generative-ai, or any other provider SDK. Provider calls live only in worker subprocesses, with credentials injected at spawn time, not read from env at runtime by framework code.',
+    spineEvent: 'WORKER_SPAWNED',
+    spineEventTone: 'framework',
+    rows: [
+      { action: 'maddu worker spawn',  effect: 'subprocess starts in clean shell',     provenance: 'WORKER_SPAWNED',     provTone: 'framework' },
+      { action: 'creds at spawn only', effect: 'env scrubbed by allowlist (next)',     provenance: 'WORKER_ENV_APPLIED', provTone: 'framework' },
+      { action: 'doctor layout check', effect: 'fails build if SDK in framework path', provenance: 'DOCTOR_RAN',         provTone: 'ok' },
+    ],
+    doesNotCover: 'A compromised worker subprocess can still leak its own credentials — isolation bounds blast radius, it does not eliminate compromise. Pair with least-privilege keys.',
+  },
+  {
+    n: '02',
+    id: 'env-allowlist',
+    tone: 'accent-2',
+    title: 'Worker env allowlist (default-deny)',
+    attack: 'Subprocesses inherit the parent shell environment by default. Any *_TOKEN, *_KEY, or *_SECRET sitting in your shell — including secrets for systems your agent has no business touching — gets handed to every spawned worker. The agent doesn\'t know which ones are relevant; they\'re all in scope.',
+    defense: 'Spawned workers don\'t inherit your shell. The allowlist is default-deny — secret-keyed env vars (anything matching token/key/secret patterns plus provider-specific prefixes) are stripped at spawn unless explicitly allowed in the workspace governance config.',
+    spineEvent: 'WORKER_ENV_APPLIED',
+    spineEventTone: 'framework',
+    rows: [
+      { action: '*_TOKEN, *_KEY stripped', effect: 'workers get only allowlisted vars', provenance: 'WORKER_ENV_APPLIED',          provTone: 'framework' },
+      { action: 'governance.json allow',   effect: 'operator names explicit exceptions',   provenance: 'GOVERNANCE_TIER_CHANGED',     provTone: 'warn' },
+      { action: 'doctor gate check',       effect: 'fails install if policy drifts',       provenance: 'DOCTOR_RAN',                  provTone: 'ok' },
+    ],
+    doesNotCover: 'Vars the operator explicitly allowlists are at full scope to the worker. The allowlist is the contract — it doesn\'t protect you from a permissive allowlist you wrote yourself.',
+  },
+  {
+    n: '03',
+    id: 'secret-scan',
+    tone: 'warn',
+    title: 'Secret scan on tool argv',
+    attack: 'An agent might call a tool with a raw API key in the command line — for testing, for laziness, for hallucination. That argv string passes through Máddu\'s telemetry, the receipt log, the live event stream, and any cockpit observer. Once it\'s in the log, it stays in the log.',
+    defense: 'Tool arguments pass a pattern scanner before any logging. AWS, OpenAI, Anthropic, GitHub, GitLab, Slack token shapes are detected and the tool call is refused. Raw values are never logged — only a SECRET_SCAN_BLOCKED event with the pattern name (no raw match content).',
+    spineEvent: 'SECRET_SCAN_BLOCKED',
+    spineEventTone: 'danger',
+    rows: [
+      { action: 'tool argv scanned',         effect: 'matches refused before exec',       provenance: 'SECRET_SCAN_BLOCKED',  provTone: 'danger' },
+      { action: 'pattern name only logged',  effect: 'raw values never reach the spine',  provenance: 'SECRET_SCAN_BLOCKED',  provTone: 'danger' },
+      { action: 'operator notified',         effect: 'cockpit toast + spine event',       provenance: 'INBOX_APPENDED',       provTone: 'session' },
+    ],
+    doesNotCover: 'Tokens not matching a known pattern slip through. Pattern set is conservative; review docs/34-threat-model.md for the current list before relying on it for novel providers.',
+  },
+  {
+    n: '04',
+    id: 'device-bound-tokens',
+    tone: 'brand',
+    title: 'Device-bound OAuth tokens',
+    rule: 'Rule #6',
+    attack: 'Cross-machine token sync turns one compromised laptop into N compromised sessions. A token stored in a synced dotfile, a cloud-backed keychain, or a checked-in .env propagates blast radius along the sync path.',
+    defense: 'Tokens live in OS device-bound paths. On Linux/macOS, ~/.config/maddu/auth/ with restrictive permissions. On Windows, %APPDATA%\\maddu\\auth\\. No cross-machine sync, by design. maddu export scrubs token paths from any export bundle. maddu import refuses to overwrite an existing token path.',
+    spineEvent: 'AUTH_TOKEN_STORED',
+    spineEventTone: 'framework',
+    rows: [
+      { action: 'maddu auth login',  effect: 'token written to device path',  provenance: 'AUTH_TOKEN_STORED',  provTone: 'framework' },
+      { action: 'maddu export',      effect: 'auth paths scrubbed from bundle', provenance: 'EXPORT_SANITIZED',   provTone: 'ok' },
+      { action: 'maddu import',      effect: 'refuses overwrite of auth path',  provenance: 'IMPORT_REFUSED',     provTone: 'warn' },
+    ],
+    doesNotCover: 'A user who manually copies the token file across machines defeats this. The framework refuses; the user can always reach around it. Treat the policy as the contract, not the wall.',
+  },
+  {
+    n: '05',
+    id: 'supply-chain',
+    tone: 'accent',
+    title: 'Supply-chain pinning',
+    rule: 'Rule #4',
+    attack: 'Every dependency is a supply-chain surface. A compromised npm package — the tj/event-stream pattern, the recent tanstack worm, any malicious typo-squat — runs with whatever scope your install gives it. Loose versioning ("^1.2.3") means a fresh install can pull a newly-published malicious release without you noticing.',
+    defense: 'maddu trust audit / pin / verify pins every dependency with a SHA256 of its tarball. Pin ledger lives at .maddu/trust/. Every install and upgrade re-verifies the pinned hash. The dependency-freshness and dep-pinning-respected gates fail doctor on tamper.',
+    spineEvent: 'TRUST_PIN_VERIFIED',
+    spineEventTone: 'ok',
+    rows: [
+      { action: 'maddu trust pin',     effect: 'sha256 written to trust ledger',  provenance: 'TRUST_PINNED',      provTone: 'framework' },
+      { action: 'maddu trust verify',  effect: 'recomputes + compares',           provenance: 'TRUST_PIN_VERIFIED', provTone: 'ok' },
+      { action: 'doctor gate fails',   effect: 'install refused on mismatch',     provenance: 'DOCTOR_RAN',        provTone: 'danger' },
+    ],
+    doesNotCover: 'Pinning protects against post-release tamper of a specific version. It does not catch a malicious dep that was published malicious from day one — that\'s the review-before-install problem, not the pin-on-install problem.',
+  },
+  {
+    n: '06',
+    id: 'mcp-gallery',
+    tone: 'accent-2',
+    title: 'MCP gallery — allowlist-only ingress',
+    attack: 'MCP servers are tools agents reach for at runtime. If the agent can pull an arbitrary MCP server from npm or a URL, it has effectively bypassed your dependency pinning — it pulls fresh code, with whatever scope it asks for, every time it runs.',
+    defense: 'MCP servers come from a curated template gallery shipping JSON descriptors with SHA256 provenance. Operator installs via maddu mcp install <template>. Anything else is refused. The gallery is small, hand-curated, and version-pinned.',
+    spineEvent: 'MCP_PROVENANCE_OK',
+    spineEventTone: 'ok',
+    rows: [
+      { action: 'maddu mcp install',     effect: 'pulls from gallery only',         provenance: 'MCP_INSTALLED',       provTone: 'framework' },
+      { action: 'sha256 verified',       effect: 'descriptor + binary checksummed', provenance: 'MCP_PROVENANCE_OK',   provTone: 'ok' },
+      { action: 'arbitrary URL refused', effect: 'install command rejects',         provenance: 'MCP_REFUSED',         provTone: 'danger' },
+    ],
+    doesNotCover: 'Anything in the gallery is trusted by definition — gallery curation is the bottleneck. A malicious template that made it into the gallery would propagate to every install. Treat the gallery list as a security-critical surface.',
+  },
+  {
+    n: '07',
+    id: 'gauntlet',
+    tone: 'danger',
+    title: 'The gauntlet — behavioral defense',
+    rule: 'Rule #9',
+    attack: 'The structural defenses above bound the blast radius of any single agent action. They do not stop a confidently-wrong agent from running away with a chain of legitimate-looking actions — rolling back a deploy, dropping a database table, force-pushing over your work — each of which "looks fine" at the tool-call level.',
+    defense: 'Read-only actions pass through (still logged). Anything that mutates state must: be on the triggers.json allowlist, respect its cooldown, satisfy the active governance tier, and emit a TRIGGER_FIRED event with triggered_by provenance. Auto-fire without all four is structurally impossible.',
+    spineEvent: 'TRIGGER_FIRED',
+    spineEventTone: 'approval',
+    rows: [
+      { action: 'mutating tool proposed', effect: 'walks the gauntlet',                provenance: 'APPROVAL_REQUESTED', provTone: 'approval' },
+      { action: 'gate(s) refuse',         effect: 'slice closes, no action taken',     provenance: 'APPROVAL_DENIED',    provTone: 'danger' },
+      { action: 'gate(s) pass',           effect: 'action fires with provenance stamp',provenance: 'TRIGGER_FIRED',      provTone: 'ok' },
+    ],
+    doesNotCover: 'The gauntlet stops auto-fires. It does not stop an operator who manually approves every refusal in a panic. The point is to make confidently-wrong propagation visible and intentional, not to physically prevent the operator from authoring damage.',
+  },
+];
+---
+
+<Layout title="Threat model" pathname="/threat-model">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Threat model</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">7 defenses · what each one covers</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">and what it doesn't</span>
+      </div>
+      <h1>Threats named, defenses named, residual risk named.</h1>
+      <p class="lede">
+        A threat model isn't a list of features that sound secure. It's an enumeration of the attacks you're assuming, the defense at each layer, the spine event that proves the defense ran, and the residual risk the defense does <em>not</em> cover. This page is exactly that. Read it before you trust Máddu with anything consequential.
+      </p>
+
+      <dl class="tm-stats">
+        <div><dt>Structural defenses</dt><dd>7</dd></div>
+        <div><dt>Rules they enforce</dt><dd>5 · 6 · 9</dd></div>
+        <div><dt>Spine event types</dt><dd>~30</dd></div>
+        <div><dt>Auto-repair</dt><dd>0</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ── BOUNDARY MAP ────────────────────────────────────────────── -->
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · The boundary map</span>
+        <h2>Where every secret, token, and dep is gated.</h2>
+        <p>The spawn boundary is the load-bearing line. Everything past it is a worker subprocess. Everything before it is framework code that never touches a provider SDK.</p>
+      </header>
+
+      <Workflow
+        eyebrow="Five surfaces · five enforcement points"
+        title="The spawn boundary is the load-bearing line."
+        meta="boundary map"
+        tone="danger"
+      >
+        <Mermaid
+          caption="The threat-model boundary, color-coded by enforcement type"
+          aside="5 surfaces"
+          code={`
+flowchart LR
+    AGENT[Agent CLI]:::session -->|spawns| W[Worker subprocess]:::worker
+    subgraph BORDER["Spawn boundary — every provider call lives past this line"]
+        W
+    end
+    OS[(OS keystore<br/>device-bound)]:::brand -.creds at spawn.-> W
+    W -->|tool argv| SCAN[/secret-scan/]:::danger
+    SCAN -.blocked patterns.-> SPINE[(spine event<br/>SECRET_SCAN_BLOCKED)]:::spine
+    SCAN -->|sanitized| TOOL[external tool / MCP]:::accent2
+    ENV[env allowlist<br/>default-deny]:::danger --> W
+    DEPS[maddu trust<br/>SHA256 pinned]:::accent --> W
+    MCP[MCP gallery<br/>allowlisted only]:::accent2 --> W
+    W -->|usage events| SPINE
+    GAUNT{gauntlet:<br/>allowlist + cooldown<br/>+ tier}:::gate --> W
+`}
+        />
+        <Fragment slot="outcome">
+          Nothing leaves the machine. Nothing logs raw secrets. Every mutating action gates through #9.
+        </Fragment>
+      </Workflow>
+      <Legend
+        label="Color key"
+        items={[
+          { tone: 'session',  label: 'agent CLI' },
+          { tone: 'worker',   label: 'worker subprocess · load-bearing' },
+          { tone: 'brand',    label: 'OS keystore · device-bound' },
+          { tone: 'danger',   label: 'env allowlist · secret scan' },
+          { tone: 'accent',   label: 'maddu trust · SHA256' },
+          { tone: 'accent2',  label: 'MCP gallery · sanitized output' },
+          { tone: 'gate',     label: 'gauntlet' },
+          { tone: 'spine',    label: 'spine event' },
+        ]}
+      />
+    </div>
+  </section>
+
+  <!-- ── DEFENSES + STICKY TOC ──────────────────────────────────── -->
+  <section class="section">
+    <div class="container-wide">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · The seven defenses</span>
+        <h2>Each one named, sourced, and bounded.</h2>
+        <p>Same shape across all seven: the attack, the defense, the implementation, the spine event that proves it ran, and what the defense <em>doesn't</em> cover. Read each as a contract, not a guarantee. The right rail tracks where you are.</p>
+      </header>
+
+      <div class="tm-layout">
+        <div class="tm-defenses">
+          {defenses.map((d) => (
+            <article class:list={['tm-defense', `tm-defense--${d.tone}`]} id={d.id}>
+              <header class="tm-head">
+                <div class="tm-head-tags">
+                  <span class="tm-n">{d.n}</span>
+                  {d.rule && <span class="tm-rule">{d.rule}</span>}
+                </div>
+                <h3 class="tm-title">{d.title}</h3>
+              </header>
+
+              <div class="tm-grid">
+                <div class="tm-block tm-block--attack">
+                  <h4>Attack</h4>
+                  <p>{d.attack}</p>
+                </div>
+                <div class="tm-block tm-block--defense">
+                  <h4>Structural defense</h4>
+                  <p>{d.defense}</p>
+                </div>
+              </div>
+
+              <Annotated
+                columns={['What you invoke', 'What happens', 'Spine event']}
+                rows={d.rows}
+              />
+
+              <Callout tone="warn" title="What this does NOT cover" tag="residual risk">
+                <p>{d.doesNotCover}</p>
+              </Callout>
+            </article>
+          ))}
+        </div>
+        <TocIndex
+          eyebrow="Defenses · 7"
+          items={defenses.map((d) => ({
+            n: d.n,
+            id: d.id,
+            tone: d.tone,
+            label: d.title.split(' — ')[0],
+            sub: d.rule,
+          }))}
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SAMPLE LOG ───────────────────────────────────────────────── -->
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 03 · The receipts</span>
+        <h2>What a defended slice actually looks like on disk.</h2>
+        <p>Every defense above leaves an event. Here's a sample slice trace including a secret-scan block, an approval cycle, and a token-usage report. This is the audit ledger you read at 2am.</p>
+      </header>
+
+      <EventStream
+        eyebrow="Spine sample · defended slice"
+        title="spine · turn 47 · all defenses present"
+        source=".maddu/events/2026-05-30.ndjson"
+        entries={[
+          { time: '14:08:02.014', type: 'BRIEF_RENDERED',           tone: 'framework', payload: 'turn=def789 · cycle=47',                          actor: 'claude-code' },
+          { time: '14:08:02.041', type: 'SESSION_REGISTERED',       tone: 'session',   payload: 'role=implementer · runtime=claude-code',          actor: 'claude-code' },
+          { time: '14:08:02.062', type: 'WORKER_SPAWNED',           tone: 'framework', payload: 'pid=42118 · runtime=claude-code',                 actor: 'bridge' },
+          { time: '14:08:02.063', type: 'WORKER_ENV_APPLIED',       tone: 'framework', payload: 'stripped=18 · allowed=4',                         actor: 'bridge' },
+          { time: '14:08:02.087', type: 'LANE_CLAIMED',             tone: 'lane',      payload: 'lane=cockpit-shell · focus="threat-model page"',  actor: 'claude-code' },
+          { time: '14:08:02.099', type: 'SLICE_STARTED',            tone: 'framework', payload: 'slice=tm-defense-04',                             actor: 'claude-code' },
+          { time: '14:08:08.214', type: 'TRUST_PIN_VERIFIED',       tone: 'ok',        payload: 'deps=12 · all ok',                                actor: 'doctor' },
+          { time: '14:08:11.402', type: 'SECRET_SCAN_BLOCKED',      tone: 'danger',    payload: 'pattern=anthropic_key · target=argv[2]',          actor: 'worker-1' },
+          { time: '14:08:11.418', type: 'INBOX_APPENDED',           tone: 'session',   payload: 'kind=warning · "secret-scan refused tool call"',  actor: 'bridge' },
+          { time: '14:08:14.617', type: 'APPROVAL_REQUESTED',       tone: 'approval',  payload: 'tool=git_push · tier=mutating',                   actor: 'gauntlet' },
+          { time: '14:08:28.811', type: 'APPROVAL_GRANTED',         tone: 'ok',        payload: 'by=operator · cooldown=respected',                actor: 'operator' },
+          { time: '14:08:28.829', type: 'TRIGGER_FIRED',            tone: 'accent',    payload: 'name=git.push · triggered_by=approval',           actor: 'gauntlet' },
+          { time: '14:08:31.084', type: 'TOKEN_USAGE_REPORTED',     tone: 'session',   payload: 'in=18402 · out=4912 · cache_hit=0.81',            actor: 'worker-1' },
+          { time: '14:08:31.110', type: 'SLICE_STOPPED',            tone: 'approval',  payload: 'targets=threat-model.astro · gates=7',            actor: 'claude-code' },
+          { time: '14:08:31.124', type: 'LANE_RELEASED',            tone: 'lane',      payload: 'lane=cockpit-shell',                              actor: 'claude-code' },
+        ]}
+      />
+    </div>
+  </section>
+
+  <!-- ── THE BOUNDARY ─────────────────────────────────────────────── -->
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 04 · The boundary</span>
+        <h2>What you still have to do yourself.</h2>
+      </header>
+
+      <Callout tone="warn" title="Máddu is the posture layer, not the vault" tag="explicit boundary">
+        <p>
+          Máddu is the audit and posture layer. It is <strong>not</strong> a secret store, a vault, or a key rotator. Pair it with a real vault — Hashicorp Vault, AWS Secrets Manager, Cloudflare Secrets, 1Password Connect, pick one. Use least-privilege IAM. Rotate keys on a schedule.
+        </p>
+        <p>
+          Máddu's job is to make sure your agents don't leak what's in those stores. It's not the store itself.
+        </p>
+      </Callout>
+
+      <Callout tone="danger" title="Forbidden patterns" tag="charter-refused">
+        <p>
+          <strong>The Hermes pattern</strong> — a hosted webhook holding many users' bot tokens, accepting inbound commands — is the exact failure mode the rest of the framework exists to prevent. Chat and connector integrations are allowed only if local, direct-API, device-bound token, off-by-default, allowlisted, and never inbound-as-command.
+        </p>
+        <p>
+          <strong>Auto-repair of the spine</strong> — never. A system that quietly heals can quietly hide a successful attack. <code>maddu spine verify</code> detects, surfaces, and stops. The operator reads the failure and decides.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="§ 05 · Continue"
+    title="Governance — the gauntlet and three tiers that fit it."
+    hint="The behavioral defense, deep-dived. Strict, standard, relaxed. What changes between them, what never does."
+    href="/governance"
+    tone="warn"
+  />
+</Layout>
+
+<style>
+  .page-head { padding: var(--m-space-16) 0 var(--m-space-8); }
+  .lede { font-size: 17px; color: var(--m-fg-0); max-width: 64ch; }
+
+  .tm-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--m-space-5);
+    border-top: 1px solid var(--m-line-soft);
+    padding-top: var(--m-space-5);
+    margin: var(--m-space-6) 0 0;
+    max-width: 720px;
+  }
+  .tm-stats div { display: flex; flex-direction: column; gap: 4px; }
+  .tm-stats dt {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+  }
+  .tm-stats dd {
+    margin: 0;
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+    font-size: 28px;
+    color: var(--m-accent);
+    line-height: 1;
+  }
+
+  /* ── 2-col layout: defense stack + sticky toc ──────────────────── */
+  .tm-layout {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    gap: var(--m-space-6);
+    align-items: start;
+  }
+  @media (max-width: 920px) {
+    .tm-layout { grid-template-columns: 1fr; }
+    .tm-layout > :global(.toc) { display: none; }
+  }
+  .tm-defenses { display: flex; flex-direction: column; gap: var(--m-space-6); min-width: 0; }
+
+  /* ── Defense card ──────────────────────────────────────────────── */
+  .tm-defense {
+    padding: var(--m-space-6);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-top-width: 2px;
+    border-radius: var(--m-radius);
+    scroll-margin-top: 80px;
+    position: relative;
+  }
+  .tm-defense--accent     { border-top: 2px solid var(--m-accent); }
+  .tm-defense--accent-2   { border-top: 2px solid var(--m-accent-2); }
+  .tm-defense--warn       { border-top: 2px solid var(--m-warn); }
+  .tm-defense--danger     { border-top: 2px solid var(--m-danger); }
+  .tm-defense--brand      { border-top: 2px solid var(--m-brand); }
+
+  .tm-head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--m-space-2);
+    margin-bottom: var(--m-space-5);
+  }
+  .tm-head-tags {
+    display: flex;
+    align-items: baseline;
+    gap: var(--m-space-3);
+  }
+  .tm-n {
+    font-family: var(--m-font-cond);
+    font-weight: 700;
+    font-size: 40px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--m-fg-3);
+  }
+  .tm-rule {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius-pill);
+    color: var(--m-fg-3);
+  }
+  .tm-title {
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+    font-size: 28px;
+    letter-spacing: -0.005em;
+    color: var(--m-fg-0);
+    margin: 0;
+    text-transform: none;
+  }
+
+  .tm-defense--accent   .tm-n,   .tm-defense--accent   .tm-rule { color: var(--m-accent);   border-color: var(--m-accent-dim); }
+  .tm-defense--accent-2 .tm-n,   .tm-defense--accent-2 .tm-rule { color: var(--m-accent-2); border-color: rgba(86, 184, 255, 0.4); }
+  .tm-defense--warn     .tm-n,   .tm-defense--warn     .tm-rule { color: var(--m-warn);     border-color: var(--m-warn-border); }
+  .tm-defense--danger   .tm-n,   .tm-defense--danger   .tm-rule { color: var(--m-danger);   border-color: var(--m-danger-border); }
+  .tm-defense--brand    .tm-n,   .tm-defense--brand    .tm-rule { color: var(--m-brand);    border-color: rgba(240, 78, 35, 0.4); }
+
+  .tm-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--m-space-4);
+    margin-bottom: var(--m-space-5);
+  }
+  @media (max-width: 760px) {
+    .tm-grid { grid-template-columns: 1fr; }
+    .tm-n { font-size: 28px; }
+    .tm-title { font-size: 22px; }
+  }
+  .tm-block {
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-1);
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+  }
+  .tm-block h4 {
+    margin: 0 0 var(--m-space-3);
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .tm-block p { margin: 0; color: var(--m-fg-1); font-size: 13.5px; line-height: 1.6; max-width: none; }
+
+  .tm-block--attack {
+    border-left: 2px solid var(--m-danger);
+  }
+  .tm-block--attack h4 { color: var(--m-danger); }
+  .tm-block--defense {
+    border-left: 2px solid var(--m-ok);
+  }
+  .tm-block--defense h4 { color: var(--m-ok); }
+</style>

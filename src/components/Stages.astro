@@ -1,0 +1,140 @@
+---
+// Stages.astro — a chip row representing a sequence of named stages.
+// Use for "orient → plan → coordinate → slice → test → review → land → account"
+// style compact summaries. Each stage gets an optional tone, optional sublabel,
+// and arrows are drawn between automatically.
+//
+// Tones map to the brand event-type palette where appropriate:
+//   framework · session · lane · approval · accent · accent-2 · ok · warn · danger
+export interface Stage {
+  label: string;
+  sub?: string;
+  tone?:
+    | 'accent'
+    | 'accent-2'
+    | 'framework'
+    | 'session'
+    | 'lane'
+    | 'approval'
+    | 'ok'
+    | 'warn'
+    | 'danger'
+    | 'neutral';
+  /** Whether this stage is "current" / highlighted */
+  active?: boolean;
+}
+export interface Props {
+  stages: Stage[];
+  /** glyph used between chips, default ▸ */
+  arrow?: string;
+  /** wrap multi-line vs scroll horizontally */
+  wrap?: boolean;
+  /** numbered indices on each chip */
+  numbered?: boolean;
+}
+
+const { stages, arrow = '▸', wrap = true, numbered = false } = Astro.props;
+---
+
+<ol class:list={['stages', wrap && 'stages--wrap', numbered && 'stages--numbered']}>
+  {stages.map((s, i) => (
+    <>
+      <li class:list={['stage', `stage--${s.tone || 'neutral'}`, s.active && 'is-active']}>
+        {numbered && <span class="stage-num">{String(i + 1).padStart(2, '0')}</span>}
+        <span class="stage-label">{s.label}</span>
+        {s.sub && <span class="stage-sub">{s.sub}</span>}
+      </li>
+      {i < stages.length - 1 && <span class="stage-arrow" aria-hidden="true">{arrow}</span>}
+    </>
+  ))}
+</ol>
+
+<style>
+  .stages {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: stretch;
+    gap: var(--m-space-2);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .stages::-webkit-scrollbar { display: none; }
+  .stages--wrap { flex-wrap: wrap; overflow-x: visible; }
+
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 12px;
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+    border-left: 2px solid var(--m-fg-4);
+    min-width: 0;
+    flex-shrink: 0;
+    transition: border-color 120ms, background 120ms, color 120ms;
+    position: relative;
+  }
+  .stage:hover { background: var(--m-bg-3); }
+  .stage.is-active {
+    background: var(--m-bg-3);
+    box-shadow: 0 0 0 1px var(--m-accent-dim), 0 0 24px rgba(208, 255, 0, 0.12);
+  }
+
+  .stage-num {
+    font-family: var(--m-font-mono);
+    font-size: 9.5px;
+    color: var(--m-fg-3);
+    letter-spacing: 0.12em;
+  }
+  .stage-label {
+    font-family: var(--m-font-cond);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--m-fg-0);
+    line-height: 1.1;
+  }
+  .stage-sub {
+    font-family: var(--m-font-mono);
+    font-size: 10.5px;
+    color: var(--m-fg-3);
+    letter-spacing: 0.04em;
+  }
+
+  .stage-arrow {
+    align-self: center;
+    color: var(--m-fg-4);
+    font-family: var(--m-font-mono);
+    font-size: 12px;
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  /* Tone variants — left bar color comes from the brand palette */
+  .stage--accent     { border-left-color: var(--m-accent); }
+  .stage--accent-2   { border-left-color: var(--m-accent-2); }
+  .stage--framework  { border-left-color: var(--m-event-framework); }
+  .stage--session    { border-left-color: var(--m-event-session); }
+  .stage--lane       { border-left-color: var(--m-event-lane); }
+  .stage--approval   { border-left-color: var(--m-event-approval); }
+  .stage--ok         { border-left-color: var(--m-ok); }
+  .stage--warn       { border-left-color: var(--m-warn); }
+  .stage--danger     { border-left-color: var(--m-danger); }
+  .stage--neutral    { border-left-color: var(--m-line); }
+
+  .stage--accent     .stage-label,
+  .stage--accent     .stage-num   { color: var(--m-accent); }
+  .stage--accent-2   .stage-num   { color: var(--m-accent-2); }
+  .stage--framework  .stage-num   { color: var(--m-event-framework); }
+  .stage--session    .stage-num   { color: var(--m-event-session); }
+  .stage--lane       .stage-num   { color: var(--m-event-lane); }
+  .stage--approval   .stage-num   { color: var(--m-event-approval); }
+  .stage--ok         .stage-num   { color: var(--m-ok); }
+  .stage--warn       .stage-num   { color: var(--m-warn); }
+  .stage--danger     .stage-num   { color: var(--m-danger); }
+
+  .stages--numbered .stage { padding-top: 6px; }
+</style>

@@ -1,0 +1,421 @@
+---
+// SearchPalette.astro — Cmd-K / Ctrl-K command palette.
+//
+// Structure + chrome mirror the cockpit's command palette
+// (template/maddu/cockpit/cockpit.css :: .palette-*). Same head, same
+// row grid (glyph | text | group tag), same active state (bg-2 + accent
+// border), same open-animation pattern.
+//
+// Index is a small static module; matching is case-insensitive substring
+// with a prefix-bonus. Hand-tuned > full text indexer at this scale.
+import { SEARCH_INDEX } from '../data/search-index';
+
+// Map each group prefix to the glyph the cockpit uses for that row kind.
+// Falls back to ▸ when nothing more specific applies.
+const indexJson = JSON.stringify(SEARCH_INDEX);
+---
+
+<div class="palette" id="palette" role="dialog" aria-modal="true" aria-label="Search the site" hidden>
+  <div class="palette-scrim" id="palette-scrim"></div>
+  <div class="palette-panel">
+    <div class="palette-head">
+      <span class="palette-glyph" aria-hidden="true">⌕</span>
+      <input
+        class="palette-input"
+        id="palette-input"
+        type="text"
+        placeholder="Type a route name, group, or keyword"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <kbd class="palette-kbd">esc</kbd>
+    </div>
+    <div class="palette-results" id="palette-results" role="listbox"></div>
+    <div class="palette-foot">
+      <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+      <span><kbd>↵</kbd> open</span>
+      <span class="palette-foot-hint" id="palette-foot-hint"></span>
+    </div>
+  </div>
+</div>
+
+<style is:global>
+  /* is:global is required — palette rows are injected by JS (innerHTML),
+   * so they don't get Astro's per-component data attribute. Without
+   * is:global these selectors would be scoped to .palette-row[data-astro-cid-XXX]
+   * and never match the runtime DOM. (Verified via CDP — without global,
+   * computed display is 'block' instead of 'grid'.) */
+  .palette { position: fixed; inset: 0; z-index: 200; pointer-events: none; }
+  .palette:not([hidden]) { pointer-events: auto; }
+  .palette-scrim {
+    position: absolute; inset: 0;
+    /* Stays dark on both themes — the scrim is intentionally heavy for
+     * focus, not a surface-color follower. Tuned alpha is what matters. */
+    background: rgba(2, 6, 14, 0.65);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    opacity: 0;
+    transition: opacity 140ms ease;
+  }
+  .palette-panel {
+    position: absolute;
+    top: 12vh; left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    width: min(560px, calc(100vw - 32px));
+    max-height: 70vh;
+    background: var(--m-bg-1);
+    border: 1px solid var(--m-bg-3);
+    border-radius: 10px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(208, 255, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transition: opacity 140ms ease, transform 180ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    overflow: hidden;
+  }
+  .palette.open .palette-scrim { opacity: 1; }
+  .palette.open .palette-panel { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .palette-head {
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--m-line-soft);
+  }
+  .palette-glyph {
+    font-family: var(--m-font-mono);
+    font-size: 16px;
+    color: var(--m-accent);
+    text-align: center;
+  }
+  .palette-input {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    outline: 0;
+    color: var(--m-fg-0);
+    font-family: var(--m-font-sans);
+    font-size: 15px;
+    padding: 0;
+    caret-color: var(--m-accent);
+  }
+  .palette-input::placeholder { color: var(--m-fg-4); }
+
+  .palette-kbd {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    color: var(--m-fg-3);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-bg-3);
+    border-radius: 3px;
+    padding: 2px 6px;
+  }
+
+  .palette-results {
+    overflow-y: auto;
+    padding: 6px;
+    flex: 1;
+    min-height: 0;
+  }
+  .palette-empty {
+    padding: 28px 16px;
+    text-align: center;
+    color: var(--m-fg-3);
+    font-size: 13px;
+    font-family: var(--m-font-mono);
+    letter-spacing: 0.02em;
+  }
+
+  .palette-row {
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 120ms, border-color 120ms;
+  }
+  .palette-row.is-active {
+    background: var(--m-bg-2);
+    border-color: var(--m-accent);
+  }
+  .palette-row-glyph {
+    font-family: var(--m-font-mono);
+    font-size: 13px;
+    color: var(--m-fg-3);
+    text-align: center;
+  }
+  .palette-row.is-active .palette-row-glyph { color: var(--m-accent); }
+
+  .palette-row-text { min-width: 0; }
+  .palette-row-title {
+    font-family: var(--m-font-cond);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--m-fg-0);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .palette-row-match {
+    font-family: var(--m-font-mono);
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    color: var(--m-accent-2);
+    text-transform: none;
+    margin-left: 6px;
+    opacity: 0.85;
+  }
+  .palette-row-desc {
+    font-size: 11.5px;
+    color: var(--m-fg-3);
+    line-height: 1.4;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .palette-row-group {
+    font-family: var(--m-font-mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--m-fg-4);
+    text-transform: uppercase;
+  }
+
+  /* Kind-modified glyph colors — exact match to cockpit .sub / .action */
+  .palette-row.sub    .palette-row-glyph { color: var(--m-accent); font-weight: 600; }
+  .palette-row.action .palette-row-glyph { color: var(--m-accent-2); font-weight: 600; }
+  .palette-row.is-active.sub    .palette-row-glyph { color: var(--m-accent); }
+  .palette-row.is-active.action .palette-row-glyph { color: var(--m-accent-2); }
+
+  .palette-foot {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    padding: 8px 14px;
+    border-top: 1px solid var(--m-line-soft);
+    font-size: 10px;
+    color: var(--m-fg-4);
+    font-family: var(--m-font-mono);
+  }
+  .palette-foot kbd {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    color: var(--m-fg-3);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-bg-3);
+    border-radius: 3px;
+    padding: 2px 6px;
+    margin-right: 2px;
+  }
+  .palette-foot-hint { margin-left: auto; color: var(--m-fg-2); }
+
+  @media (max-width: 767px) {
+    .palette-panel {
+      top: 0; left: 0; right: 0; bottom: 0;
+      width: auto; max-height: 100vh;
+      border-radius: 0;
+      transform: none;
+    }
+    .palette.open .palette-panel { transform: none; }
+  }
+</style>
+
+<script is:inline define:vars={{ indexJson }}>
+  (function () {
+    const STATIC = JSON.parse(indexJson);
+    let INDEX = STATIC;
+    let headingsLoaded = false;
+    // Lazy-fetch the post-build heading extract on first palette open.
+    // Curated static entries still rank first because the score function
+    // weights exact title hits before targetRoute hits, and headings
+    // generally hit on targetRoute. Falls back to the static set if the
+    // fetch fails (dev-only when extract-headings.mjs hasn't run yet).
+    async function loadHeadings() {
+      if (headingsLoaded) return;
+      headingsLoaded = true;
+      try {
+        const r = await fetch('/search-headings.json', { cache: 'force-cache' });
+        if (!r.ok) return;
+        const adds = await r.json();
+        if (Array.isArray(adds)) {
+          INDEX = STATIC.concat(adds);
+          if (palette.classList.contains('open')) render();
+        }
+      } catch {}
+    }
+    const palette = document.getElementById('palette');
+    const input = document.getElementById('palette-input');
+    const results = document.getElementById('palette-results');
+    const scrim = document.getElementById('palette-scrim');
+    const hint = document.getElementById('palette-foot-hint');
+    if (!palette || !input || !results || !scrim) return;
+
+    // Glyph derivation — mirrors cockpit.js renderPaletteResults():
+    //   kind 'action' → ▷  · kind 'sub' → ▸  · else → ◆ when anchored / ◇ when bare
+    function glyphFor(it) {
+      if (it.kind === 'action') return '▷';
+      if (it.kind === 'sub')    return '▸';
+      return it.url && it.url.indexOf('#') >= 0 ? '◆' : '◇';
+    }
+
+    let active = 0;
+    let visible = [];
+
+    function score(q, e) {
+      const t = e.title.toLowerCase();
+      const g = e.group.toLowerCase();
+      const k = e.keywords;
+      const tr = (e.targetRoute || '').toLowerCase();
+      if (t.startsWith(q)) return 0;
+      const ti = t.indexOf(q);
+      if (ti === 0) return 1;
+      if (ti > 0) return 5 + ti;
+      if (tr.indexOf(q) >= 0) return 15;
+      const gi = g.indexOf(q);
+      if (gi >= 0) return 20 + gi;
+      const ki = k.indexOf(q);
+      if (ki >= 0) return 50 + ki;
+      return -1;
+    }
+
+    function search(q) {
+      q = q.trim().toLowerCase();
+      if (!q) {
+        // Empty query — show top-level pages (routes) first.
+        return INDEX.filter((e) => e.kind === 'route').slice(0, 12);
+      }
+      const out = [];
+      for (const e of INDEX) {
+        const s = score(q, e);
+        if (s >= 0) out.push({ e, s });
+      }
+      out.sort((a, b) => a.s - b.s);
+      return out.slice(0, 28).map((x) => x.e);
+    }
+
+    function setHint() {
+      if (!hint) return;
+      const it = visible[active];
+      hint.textContent = it ? '→ ' + it.title : '';
+    }
+
+    function render() {
+      visible = search(input.value);
+      if (!visible.length) {
+        results.innerHTML = '<div class="palette-empty">No matches. Try a route name, group, or keyword.</div>';
+        if (hint) hint.textContent = '';
+        return;
+      }
+      let html = '';
+      visible.forEach((e, i) => {
+        const glyph = glyphFor(e);
+        // Cockpit pattern: append a · in ROUTE / · action match on sub/action kinds.
+        let matchSuffix = '';
+        if (e.kind === 'sub' && e.targetRoute) {
+          matchSuffix = '<span class="palette-row-match"> · in ' + e.targetRoute.toUpperCase() + '</span>';
+        } else if (e.kind === 'action') {
+          matchSuffix = '<span class="palette-row-match"> · action</span>';
+        }
+        const desc = e.desc ? '<div class="palette-row-desc">' + e.desc + '</div>' : '';
+        const kindMod =
+          e.kind === 'sub'    ? ' sub' :
+          e.kind === 'action' ? ' action' : '';
+        const cls = 'palette-row' + (i === active ? ' is-active' : '') + kindMod;
+        html += (
+          '<div class="' + cls + '" data-i="' + i + '" data-url="' + e.url + '" role="option" aria-selected="' + (i === active) + '">' +
+            '<span class="palette-row-glyph">' + glyph + '</span>' +
+            '<div class="palette-row-text">' +
+              '<div class="palette-row-title">' + e.title + matchSuffix + '</div>' +
+              desc +
+            '</div>' +
+            '<span class="palette-row-group">' + (e.group || '').toUpperCase() + '</span>' +
+          '</div>'
+        );
+      });
+      results.innerHTML = html;
+      setHint();
+      results.querySelectorAll('.palette-row').forEach((row) => {
+        row.addEventListener('click', () => navigate(parseInt(row.dataset.i, 10)));
+        row.addEventListener('mousemove', () => setActive(parseInt(row.dataset.i, 10)));
+      });
+      ensureActiveVisible();
+    }
+
+    function setActive(i) {
+      if (!visible.length) return;
+      active = ((i % visible.length) + visible.length) % visible.length;
+      results.querySelectorAll('.palette-row').forEach((row) => {
+        const on = parseInt(row.dataset.i, 10) === active;
+        row.classList.toggle('is-active', on);
+        row.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      ensureActiveVisible();
+      setHint();
+    }
+
+    function ensureActiveVisible() {
+      const el = results.querySelector('.palette-row.is-active');
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ block: 'nearest' });
+      }
+    }
+
+    function navigate(i) {
+      if (i == null) i = active;
+      const e = visible[i];
+      if (!e) return;
+      close();
+      window.location.href = e.url;
+    }
+
+    function open() {
+      palette.removeAttribute('hidden');
+      // Two-step open so the transition runs from the off-state.
+      requestAnimationFrame(() => palette.classList.add('open'));
+      active = 0;
+      input.value = '';
+      render();
+      // Lazy-load extended index (post-build heading scan) on first open.
+      loadHeadings();
+      requestAnimationFrame(() => input.focus());
+      document.documentElement.style.overflow = 'hidden';
+    }
+
+    function close() {
+      palette.classList.remove('open');
+      // Match the panel transition duration before hiding entirely.
+      setTimeout(() => {
+        palette.setAttribute('hidden', '');
+        document.documentElement.style.overflow = '';
+      }, 180);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      const isMod = e.metaKey || e.ctrlKey;
+      if (isMod && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        if (palette.hasAttribute('hidden')) open(); else close();
+        return;
+      }
+      if (palette.hasAttribute('hidden')) return;
+      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); setActive(active + 1); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setActive(active - 1); return; }
+      if (e.key === 'Enter') { e.preventDefault(); navigate(); return; }
+    });
+
+    scrim.addEventListener('click', close);
+    input.addEventListener('input', () => { active = 0; render(); });
+
+    window.__maddu_openSearch = open;
+  })();
+</script>

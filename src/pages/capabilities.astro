@@ -1,0 +1,484 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Callout from '../components/Callout.astro';
+import PageNext from '../components/PageNext.astro';
+
+interface Area {
+  id: string;
+  title: string;
+  glyph: string;
+  tone: 'accent' | 'accent-2' | 'warn' | 'danger' | 'ok' | 'framework' | 'session' | 'lane';
+  purpose: string;
+  verbs: string[];
+}
+
+const areas: Area[] = [
+  {
+    id: 'orchestration',
+    title: 'Orchestration core',
+    glyph: '◈',
+    tone: 'framework',
+    purpose: 'Drive the one canonical substrate loop — register a session, claim a lane, run a slice, release. Each transition is one event on the spine.',
+    verbs: ['session', 'register', 'lane', 'slice', 'slice-stop', 'stop', 'worker', 'mailbox'],
+  },
+  {
+    id: 'planning',
+    title: 'Planning & autonomy',
+    glyph: '↳',
+    tone: 'accent',
+    purpose: 'First-class auto-revising planning. Pipelines and goals decompose work; phase and loop are the iteration primitives; the coordinator fans work across a team; advise and suggest route intent to the right next move.',
+    verbs: ['pipeline', 'plan', 'goal', 'phase', 'loop', 'coordinator', 'team', 'advise', 'suggest'],
+  },
+  {
+    id: 'quality',
+    title: 'Quality & review',
+    glyph: '⚑',
+    tone: 'ok',
+    purpose: 'Keep the surface honest. Review and test gate slices; lint and format enforce code hygiene; doctor enforces the 8+1 hard rules on every install and upgrade.',
+    verbs: ['review', 'test', 'lint', 'format', 'doctor'],
+  },
+  {
+    id: 'tools',
+    title: 'Default tools',
+    glyph: '⌖',
+    tone: 'session',
+    purpose: 'The explicit-invocation tool surface an agent reaches for mid-work: version control via git, dependency install, reusable skills, and ad-hoc task tracking.',
+    verbs: ['git', 'install', 'skill', 'task'],
+  },
+  {
+    id: 'trust',
+    title: 'Supply-chain & trust',
+    glyph: '⛨',
+    tone: 'danger',
+    purpose: 'The audit / portability / supply-chain posture made operable. trust pins and verifies; sources and approval gate provenance at ingest; governance sets the per-workspace tier; mcp brings tools in through allowlisted templates.',
+    verbs: ['trust', 'sources', 'approval', 'governance', 'mcp'],
+  },
+  {
+    id: 'memory',
+    title: 'Memory & accounting',
+    glyph: '∞',
+    tone: 'lane',
+    purpose: 'Make work outlive the agent. memory and hindsight skills persist learning; cost and usage and the receipt log account for spend; import retroactively populates the ledger.',
+    verbs: ['memory', 'cost', 'usage', 'log', 'import'],
+  },
+  {
+    id: 'discovery',
+    title: 'Discovery & observability',
+    glyph: '⌕',
+    tone: 'accent-2',
+    purpose: 'Watch and replay the event log. status and events surface live state; spine verifies the append-only truth (never auto-repairs); search and brief query it; help is the on-ramp; audit runs the charter-drift check.',
+    verbs: ['status', 'events', 'spine', 'search', 'brief', 'help', 'audit'],
+  },
+  {
+    id: 'lifecycle',
+    title: 'Lifecycle & plumbing',
+    glyph: '⌬',
+    tone: 'warn',
+    purpose: 'Operator and script plumbing only (verbose CLI, no slash on-ramp). init/start/upgrade install and run the spine; workspace/global/runtime configure it; schedule fires allowlisted triggers; checkpoint snapshots; auth keeps device-bound tokens; bridges manages live connections.',
+    verbs: ['init', 'start', 'upgrade', 'workspace', 'global', 'runtime', 'schedule', 'checkpoint', 'auth', 'bridges'],
+  },
+];
+
+const totalVerbs = areas.reduce((sum, a) => sum + a.verbs.length, 0);
+---
+
+<Layout title="Capabilities" pathname="/capabilities">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Capabilities</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">the verb ontology</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">{areas.length} purpose areas</span>
+      </div>
+      <h1>Every verb earns its place. <span class="dim-h1">Or it goes.</span></h1>
+      <p class="lede">
+        Máddu has {totalVerbs} top-level verbs across {areas.length} purpose areas. Each one traces to a stated purpose against the mission and the 9 invariants. The <span class="verb">maddu audit charter</span> command exists specifically to flag drift.
+      </p>
+      <dl class="cap-stats">
+        <div><dt>Verbs</dt><dd>{totalVerbs}</dd></div>
+        <div><dt>Purpose areas</dt><dd>{areas.length}</dd></div>
+        <div><dt>Invariants</dt><dd>9</dd></div>
+        <div><dt>Slash on-ramps</dt><dd>13</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container-wide">
+      <div class="cap-filter" role="search">
+        <span class="cap-filter-glyph" aria-hidden="true">⌕</span>
+        <input
+          type="text"
+          id="capFilter"
+          class="cap-filter-input"
+          placeholder="Filter — type a verb, area, or word from a purpose…"
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="Filter capabilities"
+        />
+        <button class="cap-filter-clear" id="capFilterClear" aria-label="Clear filter" hidden>esc</button>
+        <span class="cap-filter-count" id="capFilterCount">{totalVerbs} verbs · {areas.length} areas</span>
+      </div>
+
+      <div class="cap-grid" id="capGrid">
+        {areas.map((a) => (
+          <article
+            class:list={['cap-card', `cap-card--${a.tone}`]}
+            id={a.id}
+            data-area={a.title.toLowerCase()}
+            data-purpose={a.purpose.toLowerCase()}
+            data-verbs={a.verbs.join(' ').toLowerCase()}
+          >
+            <header class="cap-card-head">
+              <span class="cap-glyph" aria-hidden="true">{a.glyph}</span>
+              <div class="cap-card-h">
+                <h3 class="cap-title">{a.title}</h3>
+                <span class="cap-count">{a.verbs.length} verb{a.verbs.length === 1 ? '' : 's'}</span>
+              </div>
+            </header>
+            <p class="cap-purpose">{a.purpose}</p>
+            <ul class="cap-verbs">
+              {a.verbs.map((v) => (
+                <li data-verb={v.toLowerCase()}><code>maddu {v}</code></li>
+              ))}
+            </ul>
+          </article>
+        ))}
+      </div>
+
+      <div class="cap-empty" id="capEmpty" hidden>
+        <span class="cap-empty-glyph" aria-hidden="true">◌</span>
+        <p>No verbs or areas match that filter.</p>
+        <button class="btn" type="button" id="capEmptyReset">Clear filter</button>
+      </div>
+    </div>
+
+    <script is:inline>
+      (function () {
+        const input  = document.getElementById('capFilter');
+        const clear  = document.getElementById('capFilterClear');
+        const count  = document.getElementById('capFilterCount');
+        const grid   = document.getElementById('capGrid');
+        const empty  = document.getElementById('capEmpty');
+        const reset  = document.getElementById('capEmptyReset');
+        if (!input || !grid) return;
+
+        const cards = Array.from(grid.querySelectorAll('.cap-card'));
+        const totalVerbs = cards.reduce((n, c) => n + c.querySelectorAll('.cap-verbs li').length, 0);
+
+        function apply(q) {
+          q = (q || '').trim().toLowerCase();
+          let shownAreas = 0;
+          let shownVerbs = 0;
+
+          for (const card of cards) {
+            const area    = card.dataset.area || '';
+            const purpose = card.dataset.purpose || '';
+            const verbs   = card.dataset.verbs || '';
+            const verbItems = card.querySelectorAll('.cap-verbs li');
+
+            if (!q) {
+              card.hidden = false;
+              card.classList.remove('cap-card--dim');
+              for (const li of verbItems) li.classList.remove('cap-verb--match', 'cap-verb--dim');
+              shownAreas++;
+              shownVerbs += verbItems.length;
+              continue;
+            }
+
+            // Per-verb match check — highlight specific verbs when the query
+            // hits one of them, dim the rest. The whole card hides only
+            // when nothing inside it matches (area, purpose, or any verb).
+            let cardHits = 0;
+            for (const li of verbItems) {
+              const v = li.dataset.verb || '';
+              if (v.indexOf(q) >= 0) {
+                li.classList.add('cap-verb--match');
+                li.classList.remove('cap-verb--dim');
+                cardHits++;
+              } else {
+                li.classList.remove('cap-verb--match');
+                li.classList.add('cap-verb--dim');
+              }
+            }
+            const areaHit    = area.indexOf(q) >= 0;
+            const purposeHit = purpose.indexOf(q) >= 0;
+            const anyHit     = cardHits > 0 || areaHit || purposeHit;
+
+            card.hidden = !anyHit;
+            card.classList.toggle('cap-card--dim', anyHit && cardHits === 0 && (areaHit || purposeHit));
+            if (anyHit) {
+              shownAreas++;
+              shownVerbs += cardHits || verbItems.length;
+            }
+          }
+
+          if (empty) empty.hidden = shownAreas > 0;
+          if (count) {
+            count.textContent = q
+              ? shownVerbs + ' verb' + (shownVerbs === 1 ? '' : 's') + ' · ' + shownAreas + ' area' + (shownAreas === 1 ? '' : 's')
+              : totalVerbs + ' verbs · ' + cards.length + ' areas';
+          }
+          if (clear) clear.hidden = !q;
+        }
+
+        input.addEventListener('input', () => apply(input.value));
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && input.value) {
+            e.preventDefault();
+            input.value = '';
+            apply('');
+          }
+        });
+        const clearFn = () => { input.value = ''; apply(''); input.focus(); };
+        clear && clear.addEventListener('click', clearFn);
+        reset && reset.addEventListener('click', clearFn);
+      })();
+    </script>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · How a verb earns its place</span>
+        <h2>Four checks. If a verb fails any, the charter flags it.</h2>
+      </header>
+
+      <ol class="earn-list">
+        <li><strong>Serves the mission</strong> — local-first, auditable orchestration.</li>
+        <li><strong>Respects all 9 invariants</strong> — the 8+1 hard rules, no exceptions.</li>
+        <li><strong>Reachable from the canonical flow</strong> or an explicit operator/agent surface.</li>
+        <li><strong>Traces to a stated purpose</strong> in the charter (the eight areas above).</li>
+      </ol>
+
+      <Callout tone="accent" title="maddu audit · 4 checks on every install" tag="charter-enforced">
+        <p>
+          <code>event-types-reachable</code> · <code>command-surface-coherent</code> · <code>cockpit-routes-reachable</code> · <code>docs-indexed</code>.
+        </p>
+        <p>
+          Anything that fails is either real drift to fix, or evidence that the charter needs to evolve. The audit's job is to make sure the answer is intentional.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="§ 03 · Loop back"
+    title="Overview — start at the top, with the redesigned hero."
+    hint="If you came in deep, the landing page now has the animated substrate loop and the full mental-model summary."
+    href="/"
+    tone="accent-2"
+  />
+</Layout>
+
+<style>
+  .page-head { padding: var(--m-space-16) 0 var(--m-space-8); }
+  .lede { font-size: 17px; color: var(--m-fg-0); max-width: 68ch; }
+  .dim-h1 { color: var(--m-fg-3); font-weight: 400; }
+
+  .cap-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--m-space-5);
+    border-top: 1px solid var(--m-line-soft);
+    padding-top: var(--m-space-5);
+    margin: var(--m-space-6) 0 0;
+    max-width: 620px;
+  }
+  .cap-stats div { display: flex; flex-direction: column; gap: 4px; }
+  .cap-stats dt {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+  }
+  .cap-stats dd {
+    margin: 0;
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+    font-size: 28px;
+    color: var(--m-accent);
+    line-height: 1;
+  }
+
+  /* ── Filter bar ────────────────────────────────────────────────── */
+  .cap-filter {
+    display: grid;
+    grid-template-columns: 24px 1fr auto auto;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--m-bg-1);
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+    margin-bottom: var(--m-space-5);
+  }
+  .cap-filter-glyph {
+    font-family: var(--m-font-mono);
+    font-size: 16px;
+    color: var(--m-accent);
+    text-align: center;
+  }
+  .cap-filter-input {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    outline: 0;
+    color: var(--m-fg-0);
+    font-family: var(--m-font-sans);
+    font-size: 14px;
+    padding: 0;
+    caret-color: var(--m-accent);
+    min-width: 0;
+  }
+  .cap-filter-input::placeholder { color: var(--m-fg-3); }
+  .cap-filter-clear {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    color: var(--m-fg-3);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-bg-3);
+    border-radius: 3px;
+    padding: 2px 8px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .cap-filter-clear:hover { color: var(--m-accent); border-color: var(--m-accent); }
+  .cap-filter-count {
+    font-family: var(--m-font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: var(--m-fg-3);
+    text-transform: uppercase;
+  }
+
+  /* Match / dim states */
+  .cap-card--dim { opacity: 0.55; }
+  .cap-verbs li.cap-verb--match code {
+    color: var(--m-accent);
+    border-color: var(--m-accent-dim);
+    background: color-mix(in srgb, var(--m-accent) 12%, var(--m-bg-3));
+  }
+  .cap-verbs li.cap-verb--dim { opacity: 0.45; }
+
+  /* Empty state */
+  .cap-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--m-space-3);
+    padding: var(--m-space-10) var(--m-space-6);
+    background: var(--m-bg-2);
+    border: 1px dashed var(--m-line);
+    border-radius: var(--m-radius);
+    color: var(--m-fg-2);
+    text-align: center;
+  }
+  .cap-empty-glyph {
+    font-family: var(--m-font-mono);
+    font-size: 28px;
+    color: var(--m-fg-4);
+  }
+  .cap-empty p {
+    margin: 0;
+    font-family: var(--m-font-mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--m-fg-3);
+  }
+
+  .cap-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: var(--m-space-3);
+  }
+  .cap-card {
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-top: 2px solid var(--m-fg-4);
+    border-radius: var(--m-radius);
+    padding: var(--m-space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--m-space-3);
+    transition: border-color 120ms, background 120ms;
+  }
+  .cap-card:hover { background: var(--m-bg-3); }
+  .cap-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--m-space-3);
+  }
+  .cap-glyph {
+    font-family: var(--m-font-mono);
+    font-size: 26px;
+    color: var(--m-accent);
+    line-height: 1;
+  }
+  .cap-card-h { flex: 1; }
+  .cap-title {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 17px;
+    color: var(--m-fg-0);
+    margin: 0;
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+  }
+  .cap-count {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+  }
+  .cap-purpose {
+    color: var(--m-fg-1);
+    font-size: 13.5px;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .cap-verbs {
+    list-style: none;
+    padding: var(--m-space-3) 0 0;
+    margin: 0;
+    border-top: 1px solid var(--m-line-soft);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .cap-verbs li { margin: 0; }
+  .cap-verbs code {
+    font-size: 11px;
+    background: var(--m-bg-3);
+    color: var(--m-fg-0);
+    border: 1px solid var(--m-line-soft);
+    padding: 3px 8px;
+    border-radius: var(--m-radius-sm);
+  }
+
+  /* Tone variants — top border + glyph color */
+  .cap-card--accent     { border-top-color: var(--m-accent); }
+  .cap-card--accent     .cap-glyph { color: var(--m-accent); }
+  .cap-card--accent-2   { border-top-color: var(--m-accent-2); }
+  .cap-card--accent-2   .cap-glyph { color: var(--m-accent-2); }
+  .cap-card--warn       { border-top-color: var(--m-warn); }
+  .cap-card--warn       .cap-glyph { color: var(--m-warn); }
+  .cap-card--danger     { border-top-color: var(--m-danger); }
+  .cap-card--danger     .cap-glyph { color: var(--m-danger); }
+  .cap-card--ok         { border-top-color: var(--m-ok); }
+  .cap-card--ok         .cap-glyph { color: var(--m-ok); }
+  .cap-card--framework  { border-top-color: var(--m-event-framework); }
+  .cap-card--framework  .cap-glyph { color: var(--m-event-framework); }
+  .cap-card--session    { border-top-color: var(--m-event-session); }
+  .cap-card--session    .cap-glyph { color: var(--m-event-session); }
+  .cap-card--lane       { border-top-color: var(--m-event-lane); }
+  .cap-card--lane       .cap-glyph { color: var(--m-event-lane); }
+
+  .earn-list { padding-left: 22px; }
+  .earn-list li { color: var(--m-fg-1); margin-bottom: 8px; }
+</style>

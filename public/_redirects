@@ -1,0 +1,13 @@
+# Cloudflare Pages redirects.
+# Format: <from>  <to>  <status>
+
+# Pretty-URL fallbacks for the threat-model anchors (defensive — the
+# in-page hash links work directly, these just legitimize any external
+# deep-link shapes that show up in the wild).
+/security/threat-model  /threat-model  301
+/threat-model/*  /threat-model#:splat  301
+
+# Per-release URLs (/changelog/v1-2-0) are real static stub pages at
+# src/pages/changelog/[slug].astro — they render a per-release og:image
+# for social crawlers, then meta-refresh humans to /changelog#:splat.
+# No catch-all redirect here so the stubs win.

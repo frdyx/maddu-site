@@ -1,0 +1,233 @@
+---
+// LayerIndex.astro — sticky right-rail navigation for /architecture.
+// Renders 14 tone-coded chips; IntersectionObserver sets active state
+// based on which layer is currently in view.
+export interface Item {
+  n: string;
+  id: string;
+  tone:
+    | 'invariant' | 'operator' | 'runtime' | 'execution' | 'substrate'
+    | 'lane' | 'gauntlet' | 'worker' | 'spine' | 'projection'
+    | 'security' | 'quality' | 'memory' | 'cockpit';
+  label: string;
+}
+export interface Props {
+  items: Item[];
+  /** Eyebrow for the rail header */
+  eyebrow?: string;
+}
+
+const { items, eyebrow = 'Layers' } = Astro.props;
+---
+
+<aside class="lx" aria-label="Layer navigation">
+  <header class="lx-head">
+    <span class="lx-eyebrow">{eyebrow}</span>
+    <span class="lx-count">{items.length}</span>
+  </header>
+  <nav class="lx-nav">
+    {items.map((it) => (
+      <a
+        href={`#${it.id}`}
+        class:list={['lx-link', `lx-link--${it.tone}`]}
+        data-target={it.id}
+      >
+        <span class="lx-n">{it.n}</span>
+        <span class="lx-label">{it.label}</span>
+        <span class="lx-glyph" aria-hidden="true">›</span>
+      </a>
+    ))}
+  </nav>
+</aside>
+
+<style>
+  .lx {
+    position: sticky;
+    top: calc(var(--m-nav-h) + var(--m-space-4));
+    align-self: start;
+    background: var(--m-bg-1);
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+    overflow: hidden;
+    max-height: calc(100vh - var(--m-nav-h) - var(--m-space-6));
+    display: flex;
+    flex-direction: column;
+  }
+  .lx-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--m-line-soft);
+    background: var(--m-bg-2);
+  }
+  .lx-eyebrow {
+    font-family: var(--m-font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+  }
+  .lx-count {
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    color: var(--m-accent);
+  }
+  .lx-nav {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 4px 0;
+  }
+  .lx-link {
+    display: grid;
+    grid-template-columns: 28px 1fr 16px;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 12px;
+    border-left: 2px solid transparent;
+    color: var(--m-fg-2);
+    border-bottom: 0;
+    font-family: var(--m-font-cond);
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
+    transition: background 120ms, color 120ms, border-color 120ms;
+  }
+  .lx-link:hover {
+    background: var(--m-bg-2);
+    color: var(--m-fg-0);
+    border-bottom: 0;
+  }
+  .lx-link.is-active {
+    background: var(--m-bg-3);
+    color: var(--m-fg-0);
+  }
+
+  .lx-n {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    color: var(--m-fg-4);
+    letter-spacing: 0.06em;
+  }
+  .lx-label { line-height: 1.2; }
+  .lx-glyph { color: var(--m-fg-4); opacity: 0; transition: opacity 120ms; }
+  .lx-link.is-active .lx-glyph { opacity: 1; }
+
+  /* Tone variants — left bar + active number tint */
+  .lx-link--invariant   { border-left-color: var(--m-brand); }
+  .lx-link--invariant.is-active   { color: var(--m-brand); }
+  .lx-link--invariant.is-active   .lx-n,
+  .lx-link--invariant.is-active   .lx-glyph { color: var(--m-brand); }
+
+  .lx-link--operator    { border-left-color: var(--m-accent); }
+  .lx-link--operator.is-active    { color: var(--m-accent); }
+  .lx-link--operator.is-active    .lx-n,
+  .lx-link--operator.is-active    .lx-glyph { color: var(--m-accent); }
+
+  .lx-link--runtime     { border-left-color: var(--m-event-session); }
+  .lx-link--runtime.is-active     { color: var(--m-event-session); }
+  .lx-link--runtime.is-active     .lx-n,
+  .lx-link--runtime.is-active     .lx-glyph { color: var(--m-event-session); }
+
+  .lx-link--execution   { border-left-color: var(--m-accent); }
+  .lx-link--execution.is-active   { color: var(--m-accent); }
+  .lx-link--execution.is-active   .lx-n,
+  .lx-link--execution.is-active   .lx-glyph { color: var(--m-accent); }
+
+  .lx-link--substrate   { border-left-color: var(--m-event-framework); }
+  .lx-link--substrate.is-active   { color: var(--m-event-framework); }
+  .lx-link--substrate.is-active   .lx-n,
+  .lx-link--substrate.is-active   .lx-glyph { color: var(--m-event-framework); }
+
+  .lx-link--lane        { border-left-color: var(--m-event-lane); }
+  .lx-link--lane.is-active        { color: var(--m-event-lane); }
+  .lx-link--lane.is-active        .lx-n,
+  .lx-link--lane.is-active        .lx-glyph { color: var(--m-event-lane); }
+
+  .lx-link--gauntlet    { border-left-color: var(--m-warn); }
+  .lx-link--gauntlet.is-active    { color: var(--m-warn); }
+  .lx-link--gauntlet.is-active    .lx-n,
+  .lx-link--gauntlet.is-active    .lx-glyph { color: var(--m-warn); }
+
+  .lx-link--worker      { border-left-color: var(--m-danger); }
+  .lx-link--worker.is-active      { color: var(--m-danger); }
+  .lx-link--worker.is-active      .lx-n,
+  .lx-link--worker.is-active      .lx-glyph { color: var(--m-danger); }
+
+  .lx-link--spine       { border-left-color: var(--m-accent-2); }
+  .lx-link--spine.is-active       { color: var(--m-accent-2); }
+  .lx-link--spine.is-active       .lx-n,
+  .lx-link--spine.is-active       .lx-glyph { color: var(--m-accent-2); }
+
+  .lx-link--projection  { border-left-color: var(--m-event-lane); }
+  .lx-link--projection.is-active  { color: var(--m-event-lane); }
+  .lx-link--projection.is-active  .lx-n,
+  .lx-link--projection.is-active  .lx-glyph { color: var(--m-event-lane); }
+
+  .lx-link--security    { border-left-color: var(--m-danger); }
+  .lx-link--security.is-active    { color: var(--m-danger); }
+  .lx-link--security.is-active    .lx-n,
+  .lx-link--security.is-active    .lx-glyph { color: var(--m-danger); }
+
+  .lx-link--quality     { border-left-color: var(--m-ok); }
+  .lx-link--quality.is-active     { color: var(--m-ok); }
+  .lx-link--quality.is-active     .lx-n,
+  .lx-link--quality.is-active     .lx-glyph { color: var(--m-ok); }
+
+  .lx-link--memory      { border-left-color: var(--m-event-framework); }
+  .lx-link--memory.is-active      { color: var(--m-event-framework); }
+  .lx-link--memory.is-active      .lx-n,
+  .lx-link--memory.is-active      .lx-glyph { color: var(--m-event-framework); }
+
+  .lx-link--cockpit     { border-left-color: var(--m-accent-2); }
+  .lx-link--cockpit.is-active     { color: var(--m-accent-2); }
+  .lx-link--cockpit.is-active     .lx-n,
+  .lx-link--cockpit.is-active     .lx-glyph { color: var(--m-accent-2); }
+</style>
+
+<script>
+  // Scroll-spy: observe each layer card; promote the matching lx-link
+  // to .is-active when its card is most-in-view.
+  const links = document.querySelectorAll<HTMLAnchorElement>('.lx-link');
+  if (links.length) {
+    const targets = Array.from(links)
+      .map((l) => ({ link: l, el: document.getElementById(l.dataset.target!) }))
+      .filter((x): x is { link: HTMLAnchorElement; el: HTMLElement } => !!x.el);
+
+    const setActive = (id: string) => {
+      links.forEach((l) => {
+        l.classList.toggle('is-active', l.dataset.target === id);
+      });
+    };
+
+    // IntersectionObserver picks the layer whose top is closest to the
+    // viewport's upper third — that reads as "the one you're reading."
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible[0]?.target?.id) {
+          setActive(visible[0].target.id);
+        }
+      },
+      { rootMargin: '-25% 0px -55% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] }
+    );
+
+    targets.forEach((t) => observer.observe(t.el));
+
+    // Smooth scroll on click — works around the sticky-header overlap.
+    links.forEach((l) => {
+      l.addEventListener('click', (e) => {
+        const id = l.dataset.target;
+        const el = id ? document.getElementById(id) : null;
+        if (el) {
+          e.preventDefault();
+          const y = el.getBoundingClientRect().top + window.scrollY - 80;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+          history.replaceState(null, '', '#' + id);
+        }
+      });
+    });
+  }
+</script>

@@ -1,0 +1,240 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Callout from '../components/Callout.astro';
+import PageNext from '../components/PageNext.astro';
+---
+
+<Layout title="Manifesto" pathname="/manifesto" description="Why Máddu exists, what it refuses to be, and what it means to build orchestration that outlives every agent that touches it.">
+  <article class="manifesto">
+    <header class="m-head">
+      <div class="container">
+        <div class="eyebrow-chain">
+          <span class="eyebrow">Manifesto</span>
+          <span class="eyebrow-sep">·</span>
+          <span class="eyebrow-dim">why, in prose</span>
+          <span class="eyebrow-sep">·</span>
+          <span class="eyebrow-dim">7 sections · ~6 min read</span>
+        </div>
+        <h1 class="m-title">
+          The orchestration spine<br />
+          that <em>outlives</em> every agent<br />
+          that touches it.
+        </h1>
+        <p class="m-deck">
+          The rest of the site is a reference. This one is the position.
+        </p>
+      </div>
+    </header>
+
+    <section class="m-section">
+      <div class="container">
+        <span class="m-num">I.</span>
+        <h2 class="m-h2">Capability gets the headlines. Accountability is the gap.</h2>
+        <p>
+          The current AI cycle is racing on capability. Bigger models. More tools. Wider context. Multi-agent systems coordinating across thousands of steps. And mostly the conversation stops there — at what these systems can <em>do</em>.
+        </p>
+        <p>
+          The conversation people aren't having out loud yet is the one that matters: when an agent makes a confident, wrong call at 2am and propagates it across three handoffs, <strong>whose fault is it, what exactly happened, and how do you clean it up?</strong>
+        </p>
+        <p>
+          That gap is structural. Logs aren't enough. Receipts aren't enough. Models with prettier reasoning traces aren't enough. You need a layer underneath the agents — a layer that doesn't move when the vendor pivots, doesn't leak when the model hallucinates, and doesn't forget when the context window slides. That layer is what Máddu is.
+        </p>
+      </div>
+    </section>
+
+    <section class="m-section">
+      <div class="container">
+        <span class="m-num">II.</span>
+        <h2 class="m-h2">The construction-lawsuit model of chain of custody.</h2>
+        <p>
+          The mental model that fits the problem isn't database logs or analytics events. It's <em>chain of custody</em> — the way a construction lawsuit reconstructs what happened on a job site, or the way law enforcement tracks evidence from seizure to courtroom. An immutable record of who changed what, when, and why, that survives the people who produced it.
+        </p>
+        <p>
+          So Máddu's spine is append-only NDJSON. Every transition is one event. Projections rebuild from it and are never authoritative. Replay reconstructs past state deterministically. And there is no auto-repair — because a system that quietly heals corruption is a system that can quietly hide a successful attack.
+        </p>
+        <p>
+          Verifiable, not declared. <strong>That's the principle the rest of the framework hangs from.</strong>
+        </p>
+      </div>
+    </section>
+
+    <section class="m-section">
+      <div class="container">
+        <span class="m-num">III.</span>
+        <h2 class="m-h2">Local-first isn't nostalgia. It's a security posture.</h2>
+        <p>
+          Every hosted backend is a place where a breach turns into N breaches. Every SaaS account is a trust relationship you can't audit. Every telemetry pipe is a copy of your work on a machine you don't control. Every cross-machine token sync is a way for one compromised laptop to cascade.
+        </p>
+        <p>
+          So Máddu has no hosted backend. No telemetry. No relay. No "Máddu Cloud" — and there isn't going to be one. Tokens are device-bound. Provider API calls live in subprocess workers, never in framework code. The cockpit is a static page served from the bridge that dies when you kill the process. <strong>Nothing leaves the machine.</strong>
+        </p>
+        <p>
+          This isn't a stance against the cloud — it's a stance about <em>where the trust boundary lives</em>. Inside the machine, you can audit. Outside it, you can hope. Máddu chose audit.
+        </p>
+      </div>
+    </section>
+
+    <section class="m-section">
+      <div class="container">
+        <span class="m-num">IV.</span>
+        <h2 class="m-h2">Confidence costs a checkpoint.</h2>
+        <p>
+          The most dangerous failure mode in agentic systems isn't crashes. It's confident, unsupervised propagation: a triage agent misdiagnoses a database timeout as a bad deployment, hands off to a deployment agent, which rolls back a perfectly fine change. By the time a human looks up, there are three downstream actions to undo and nobody can say where the chain went wrong.
+        </p>
+        <p>
+          So Máddu has the gauntlet — Rule #9. Anything that mutates state must be on an allowlist, must respect its cooldown, must satisfy the active governance tier, and must leave a provenance-stamped event behind. Confidence costs a checkpoint. Auto-fire without all four is structurally impossible.
+        </p>
+        <p>
+          This doesn't prevent the bad decision. No orchestrator can. It prevents the bad decision from <em>running away unsupervised</em>, and makes the cleanup a replay rather than a forensic argument. The point is to make confidently-wrong propagation <strong>visible and intentional</strong>, not to physically stop the operator from authoring damage.
+        </p>
+      </div>
+    </section>
+
+    <section class="m-section">
+      <div class="container">
+        <span class="m-num">V.</span>
+        <h2 class="m-h2">Runtime-agnostic, by design and by survival.</h2>
+        <p>
+          Every agent CLI on the market today has a vendor behind it. Vendors pivot. Vendors get acquired. Vendors change their pricing, their rate limits, their terms. If your orchestration is bound to one vendor's tooling, your orchestration moves with them.
+        </p>
+        <p>
+          So the coordinator that drives multi-phase work in Máddu is a Máddu primitive, not a Claude Code or Codex feature. You can drive the spine with Claude, with Codex, with Gemini, with any subprocess-spawnable agent CLI — present or future. The orchestration outlives the agent that touches it. <strong>That's not marketing copy. It's a design decision with operational consequences.</strong>
+        </p>
+      </div>
+    </section>
+
+    <section class="m-section">
+      <div class="container">
+        <span class="m-num">VI.</span>
+        <h2 class="m-h2">Discipline that scales with consequence.</h2>
+        <p>
+          A scratch web project shouldn't drown in approval friction. A production-adjacent system shouldn't get to skip them. Most frameworks pick one posture and hardcode it; either everything is cheap and dangerous, or everything is expensive and slow.
+        </p>
+        <p>
+          Máddu has three governance tiers — strict, standard, relaxed — that tune <em>operational</em> friction without touching <em>structural</em> integrity. The 8+1 hard rules don't loosen. The spine stays append-only. The gauntlet still gates. What changes is whether the operator gets prompted at each slice-stop, or whether the audit ledger catches up afterward.
+        </p>
+        <p>
+          This matters because no single project lives at one consequence level for its whole life. The same codebase is exploration on Monday and production-adjacent on Friday. <strong>The framework has to hold both, by configuration, not by rewrite.</strong>
+        </p>
+      </div>
+    </section>
+
+    <section class="m-section">
+      <div class="container">
+        <span class="m-num">VII.</span>
+        <h2 class="m-h2">Invariants you can't change become invariants you don't have to argue about.</h2>
+        <p>
+          Across nineteen releases — v0.17.1 through v1.3.0, roughly nine days of intense iteration — Máddu kept the layout-refusal gate at 4 of 4 every single time. The 8+1 hard rules graduated from "architectural intent" to "doctor-enforced on every install and upgrade" without any rule ever loosening. The spine format, the slash names, the cockpit routes, the CLI surface — all stable since v1.0.0.
+        </p>
+        <p>
+          That stability isn't an accident. It's the consequence of writing invariants down, then refusing to negotiate them. Velocity comes from the freedom <em>around</em> them, not from negotiating <em>them</em>. Every feature has to earn its place against the charter. Anything that fails the audit is either drift to fix or evidence the charter needs to evolve — and even that conversation happens on the record.
+        </p>
+        <Callout tone="brand" title="The bet, in one sentence" tag="design north star">
+          <p>
+            Trust in agentic systems will be built by the layer that proves what happened, not the layer that decides what happens next. Máddu is that layer, built local, built portable, built to outlast every agent that touches it.
+          </p>
+        </Callout>
+      </div>
+    </section>
+  </article>
+
+  <PageNext
+    eyebrow="§ · Continue"
+    title="Hard rules — the 8+1 invariants, in detail."
+    hint="Every position above traces to one of these. The reference companion to the manifesto."
+    href="/hard-rules"
+    tone="brand"
+  />
+</Layout>
+
+<style>
+  .manifesto { padding: var(--m-space-16) 0 var(--m-space-10); }
+
+  .m-head { margin-bottom: var(--m-space-16); }
+  .m-title {
+    font-family: var(--m-font-cond);
+    font-weight: 700;
+    font-size: clamp(40px, 6.5vw, 76px);
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    color: var(--m-fg-0);
+    margin: 0 0 var(--m-space-6);
+    max-width: 18ch;
+  }
+  .m-title em {
+    color: var(--m-accent);
+    font-style: italic;
+    border-bottom: 0;
+    text-shadow: 0 0 32px rgba(208, 255, 0, 0.4);
+  }
+  .m-deck {
+    font-family: var(--m-font-mono);
+    font-size: 14px;
+    color: var(--m-accent-2);
+    letter-spacing: 0.04em;
+    max-width: 60ch;
+    margin: 0;
+    padding-top: var(--m-space-5);
+    border-top: 1px solid var(--m-line-soft);
+    font-style: italic;
+  }
+
+  .m-section {
+    padding: var(--m-space-12) 0;
+    position: relative;
+  }
+  .m-section:not(:last-of-type) { border-bottom: 1px solid var(--m-line-soft); }
+
+  .m-num {
+    font-family: var(--m-font-cond);
+    font-weight: 700;
+    font-size: 48px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--m-accent);
+    opacity: 0.85;
+    display: inline-block;
+    margin-bottom: var(--m-space-3);
+  }
+  .m-h2 {
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+    font-size: clamp(24px, 3vw, 34px);
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+    color: var(--m-fg-0);
+    text-transform: none;
+    margin: 0 0 var(--m-space-6);
+    max-width: 22ch;
+  }
+
+  .m-section p {
+    font-family: var(--m-font-sans);
+    font-size: 17px;
+    line-height: 1.65;
+    color: var(--m-fg-1);
+    max-width: 64ch;
+    margin: 0 0 var(--m-space-4);
+  }
+  .m-section p strong { color: var(--m-fg-0); font-weight: 600; }
+  .m-section p em {
+    color: var(--m-fg-0);
+    font-style: normal;
+    border-bottom: 1px dashed var(--m-line);
+    padding-bottom: 1px;
+  }
+  .m-section p:last-child { margin-bottom: 0; }
+
+  /* Alternating section tints — every other section gets a faint backdrop,
+   * so the page reads as paced beats rather than a single wall of text. */
+  .m-section:nth-of-type(even) {
+    background: linear-gradient(180deg, transparent, var(--m-bg-2), transparent);
+  }
+  .m-section:nth-of-type(even) .m-num { color: var(--m-accent-2); }
+  .m-section:nth-of-type(3n) .m-num   { color: var(--m-brand); }
+
+  @media (max-width: 720px) {
+    .manifesto { padding: var(--m-space-10) 0 var(--m-space-6); }
+    .m-section { padding: var(--m-space-8) 0; }
+  }
+</style>

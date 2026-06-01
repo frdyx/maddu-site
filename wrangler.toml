@@ -1,0 +1,14 @@
+# wrangler.toml — Cloudflare Pages config.
+# The actual project is created through the Cloudflare dashboard or
+# `npx wrangler pages project create`; this file lets the GitHub Action
+# (and local `wrangler pages deploy`) know which project to target.
+#
+# Replace `name` with your project name before first deploy.
+
+name = "maddu-site"
+compatibility_date = "2025-01-01"
+pages_build_output_dir = "dist"
+
+# No bindings, no functions, no D1 — this is a pure static site. The
+# whole point of Máddu's posture is "nothing leaves the machine," and
+# the marketing site honors that: no edge workers, no KV, no R2.

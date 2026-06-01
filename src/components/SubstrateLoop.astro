@@ -1,0 +1,328 @@
+---
+// SubstrateLoop.astro — animated hero diagram. Pure CSS, no JS.
+//
+// Six substrate nodes in a horizontal flow, color-coded by event family.
+// A pulse rotates through them in sequence; each pulse drops a matching
+// event chip into the spine rail below. Loop length is 7.2s (1.2s/node).
+//
+// Encodes the "every transition = one event" claim visually, in motion,
+// without ever leaving the brand palette.
+const steps = [
+  { label: 'register', sub: 'session', event: 'SESSION_REGISTERED', tone: 'session' },
+  { label: 'claim',    sub: 'lane',    event: 'LANE_CLAIMED',       tone: 'lane' },
+  { label: 'slice',    sub: 'work',    event: 'SLICE_STARTED',      tone: 'framework' },
+  { label: 'stop',     sub: 'slice',   event: 'SLICE_STOPPED',      tone: 'approval' },
+  { label: 'release',  sub: 'lane',    event: 'LANE_RELEASED',      tone: 'lane' },
+  { label: 'close',    sub: 'session', event: 'SESSION_CLOSED',     tone: 'session' },
+];
+---
+
+<figure class="substrate" role="img" aria-label="Substrate loop — six transitions, each one an event on the spine">
+  <div class="substrate-rail">
+    {steps.map((s, i) => (
+      <>
+        <div
+          class:list={['substrate-node', `substrate-node--${s.tone}`]}
+          style={`--delay: ${i * 1.2}s`}
+        >
+          <span class="substrate-num">{String(i + 1).padStart(2, '0')}</span>
+          <span class="substrate-label">{s.label}</span>
+          <span class="substrate-sub">{s.sub}</span>
+          <span class="substrate-pulse" aria-hidden="true"></span>
+        </div>
+        {i < steps.length - 1 && (
+          <svg class="substrate-arrow" viewBox="0 0 36 12" aria-hidden="true">
+            <path d="M0 6 L30 6" stroke="currentColor" stroke-width="1" fill="none" />
+            <path d="M26 2 L32 6 L26 10" stroke="currentColor" stroke-width="1" fill="none" />
+          </svg>
+        )}
+      </>
+    ))}
+  </div>
+
+  <div class="substrate-conn" aria-hidden="true">
+    {steps.map((_, i) => (
+      <span class="substrate-drop" style={`--delay: ${i * 1.2}s`}></span>
+    ))}
+  </div>
+
+  <div class="substrate-spine">
+    <header class="substrate-spine-head">
+      <span class="substrate-spine-glyph">◆</span>
+      <span class="substrate-spine-label">append-only spine</span>
+      <span class="substrate-spine-meta">.maddu/events/*.ndjson</span>
+    </header>
+    <div class="substrate-spine-body">
+      {steps.map((s, i) => (
+        <div
+          class:list={['substrate-evt', `substrate-evt--${s.tone}`]}
+          style={`--delay: ${i * 1.2}s`}
+        >
+          <span class="substrate-evt-time">{`+${(i * 80 + 12).toString().padStart(3, '0')}ms`}</span>
+          <span class="substrate-evt-name">{s.event}</span>
+          <span class="substrate-evt-tag">turn=abc12 · seq={i + 1}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <figcaption class="substrate-caption">
+    <span class="substrate-caption-label">6 transitions</span>
+    <span class="substrate-caption-sep">·</span>
+    <span class="substrate-caption-dim">each one fires exactly one event</span>
+  </figcaption>
+</figure>
+
+<style>
+  .substrate {
+    margin: var(--m-space-10) 0 var(--m-space-8);
+    padding: var(--m-space-6) var(--m-space-5) var(--m-space-5);
+    background:
+      radial-gradient(ellipse at top right, var(--m-accent-2-glow-bg), transparent 55%),
+      radial-gradient(ellipse at bottom left, var(--m-accent-glow-bg), transparent 50%),
+      var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-top: 1px solid var(--m-accent-2);
+    border-radius: var(--m-radius);
+    overflow: hidden;
+  }
+
+  /* ── Node rail ─────────────────────────────────────────────────── */
+  .substrate-rail {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: var(--m-space-2);
+  }
+  .substrate-rail::-webkit-scrollbar { display: none; }
+
+  .substrate-node {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 14px 12px;
+    background: var(--m-bg-1);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-fg-4);
+    border-radius: var(--m-radius);
+    min-width: 96px;
+    flex: 1 1 0;
+    flex-shrink: 0;
+    overflow: hidden;
+    animation: node-cycle 7.2s ease-in-out var(--delay, 0s) infinite;
+  }
+
+  .substrate-pulse {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: currentColor;
+    opacity: 0;
+    mix-blend-mode: screen;
+    animation: pulse-flash 7.2s ease-in-out var(--delay, 0s) infinite;
+  }
+
+  .substrate-num {
+    font-family: var(--m-font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    color: var(--m-fg-3);
+  }
+  .substrate-label {
+    font-family: var(--m-font-cond);
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--m-fg-0);
+    line-height: 1.1;
+  }
+  .substrate-sub {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    color: var(--m-fg-3);
+    letter-spacing: 0.04em;
+  }
+
+  /* Node tone — left bar + numerals + pulse glow color */
+  .substrate-node--session   { color: #9FCBD8; border-left-color: #9FCBD8; }
+  .substrate-node--session   .substrate-num { color: #9FCBD8; }
+  .substrate-node--lane      { color: #A8D4B8; border-left-color: #A8D4B8; }
+  .substrate-node--lane      .substrate-num { color: #A8D4B8; }
+  .substrate-node--framework { color: #C8A8D4; border-left-color: #C8A8D4; }
+  .substrate-node--framework .substrate-num { color: #C8A8D4; }
+  .substrate-node--approval  { color: #F2BD5C; border-left-color: #F2BD5C; }
+  .substrate-node--approval  .substrate-num { color: #F2BD5C; }
+
+  .substrate-arrow {
+    width: 28px;
+    height: 12px;
+    align-self: center;
+    color: var(--m-fg-4);
+    flex-shrink: 0;
+  }
+
+  /* ── Drop lines (vertical pulses connecting node to spine) ─────── */
+  .substrate-conn {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    height: 18px;
+    margin-top: 4px;
+    padding: 0 12px;
+  }
+  .substrate-drop {
+    justify-self: center;
+    width: 1px;
+    background: linear-gradient(180deg, var(--m-line) 0%, transparent 100%);
+    height: 100%;
+    position: relative;
+    overflow: visible;
+  }
+  .substrate-drop::after {
+    content: '';
+    position: absolute;
+    left: -2px;
+    top: -2px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--m-accent);
+    opacity: 0;
+    box-shadow: 0 0 14px var(--m-accent);
+    animation: drop-fall 7.2s ease-in var(--delay, 0s) infinite;
+  }
+
+  /* ── Spine viewer ──────────────────────────────────────────────── */
+  .substrate-spine {
+    margin-top: 6px;
+    border: 1px solid var(--m-line);
+    border-top: 1px solid var(--m-accent-2);
+    border-radius: var(--m-radius);
+    background: var(--m-bg-1);
+    overflow: hidden;
+  }
+  .substrate-spine-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--m-line-soft);
+    background: var(--m-bg-2);
+  }
+  .substrate-spine-glyph { color: var(--m-accent-2); font-size: 9px; }
+  .substrate-spine-label {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--m-accent-2);
+  }
+  .substrate-spine-meta {
+    margin-left: auto;
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    color: var(--m-fg-3);
+  }
+  .substrate-spine-body {
+    padding: 4px 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .substrate-evt {
+    display: grid;
+    grid-template-columns: 72px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 5px 14px;
+    font-family: var(--m-font-mono);
+    font-size: 11.5px;
+    color: var(--m-fg-2);
+    opacity: 0.45;
+    transition: opacity 200ms;
+    animation: evt-arrive 7.2s ease-out var(--delay, 0s) infinite;
+  }
+  .substrate-evt-time { color: var(--m-fg-3); }
+  .substrate-evt-name {
+    color: var(--m-fg-0);
+    letter-spacing: 0.04em;
+  }
+  .substrate-evt-tag {
+    color: var(--m-fg-4);
+    font-size: 10.5px;
+  }
+
+  .substrate-evt--session   .substrate-evt-name { color: #9FCBD8; }
+  .substrate-evt--lane      .substrate-evt-name { color: #A8D4B8; }
+  .substrate-evt--framework .substrate-evt-name { color: #C8A8D4; }
+  .substrate-evt--approval  .substrate-evt-name { color: #F2BD5C; }
+
+  /* ── Caption ───────────────────────────────────────────────────── */
+  .substrate-caption {
+    margin-top: var(--m-space-3);
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+  .substrate-caption-label { color: var(--m-accent); }
+  .substrate-caption-sep   { color: var(--m-fg-4); }
+  .substrate-caption-dim   { color: var(--m-fg-3); }
+
+  /* ── Animations ────────────────────────────────────────────────── */
+  @keyframes node-cycle {
+    0%, 16%, 100% {
+      background: var(--m-bg-1);
+      box-shadow: none;
+    }
+    2%, 14% {
+      background: var(--m-bg-3);
+      box-shadow: 0 0 0 1px currentColor, 0 0 28px color-mix(in srgb, currentColor 35%, transparent);
+    }
+  }
+  @keyframes pulse-flash {
+    0%, 16%, 100% { opacity: 0; }
+    2%           { opacity: 0.18; }
+    14%          { opacity: 0; }
+  }
+  @keyframes drop-fall {
+    0%, 16%, 100% { opacity: 0; transform: translateY(-6px); }
+    4%            { opacity: 1; transform: translateY(0); }
+    13%           { opacity: 0.6; transform: translateY(8px); }
+  }
+  @keyframes evt-arrive {
+    0%, 100% { opacity: 0.45; }
+    /* The matching event lights up briefly when its node fires. */
+    4%       { opacity: 0.45; }
+    8%       { opacity: 1; background: var(--m-bg-3); }
+    16%      { opacity: 0.85; background: transparent; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .substrate-node,
+    .substrate-pulse,
+    .substrate-drop::after,
+    .substrate-evt {
+      animation: none !important;
+    }
+    .substrate-evt { opacity: 1; }
+  }
+
+  @media (max-width: 720px) {
+    .substrate-rail { padding: 0 0 var(--m-space-2); }
+    .substrate-node { min-width: 80px; padding: 8px 10px; }
+    .substrate-label { font-size: 12px; }
+    .substrate-arrow { width: 16px; }
+    .substrate-conn { padding: 0 6px; gap: 4px; }
+    .substrate-evt { grid-template-columns: 56px 1fr; }
+    .substrate-evt-tag { display: none; }
+  }
+</style>
