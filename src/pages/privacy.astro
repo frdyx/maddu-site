@@ -41,13 +41,13 @@ import Annotated from '../components/Annotated.astro';
           { action: 'analytics',           effect: 'no script installed',                                provenance: '0 endpoints',                provTone: 'ok' },
           { action: 'fonts',               effect: 'self-hosted Plex woff2 from same origin',             provenance: '/fonts/*.woff2',             provTone: 'accent' },
           { action: 'mermaid diagrams',    effect: 'loaded from same origin only',                       provenance: '/_astro/*.js',               provTone: 'accent' },
-          { action: 'theme preference',    effect: 'one localStorage key, this device only',             provenance: 'maddu-site-theme',           provTone: 'session' },
+          { action: 'local storage',       effect: 'nothing written — no keys at all',                   provenance: '0 keys',                     provTone: 'ok' },
         ]}
       />
 
-      <Callout tone="ok" title="The one piece of local state" tag="device-only">
+      <Callout tone="ok" title="No local state" tag="device-only">
         <p>
-          When you toggle the site theme, your choice persists in <code>localStorage</code> under the key <code>maddu-site-theme</code>. That value stays in your browser and never travels anywhere — there's nowhere for it to go. Clear your browser storage and it's gone.
+          This site writes nothing to <code>localStorage</code>, sets no cookies, and keeps no per-device preferences. There is no state to clear because there is none to begin with.
         </p>
       </Callout>
     </div>

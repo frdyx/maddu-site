@@ -55,7 +55,7 @@ import SearchPalette from '../components/SearchPalette.astro';
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -90,21 +90,6 @@ import SearchPalette from '../components/SearchPalette.astro';
   <meta name="twitter:title" content={fullTitle} />
   <meta name="twitter:description" content={description} />
   <meta name="twitter:image" content={ogImage} />
-
-  <!-- Pre-paint theme init — set data-theme on <html> before first paint
-       so there's no flash. Honors stored preference, falls back to
-       prefers-color-scheme, defaults to dark (the brand). -->
-  <script is:inline>
-    (function () {
-      try {
-        var stored = localStorage.getItem('maddu-site-theme');
-        var theme = stored || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-        document.documentElement.dataset.theme = theme;
-      } catch (e) {
-        document.documentElement.dataset.theme = 'dark';
-      }
-    })();
-  </script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -136,12 +121,6 @@ import SearchPalette from '../components/SearchPalette.astro';
           <span class="site-nav-search-glyph" aria-hidden="true">⌕</span>
           <span class="site-nav-search-label">Search</span>
           <kbd class="site-nav-search-kbd"><span class="site-nav-search-mod">⌘</span>K</kbd>
-        </button>
-        <button class="site-nav-theme" id="navTheme" aria-label="Toggle light or dark theme" title="Toggle theme">
-          <span class="site-nav-theme-glyph" aria-hidden="true" data-theme-dark>◐</span>
-          <span class="site-nav-theme-glyph" aria-hidden="true" data-theme-light>◑</span>
-          <span class="sr-only" data-theme-srdark>Switch to light theme</span>
-          <span class="sr-only" data-theme-srlight>Switch to dark theme</span>
         </button>
         <button class="site-nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
           <span></span><span></span><span></span>
@@ -206,16 +185,6 @@ import SearchPalette from '../components/SearchPalette.astro';
     // Search button — opens the palette via the global exposed by SearchPalette.
     document.getElementById('navSearch')?.addEventListener('click', () => {
       (window as any).__maddu_openSearch?.();
-    });
-
-    // Theme toggle — flips data-theme on <html>, persists in localStorage.
-    // The pre-paint init script in <head> already set the right theme;
-    // this just lets the user swap from there.
-    document.getElementById('navTheme')?.addEventListener('click', () => {
-      const root = document.documentElement;
-      const next = root.dataset.theme === 'light' ? 'dark' : 'light';
-      root.dataset.theme = next;
-      try { localStorage.setItem('maddu-site-theme', next); } catch {}
     });
 
     // Cmd/Ctrl modifier glyph for the search kbd hint — display ⌘ on
@@ -566,33 +535,6 @@ import SearchPalette from '../components/SearchPalette.astro';
       border-radius: 3px;
       color: var(--m-fg-2);
     }
-
-    .site-nav-theme {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 36px;
-      height: 36px;
-      background: transparent;
-      border: 1px solid var(--m-line);
-      border-radius: var(--m-radius);
-      cursor: pointer;
-      padding: 0;
-      color: var(--m-fg-2);
-      font-family: var(--m-font-mono);
-      font-size: 16px;
-      transition: border-color 120ms, color 120ms;
-      flex-shrink: 0;
-    }
-    .site-nav-theme:hover { border-color: var(--m-accent); color: var(--m-accent); }
-    .site-nav-theme-glyph[data-theme-light] { display: none; }
-    .site-nav-theme-glyph[data-theme-dark] { display: inline; }
-    [data-theme-srdark] { display: inline; }
-    [data-theme-srlight] { display: none; }
-    :root[data-theme="light"] .site-nav-theme-glyph[data-theme-dark] { display: none; }
-    :root[data-theme="light"] .site-nav-theme-glyph[data-theme-light] { display: inline; }
-    :root[data-theme="light"] [data-theme-srdark]  { display: none; }
-    :root[data-theme="light"] [data-theme-srlight] { display: inline; }
 
     /* ── 1380px and down — hide brand tag ─────────────────────────── */
     @media (max-width: 1380px) {

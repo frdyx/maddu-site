@@ -500,7 +500,7 @@ hr {
  * Long-form pages (/manifesto, /threat-model, /architecture, /changelog,
  * /privacy) print as clean briefs by default. */
 @media print {
-  :root, :root[data-theme="dark"], :root[data-theme="light"] {
+  :root, :root[data-theme="dark"] {
     /* Force a clean print palette — ignore theme tokens, paper-on-ink. */
     --m-bg-0: #ffffff;
     --m-bg-1: #ffffff;
@@ -537,7 +537,6 @@ hr {
   .skip-link,
   .substrate,
   .site-nav-search,
-  .site-nav-theme,
   .site-nav-toggle,
   .toc,
   .lx,
