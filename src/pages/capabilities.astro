@@ -94,7 +94,7 @@ const totalVerbs = areas.reduce((sum, a) => sum + a.verbs.length, 0);
       </div>
       <h1>Every verb earns its place. <span class="dim-h1">Or it goes.</span></h1>
       <p class="lede">
-        Máddu has {totalVerbs} top-level verbs across {areas.length} purpose areas. Each one traces to a stated purpose against the mission and the 9 invariants. The <span class="verb">maddu audit charter</span> command exists specifically to flag drift.
+        Máddu has {totalVerbs} top-level verbs across {areas.length} purpose areas. Each one traces to a stated purpose against the mission and the 9 invariants. The <span class="verb">maddu audit charter</span> command exists specifically to flag drift. Click any verb for its reference page.
       </p>
       <dl class="cap-stats">
         <div><dt>Verbs</dt><dd>{totalVerbs}</dd></div>
@@ -141,7 +141,7 @@ const totalVerbs = areas.reduce((sum, a) => sum + a.verbs.length, 0);
             <p class="cap-purpose">{a.purpose}</p>
             <ul class="cap-verbs">
               {a.verbs.map((v) => (
-                <li data-verb={v.toLowerCase()}><code>maddu {v}</code></li>
+                <li data-verb={v.toLowerCase()}><a class="cap-verb-link" href={`/capabilities/${v}`}><code>maddu {v}</code></a></li>
               ))}
             </ul>
           </article>
@@ -452,6 +452,7 @@ const totalVerbs = areas.reduce((sum, a) => sum + a.verbs.length, 0);
     gap: 6px;
   }
   .cap-verbs li { margin: 0; }
+  .cap-verb-link { text-decoration: none; display: inline-block; }
   .cap-verbs code {
     font-size: 11px;
     background: var(--m-bg-3);
@@ -459,7 +460,10 @@ const totalVerbs = areas.reduce((sum, a) => sum + a.verbs.length, 0);
     border: 1px solid var(--m-line-soft);
     padding: 3px 8px;
     border-radius: var(--m-radius-sm);
+    cursor: pointer;
+    transition: border-color 120ms, color 120ms;
   }
+  .cap-verb-link:hover code { color: var(--m-accent); border-color: var(--m-accent-dim); }
 
   /* Tone variants — top border + glyph color */
   .cap-card--accent     { border-top-color: var(--m-accent); }

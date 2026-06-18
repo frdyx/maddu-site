@@ -3,6 +3,8 @@
 // Order = reading order (mirrors PageNext arc).
 
 import type { APIRoute } from 'astro';
+import { RELEASES } from '../data/releases';
+import capDetail from '../data/capabilities-detail.json';
 
 const SITE = 'https://maddu.dev';
 
@@ -22,15 +24,17 @@ const PAGES = [
 
 // Per-release stub pages — emitted but flagged noindex (release context
 // lives on /changelog itself); included here so sitemap crawlers can
-// discover the deep-link URLs for the social cards.
-const RELEASE_SLUGS = [
-  'v1-3-0', 'v1-2-3', 'v1-2-2', 'v1-2-1', 'v1-2-0',
-  'v1-1-2', 'v1-1-1', 'v1-1-0',
-  'v1-0-5', 'v1-0-4', 'v1-0-3', 'v1-0-2', 'v1-0-1', 'v1-0-0',
-  'v0-19-2', 'v0-19-1', 'v0-19-0', 'v0-18-0', 'v0-17-1',
-];
-for (const slug of RELEASE_SLUGS) {
-  PAGES.push({ path: '/changelog/' + slug, priority: 0.3, changefreq: 'yearly' });
+// discover the deep-link URLs for the social cards. Derived from the
+// canonical RELEASES list so it never drifts as releases are added.
+for (const r of RELEASES) {
+  PAGES.push({ path: '/changelog/' + r.id, priority: 0.3, changefreq: 'yearly' });
+}
+
+// Per-verb capability entity pages — derived from the audited capability
+// detail map (scripts/gen-capabilities.mjs), so all 62 stay discoverable
+// and the list never has to be hand-maintained.
+for (const v of capDetail.verbs) {
+  PAGES.push({ path: '/capabilities/' + v.verb, priority: 0.5, changefreq: 'monthly' });
 }
 
 const MANIFESTO_SLUGS = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii'];
