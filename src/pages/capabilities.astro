@@ -26,16 +26,16 @@ const areas: Area[] = [
     title: 'Planning & autonomy',
     glyph: '↳',
     tone: 'accent',
-    purpose: 'First-class auto-revising planning. Pipelines and goals decompose work; phase and loop are the iteration primitives; the coordinator fans work across a team; advise and suggest route intent to the right next move.',
-    verbs: ['pipeline', 'plan', 'goal', 'phase', 'loop', 'coordinator', 'team', 'advise', 'suggest'],
+    purpose: 'First-class auto-revising planning. Pipelines and goals decompose work (goal carries measurable success conditions); phase and loop are the iteration primitives; the coordinator fans work across a team; advise and suggest route intent; handoff curates the cross-session "▶ RESUME HERE" briefing.',
+    verbs: ['pipeline', 'plan', 'goal', 'phase', 'loop', 'coordinator', 'team', 'advise', 'suggest', 'handoff'],
   },
   {
     id: 'quality',
     title: 'Quality & review',
     glyph: '⚑',
     tone: 'ok',
-    purpose: 'Keep the surface honest. Review and test gate slices; lint and format enforce code hygiene; doctor enforces the 8+1 hard rules on every install and upgrade.',
-    verbs: ['review', 'test', 'lint', 'format', 'doctor'],
+    purpose: 'Keep the surface honest. Review and test gate slices through host-project test (legacy runner or adaptive profiles); self-test is the framework-source runner; lint and format enforce code hygiene; doctor enforces the 8+1 hard rules on every install and upgrade.',
+    verbs: ['review', 'test', 'self-test', 'lint', 'format', 'doctor'],
   },
   {
     id: 'tools',
@@ -50,24 +50,24 @@ const areas: Area[] = [
     title: 'Supply-chain & trust',
     glyph: '⛨',
     tone: 'danger',
-    purpose: 'The audit / portability / supply-chain posture made operable. trust pins and verifies; sources and approval gate provenance at ingest; governance sets the per-workspace tier; mcp brings tools in through allowlisted templates.',
-    verbs: ['trust', 'sources', 'approval', 'governance', 'mcp'],
+    purpose: 'The audit / portability / supply-chain posture made operable. trust pins and verifies; sources and approval gate provenance at ingest; governance sets the per-workspace tier; mcp brings tools in through allowlisted templates; plugin loads capabilities that live outside the core (bundled-trusted; user-added gated by --trust).',
+    verbs: ['trust', 'sources', 'approval', 'governance', 'mcp', 'plugin'],
   },
   {
     id: 'memory',
     title: 'Memory & accounting',
     glyph: '∞',
     tone: 'lane',
-    purpose: 'Make work outlive the agent. memory and hindsight skills persist learning; cost and usage and the receipt log account for spend; import retroactively populates the ledger.',
-    verbs: ['memory', 'cost', 'usage', 'log', 'import'],
+    purpose: 'Make work outlive the agent. memory and hindsight skills persist learning; learn mines past sessions for failed→succeeded tool-call pairs and distils durable project corrections; blueprint exports a portable variable-driven handoff of how a whole project was built; debt ledgers the deliberate shortcuts and flags the ones with no upgrade trigger; cost and usage and the receipt log account for spend; import retroactively populates the ledger.',
+    verbs: ['memory', 'learn', 'blueprint', 'debt', 'cost', 'usage', 'log', 'import'],
   },
   {
     id: 'discovery',
     title: 'Discovery & observability',
     glyph: '⌕',
     tone: 'accent-2',
-    purpose: 'Watch and replay the event log. status and events surface live state; spine verifies the append-only truth (never auto-repairs); search and brief query it; help is the on-ramp; audit runs the charter-drift check.',
-    verbs: ['status', 'events', 'spine', 'search', 'brief', 'help', 'audit'],
+    purpose: 'Watch and replay the event log. status and events surface live state; spine verifies the append-only truth (never auto-repairs); search and brief query it; orient is the goal-anchored session-start briefing; help is the on-ramp; audit runs the charter-drift check; insights reports empirically what is actually used across registered workspaces vs merely defined.',
+    verbs: ['status', 'events', 'spine', 'search', 'brief', 'orient', 'help', 'audit', 'insights'],
   },
   {
     id: 'lifecycle',
@@ -100,7 +100,7 @@ const totalVerbs = areas.reduce((sum, a) => sum + a.verbs.length, 0);
         <div><dt>Verbs</dt><dd>{totalVerbs}</dd></div>
         <div><dt>Purpose areas</dt><dd>{areas.length}</dd></div>
         <div><dt>Invariants</dt><dd>9</dd></div>
-        <div><dt>Slash on-ramps</dt><dd>13</dd></div>
+        <div><dt>Slash on-ramps</dt><dd>23</dd></div>
       </dl>
     </div>
   </section>
@@ -253,9 +253,9 @@ const totalVerbs = areas.reduce((sum, a) => sum + a.verbs.length, 0);
         <li><strong>Traces to a stated purpose</strong> in the charter (the eight areas above).</li>
       </ol>
 
-      <Callout tone="accent" title="maddu audit · 4 checks on every install" tag="charter-enforced">
+      <Callout tone="accent" title="maddu audit · 12 checks on every install" tag="charter-enforced">
         <p>
-          <code>event-types-reachable</code> · <code>command-surface-coherent</code> · <code>cockpit-routes-reachable</code> · <code>docs-indexed</code>.
+          <code>event-types-reachable</code> · <code>command-surface-coherent</code> · <code>cockpit-routes-reachable</code> · <code>docs-indexed</code> · <code>slash-on-ramp</code> · <code>charter-drift</code> · <code>defaults-single-sourced</code> · <code>brief-coherence</code> · <code>rule-gate-traceability</code> · <code>docs-in-sync</code> · <code>rule-invariant-drift</code> · <code>architecture-drift</code>.
         </p>
         <p>
           Anything that fails is either real drift to fix, or evidence that the charter needs to evolve. The audit's job is to make sure the answer is intentional.

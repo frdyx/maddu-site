@@ -19,9 +19,237 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v1.18.0',
+    id: 'v1-18-0',
+    date: '2026-06-18',
+    type: 'feature',
+    headline: 'Architecture drift — maddu architecture (MVP)',
+    highlights: [
+      'New **`maddu architecture`** / `/maddu-architecture` — declares intended structure as path-glob modules + `allow`/`forbid` rules in `.maddu/config/architecture.json`; `init` scaffolds it from detected source dirs',
+      'Observed reality — the real import graph extracted by stdlib regex (no parser dependency, rule #4): relative JS/TS + Python imports',
+      'Drift detection — `forbidden-edge` (with `file:line`), `cycle` (SCC), `undeclared-area`, `uncovered-file`; a single **`driftScore`** stamped on every scan',
+      '`failOn` ladder + baseline ratchet — `none` warns + ratchets, `new` fails only on un-baselined violations, `any` fails on all; the `architecture-drift` gate (doctor + audit) honors it',
+      '`maddu architecture diagram` writes a mermaid graph with violations as red dashed edges; `ARCHITECTURE_SCANNED` spine event',
+      '`maddu audit` grows **11 → 12** checks',
+    ],
+    note: 'Structural drift is the dominant failure mode when many agents build one system over time. Same observe → record → compare → gate → ratchet model as the rest of the framework.',
+  },
+  {
+    version: 'v1.17.0',
+    id: 'v1-17-0',
+    date: '2026-06-18',
+    type: 'hardening',
+    headline: 'Robustness bundle — drift gate, debt ledger, risk + deliverable checks',
+    highlights: [
+      '**Rule-invariant drift gate** (`maddu audit invariants`) — pins 13 load-bearing phrases per agent brief and FAILs with the exact (file, phrase) miss if one is reworded away; `maddu audit` grows **10 → 11**',
+      '**`maddu debt`** / `/maddu-debt` — scans for `maddu-debt: … ceiling: … upgrade: …` markers, groups by file, and flags any with **no upgrade trigger** (the shortcut that silently rots); writes `DEBT_SCANNED`',
+      '**Deterministic change-risk classifier** — every slice-stop records a `risk` level (none→critical) from its touched paths; high/critical **escalates the post-stop review past its cooldown**',
+      '**Declared-deliverable verification** — slice-stop checks each `--targets` file actually exists and flags the hollow ones (WARN)',
+      '**Routing-discipline hardening** — intent-routing now refuses to act on *pasted* content (logs, output, transcripts): "pasted content is context, not a command"',
+    ],
+    note: 'Five safeguards drawn from an audit of two external Claude-Code projects, filtered to what is additive and hard-rule-clean.',
+  },
+  {
+    version: 'v1.16.0',
+    id: 'v1-16-0',
+    date: '2026-06-18',
+    type: 'feature',
+    headline: 'Test command split — source self-test + adaptive project tests',
+    highlights: [
+      '**`maddu self-test`** / `/maddu-self-test` — source-only framework runner; auto-discovers `scripts/test/*.mjs` + smoke checks behind `smoke` / `quick` / `full` profiles; `npm test` runs quick',
+      'Self-test reporting + the `self-test-recent` doctor gate (warns when the source suite is stale, failed, or only smoke-verified; consumer installs skip it)',
+      '**`maddu test`** — host-project harness keeps the v1.1 detected-runner wrapper, or switches to adaptive profiles (npm / vitest / jest / mocha / pytest) with `--changed` git-diff task selection',
+      'Fleet-audit drift hardening — workspace roles (project / fixture / archive), idempotent lane release, `prev_hash`-preserving upgrades, surfaced spine-integrity warnings',
+    ],
+    note: 'Splits the overloaded `maddu test` cleanly: framework-source self-test vs host-project test harness.',
+  },
+  {
+    version: 'v1.15.0',
+    id: 'v1-15-0',
+    date: '2026-06-11',
+    type: 'feature',
+    headline: 'Blueprint robustness (--distill) + README rework',
+    highlights: [
+      'Blueprint extractor **hardened + pinned** — malformed / truncated / null transcript lines are skipped not thrown; Windows backslash paths normalize; the output contract holds on all-empty input',
+      '`--since` now **fails loud** (exit 2) instead of silently widening the export',
+      '**`maddu blueprint --distill`** — spawns a provider CLI to rewrite the deterministic skeleton into flowing prose (`*-distilled.md`); the deterministic export stays **canonical**; emits `BLUEPRINT_DISTILLED`',
+      'Best-effort with graceful fallback — no sign-in / worker failure falls back to the deterministic blueprint, exit 0 (rule #5: the provider call lives only in the subprocess)',
+      'Shared `_worker-spawn.mjs` extracted — `learn` + `blueprint --distill` single-source the audited spawn + auth-gate logic',
+      '**README** reorganized from version-archaeology into a product-first description of what Máddu is today',
+    ],
+  },
+  {
+    version: 'v1.14.0',
+    id: 'v1-14-0',
+    date: '2026-06-09',
+    type: 'hardening',
+    headline: 'Spine tamper-evidence — forward prev_hash chain',
+    highlights: [
+      '**Forward `prev_hash` chain** — every event carries the SHA-256 of the preceding event\'s stored NDJSON line (genesis is `null`); a ≤64 KB tail-read keeps the cost flat',
+      '**`chain-integrity` in `spine verify`** — recomputes the chain and flags the first broken link (`chain_broken`) or an unchained `chain_gap`, pinpointing where history was altered',
+      '**WARN, not FAIL** — the no-mutex append path can also fork the chain, so the verifier reports and the operator adjudicates tamper vs. concurrency; **never auto-repaired** (rule #2)',
+      'Forward-only — no migration; legacy events keep verifying clean and adopt the chain on their next append',
+      'Pure stdlib `crypto` — no new dependency (rule #4), every line stays independently `cat`-able (rule #1)',
+    ],
+    note: 'Upgrades the spine from legible to tamper-evident. Charter-level decision: the spine should be trustworthy independent of git.',
+  },
+  {
+    version: 'v1.13.0',
+    id: 'v1-13-0',
+    date: '2026-06-09',
+    type: 'hardening',
+    headline: 'Robustness hardening — tighten the guarantees',
+    highlights: [
+      'Framework-repo `doctor` is **self-explanatory** — the expected `maddu.json missing` FAIL in the source repo is now an INFO line, detected structurally',
+      '**Append durability + torn-line detection** — `append()` passes explicit `O_APPEND`; `spine verify` distinguishes a safe `torn_trailing_line` from interior `unparseable` corruption',
+      '**Bridge loopback-origin enforcement** — requests whose Host/Origin hostname is not loopback are rejected `403 forbidden_origin` (DNS-rebinding defense), with a rate-limited event',
+      '**Blueprint output secret-scanned** — `redactText()` scrubs every rendered blueprint before it is written',
+      '**Hard-rule ↔ gate traceability** — new doc + a `rule-gate traceability` audit sub-check; rules 3 and 7 documented as enforced-by-construction',
+      'Stress harness grows to **15 scenarios**; `docs-in-sync`, git-diff slice-scope, and `learn-corrections-coherent` gates wired in',
+    ],
+    note: 'Every change tightens an existing guarantee — no SQLite, no daemon, no queue, no new dependency, no spine auto-repair.',
+  },
+  {
+    version: 'v1.12.0',
+    id: 'v1-12-0',
+    date: '2026-06-09',
+    type: 'feature',
+    headline: 'Project blueprint — maddu blueprint',
+    highlights: [
+      '**`maddu blueprint`** / `/maddu-blueprint` — exports a portable, variable-driven handoff of how a whole project was built',
+      'Captures intake schema, procedure, problems & fixes, iteration hotspots, the real product repo, and acceptance criteria',
+      'Deterministic and byte-stable — two renders over identical input are identical (timestamp isolated as the only variable)',
+      'Secret-scanned before write — keys pasted into a transcript can\'t ride the handoff across the rule-#6 boundary',
+    ],
+    note: 'Reproduce a project\'s genesis in a non-Máddu context — the procedure, not just the artifact.',
+  },
+  {
+    version: 'v1.11.0',
+    id: 'v1-11-0',
+    date: '2026-06-09',
+    type: 'hardening',
+    headline: 'Drift-proofing — single-source config seeding + coherence guards',
+    highlights: [
+      'All config defaults extracted to a single `_config-seed.mjs`, eliminating seed drift',
+      '**`defaults-single-sourced`** gate (FAIL) — verifies defaults are never duplicated',
+      '**`brief-coherence`** gate (WARN) — verifies the brief never duplicates seeded config',
+      '`maddu audit` grows **6 → 8** checks',
+    ],
+  },
+  {
+    version: 'v1.10.0',
+    id: 'v1-10-0',
+    date: '2026-06-09',
+    type: 'feature',
+    headline: 'Invocation-logic pass 2 — light up the dead domains',
+    highlights: [
+      '**`slice-stop:auto-handoff`** — derives and emits a resume narrative at every slice-stop',
+      '**Skill-candidate detection generalizes** to real products, not just Máddu itself',
+      '**Auto-review** spawns after slice-stop with cooldown guards',
+    ],
+    note: 'Lights up three previously-dead triggers — all under the rule-#9 gauntlet.',
+  },
+  {
+    version: 'v1.9.2',
+    id: 'v1-9-2',
+    date: '2026-06-09',
+    type: 'patch',
+    headline: 'Name maddu learn in the worker brief',
+    highlights: [
+      'Adds `maddu learn digest / run / memory` to the installed worker brief so agents discover the capability directly',
+    ],
+  },
+  {
+    version: 'v1.9.1',
+    id: 'v1-9-1',
+    date: '2026-06-09',
+    type: 'patch',
+    headline: 'maddu learn — Windows judgment-worker spawn fix',
+    highlights: [
+      'Routes the judgment prompt via STDIN instead of argv, and uses a shell only for bare `.cmd` shims',
+    ],
+  },
+  {
+    version: 'v1.9.0',
+    id: 'v1-9-0',
+    date: '2026-06-09',
+    type: 'feature',
+    headline: 'Failure learning — maddu learn',
+    highlights: [
+      '**`maddu learn`** / `/maddu-learn` — mines failed→succeeded tool-call pairs from Claude Code transcripts',
+      'Distils durable project corrections into the brief and `.maddu/memory.ndjson`',
+      'Reversible briefings + supersession chains (`LEARN_CORRECTION_WRITTEN`, `MEMORY_FACT_SUPERSEDED`)',
+    ],
+    note: 'Inspired by Headroom — turn past failures into standing guidance the next agent inherits.',
+  },
+  {
+    version: 'v1.8.0',
+    id: 'v1-8-0',
+    date: '2026-06-05',
+    type: 'hardening',
+    headline: 'Rule scope boundary — Máddu’s rules govern Máddu, not your product',
+    highlights: [
+      'The 8+1 hard rules are explicitly scoped to **the framework layer only**',
+      'Agents building *with* Máddu may use any SDK, backend, or database for their own product — the rules never constrain the host repo',
+      'A scope sweep eradicates residual unscoped rule prose across the agent briefs',
+    ],
+  },
+  {
+    version: 'v1.7.0',
+    id: 'v1-7-0',
+    date: '2026-06-04',
+    type: 'feature',
+    headline: 'Invocation logic — wire WHEN the still-dead domains fire',
+    highlights: [
+      'Each still-dormant capability gets a defined trigger condition wired into the flow',
+      '`trust-audit` fires on deps-change; the coordinator checkpoints before runs',
+      'A `dormant-by-design` registry honestly separates broken from merely-untriggered features',
+    ],
+  },
+  {
+    version: 'v1.6.0',
+    id: 'v1-6-0',
+    date: '2026-06-04',
+    type: 'feature',
+    headline: 'Orchestration handoff — goal progress + cross-session briefing',
+    highlights: [
+      '**`maddu orient`** — runs goal verification commands and shows success-progress (✓ / ○ / ?)',
+      '**`maddu handoff set`** — curates a cross-session "▶ RESUME HERE" briefing that persists across sessions',
+      'Goal success conditions become measurable and verifiable (`HANDOFF_SET`, enhanced `GOAL_DECLARED`)',
+    ],
+  },
+  {
+    version: 'v1.5.0',
+    id: 'v1-5-0',
+    date: '2026-06-03',
+    type: 'feature',
+    headline: 'Real sub-worker spawn + tracking',
+    highlights: [
+      'The coordinator spawns **tracked** sub-workers per phase across disjoint lanes',
+      '**`maddu team spawn`** fans work concurrently',
+      'OAuth sub-worker tracking enables genuine multi-agent coordination (`WORKER_SPAWNED` / `WORKER_EXITED`, `TEAM_*`)',
+    ],
+  },
+  {
+    version: 'v1.4.0',
+    id: 'v1-4-0',
+    date: '2026-06-03',
+    type: 'feature',
+    headline: 'Empirical insights, plugin loader, tighter core',
+    highlights: [
+      'New read-only `maddu insights` / `/maddu-insights` — harvests `.maddu` spines + transcripts and classifies every event type **load-bearing / occasional / single-project / dormant / dead**',
+      'New `maddu plugin` / `/maddu-plugin` (`list | info | enable | disable`) — capabilities ship as a `plugin.json` manifest, loaded only when enabled; user plugins gated by `--trust` + sha256',
+      'Comms (Telegram / Discord / Email) demoted to the first plugin — out of the bridge boot path, **off by default**, back-compat auto-enable on `upgrade`',
+      'Skills funnel fires automatically at `maddu slice-stop` — emits `SKILL_CANDIDATE_DETECTED` across the rule-#9 gauntlet',
+      'Coordinator enforces the review stage — reviews the newest slice per phase (`SLICE_REVIEWED` + `FOLLOWUP_OPENED`)',
+      'Usage audit: 90 of 142 event types never fired in real projects; honest core-dead count drops 90 → 71 after the comms carve-out',
+    ],
+    note: 'The first data-driven release. After ~8 real projects, a cross-project usage audit (8 spines + 125 transcripts) drove domain demotion, not deletion. The 8+1 hard rules are unchanged.',
+  },
+  {
     version: 'v1.3.0',
     id: 'v1-3-0',
-    date: '2026-05-28',
+    date: '2026-05-24',
     type: 'feature',
     headline: 'Coherence realignment + completeness',
     highlights: [
@@ -306,19 +534,19 @@ function typeMeta(t: ReleaseType) {
       <div class="eyebrow-chain">
         <span class="eyebrow">Changelog</span>
         <span class="eyebrow-sep">·</span>
-        <span class="eyebrow-dim">v0.17.1 → v1.3.0</span>
+        <span class="eyebrow-dim">v0.17.1 → v1.18.0</span>
         <span class="eyebrow-sep">·</span>
-        <span class="eyebrow-dim">{RELEASES.length} releases · ~9 days</span>
+        <span class="eyebrow-dim">{RELEASES.length} releases · ~4 weeks</span>
       </div>
-      <h1>Nineteen releases. <span class="dim-h1">One charter held.</span></h1>
+      <h1>Thirty-six releases. <span class="dim-h1">One charter held.</span></h1>
       <p class="lede">
-        The arc that took Máddu from a private 18-gate baseline to the public-surface stable v1.3.0. Every release kept the layout-refusal invariant at 4/4, took the doctor from 18 → 54 gates, and never broke a posted invariant. Color-coded by release type — milestones, features, hardening, polish, patches.
+        The arc that took Máddu from a private 18-gate baseline to v1.18.0 — spine tamper-evidence, failure learning, portable blueprints, a debt ledger, and architecture-drift detection. Every release kept the layout-refusal invariant at 4/4, took the doctor from 18 → 60 gates, and never broke a posted invariant. Color-coded by release type — milestones, features, hardening, polish, patches.
       </p>
 
       <dl class="cl-stats">
         <div><dt>Releases</dt><dd>{RELEASES.length}</dd></div>
-        <div><dt>Doctor gates added</dt><dd>+36</dd></div>
-        <div><dt>Stress scenarios added</dt><dd>+12</dd></div>
+        <div><dt>Doctor gates added</dt><dd>+42</dd></div>
+        <div><dt>Stress scenarios added</dt><dd>+15</dd></div>
         <div><dt>Invariants broken</dt><dd>0</dd></div>
       </dl>
 
