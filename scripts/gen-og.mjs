@@ -175,7 +175,7 @@ const PAGES = [
     stats: [
       { label: 'LAYERS',        value: '14' },
       { label: 'INVARIANTS',    value: '8 + 1' },
-      { label: 'VERBS',         value: '61' },
+      { label: 'VERBS',         value: '62' },
       { label: 'COCKPIT ROUTES', value: '38+' },
     ],
   },
@@ -233,7 +233,7 @@ const PAGES = [
     title: ['Every verb', 'earns its place.', 'Or it goes.'],
     tone: 'accent',
     stats: [
-      { label: 'VERBS',         value: '61' },
+      { label: 'VERBS',         value: '62' },
       { label: 'PURPOSE AREAS', value: '8' },
       { label: 'INVARIANTS',    value: '9' },
       { label: 'SLASH ON-RAMPS', value: '23' },
