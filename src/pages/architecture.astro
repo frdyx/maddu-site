@@ -39,7 +39,7 @@ const layers: Layer[] = [
     title: 'Operator surface — zero learning curve',
     short: 'Operator',
     blurb: 'Operator types a slash command or a sentence. Verbose CLI stays for scripting. No one memorizes `maddu cmd subcmd --flag value`. The bar is OMC: a brand-new user ships a slice without ever opening the docs.',
-    chips: ['/slash', 'natural language', '13 on-ramps'],
+    chips: ['/slash', 'natural language', '23 on-ramps'],
   },
   {
     n: '02',
@@ -101,8 +101,8 @@ const layers: Layer[] = [
     tone: 'spine',
     title: 'The spine — single source of truth',
     short: 'Spine',
-    blurb: 'Append-only NDJSON under .maddu/events/. ~30 event types covering session lifecycle, lane operations, slices, approvals, triggers, token usage, trust audits, MCP provenance, secret-scan blocks, governance changes, audit reports. Verified, never auto-repaired.',
-    chips: ['NDJSON', '~30 event types', 'no auto-repair'],
+    blurb: 'Append-only NDJSON under .maddu/events/. ~45 event types covering session lifecycle, lane operations, slices, approvals, triggers, token usage, trust audits, MCP provenance, secret-scan blocks, governance changes, audit reports. A forward prev_hash hash-chain makes interior tampering evident. Verified, never auto-repaired.',
+    chips: ['NDJSON', '~45 event types', 'prev_hash chain', 'no auto-repair'],
   },
   {
     n: '09',
@@ -128,8 +128,8 @@ const layers: Layer[] = [
     tone: 'quality',
     title: 'Quality & invariant enforcement',
     short: 'Quality',
-    blurb: '54 doctor gates on every install and upgrade. Charter-drift audit. 12-scenario stress harness. Four-version upgrade matrix. Layout-refusal at every release boundary. Review, test, lint, format at slice level. Enforcement, not aspiration.',
-    chips: ['54 gates', '12 stress scenarios', '4 upgrade sources'],
+    blurb: '60 doctor gates on every install and upgrade. 12-check charter-drift audit, now including architecture-drift. 15-scenario stress harness. Four-version upgrade matrix. Framework-source self-test vs host-project test. Layout-refusal at every release boundary. Review, test, lint, format at slice level. Enforcement, not aspiration.',
+    chips: ['60 gates', '15 stress scenarios', 'architecture-drift'],
   },
   {
     n: '12',
@@ -137,8 +137,8 @@ const layers: Layer[] = [
     tone: 'memory',
     title: 'Memory & accounting — work outlives the agent',
     short: 'Memory',
-    blurb: 'Hindsight skills auto-curate from slice-stops (threshold-gated, with cooldowns). Receipt log accounts for spend. Operator memory persists decisions and their rationale. Replay determinism means past state is reconstructible.',
-    chips: ['hindsight skills', 'receipt log', 'replay-derivable'],
+    blurb: 'Hindsight skills auto-curate from slice-stops (threshold-gated, with cooldowns). maddu learn mines failed→succeeded tool-call pairs into durable corrections; maddu blueprint exports a portable variable-driven project handoff; maddu debt ledgers the deliberate shortcuts. Receipt log accounts for spend. Operator memory persists decisions and their rationale. Replay determinism means past state is reconstructible.',
+    chips: ['hindsight · learn', 'blueprint · debt', 'replay-derivable'],
   },
   {
     n: '13',
@@ -169,7 +169,7 @@ const indexItems = layers.map((l) => ({
         <span class="eyebrow-sep">·</span>
         <span class="eyebrow-dim">14 layers</span>
       </div>
-      <h1>Thirteen layers. <span class="dim-h1">One charter.</span></h1>
+      <h1>Fourteen layers. <span class="dim-h1">One charter.</span></h1>
       <p class="lede">
         Máddu's architecture isn't a flow chart, it's an ontology: every feature is namespaced under a purpose, every purpose answers to an invariant, every invariant is doctor-enforced on every install and upgrade.
       </p>
@@ -248,8 +248,8 @@ flowchart TB
     end
 
     subgraph SPINE["LAYER 8 · THE SPINE"]
-        EV[("NDJSON · ~30 event types")]:::spine
-        VFY["spine verify · no auto-repair"]:::accent2
+        EV[("NDJSON · ~45 event types")]:::spine
+        VFY["spine verify · prev_hash chain · no auto-repair"]:::accent2
     end
 
     subgraph PROJ["LAYER 9 · PROJECTIONS"]
@@ -263,13 +263,15 @@ flowchart TB
     end
 
     subgraph QA["LAYER 11 · QUALITY"]
-        DOC["doctor · 54 gates"]:::ok
-        AUDIT["audit · charter-drift"]:::ok
+        DOC["doctor · 60 gates"]:::ok
+        AUDIT["audit · charter-drift · 12 checks"]:::ok
+        ADRIFT["architecture · drift ratchet"]:::ok
     end
 
     subgraph MEM["LAYER 12 · MEMORY"]
-        H1["hindsight skills"]:::framework
+        H1["hindsight skills · learn"]:::framework
         H2["receipt log · cost"]:::framework
+        H3["blueprint · debt"]:::framework
     end
 
     subgraph COCK["LAYER 13 · COCKPIT"]

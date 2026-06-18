@@ -42,7 +42,7 @@
 
   <!-- Title (1–3 lines) -->
   
-    <text x="72" y="260" fill="#E8E6E3" font-size="64" font-weight="700" font-family="IBM Plex Sans Condensed" letter-spacing="-1">Thirteen layers.</text>
+    <text x="72" y="260" fill="#E8E6E3" font-size="64" font-weight="700" font-family="IBM Plex Sans Condensed" letter-spacing="-1">Fourteen layers.</text>
   
     <text x="72" y="338" fill="#E8E6E3" font-size="64" font-weight="700" font-family="IBM Plex Sans Condensed" letter-spacing="-1">One charter.</text>
   
@@ -55,7 +55,7 @@
     
       <g transform="translate(0, 0)">
         <text x="0" y="0" fill="#6a7079" font-size="11" font-family="IBM Plex Mono" font-weight="400" letter-spacing="2">LAYERS</text>
-        <text x="0" y="36" fill="#56B8FF" font-size="32" font-weight="700" font-family="IBM Plex Sans Condensed">13</text>
+        <text x="0" y="36" fill="#56B8FF" font-size="32" font-weight="700" font-family="IBM Plex Sans Condensed">14</text>
       </g>
     
       <g transform="translate(200, 0)">
@@ -65,7 +65,7 @@
     
       <g transform="translate(400, 0)">
         <text x="0" y="0" fill="#6a7079" font-size="11" font-family="IBM Plex Mono" font-weight="400" letter-spacing="2">VERBS</text>
-        <text x="0" y="36" fill="#56B8FF" font-size="32" font-weight="700" font-family="IBM Plex Sans Condensed">53</text>
+        <text x="0" y="36" fill="#56B8FF" font-size="32" font-weight="700" font-family="IBM Plex Sans Condensed">61</text>
       </g>
     
       <g transform="translate(600, 0)">
