@@ -1,0 +1,240 @@
+---
+// Per-verb entity pages — one per capability verb, composed by
+// scripts/gen-capabilities.mjs from the framework's three canonical sources:
+//   docs/charter.md            → domain + purpose
+//   docs/03-cli-reference.md   → CLI surface / flags
+//   docs/capability-docs.json  → the audited "read in depth" doc map
+// To refresh: `npm run capabilities` (re-reads the framework repo).
+import Layout from '../../layouts/Layout.astro';
+import PageNext from '../../components/PageNext.astro';
+import data from '../../data/capabilities-detail.json';
+
+interface Detail {
+  verb: string;
+  domain: string | null;
+  domainId: string | null;
+  domainPurpose: string | null;
+  summary: string | null;
+  since: string | null;
+  cliIntro: string | null;
+  cliBlocks: string[];
+  cliNotes: string | null;
+  deepDive: { file: string; url: string } | null;
+}
+
+export function getStaticPaths() {
+  const verbs = (data.verbs as Detail[]);
+  return verbs.map((v, i) => ({
+    params: { verb: v.verb },
+    props: {
+      v,
+      prev: verbs[(i - 1 + verbs.length) % verbs.length],
+      next: verbs[(i + 1) % verbs.length],
+    },
+  }));
+}
+
+const { v, prev, next } = Astro.props as { v: Detail; prev: Detail; next: Detail };
+const desc = v.summary
+  ? `maddu ${v.verb} — ${v.summary}`
+  : `maddu ${v.verb} — a capability verb in the ${v.domain} domain.`;
+---
+
+<Layout title={`maddu ${v.verb}`} pathname={`/capabilities/${v.verb}`} description={desc}>
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <a class="eyebrow" href="/capabilities">Capabilities</a>
+        <span class="eyebrow-sep">·</span>
+        {v.domain && v.domainId ? (
+          <a class="eyebrow-dim eyebrow-link" href={`/capabilities#${v.domainId}`}>{v.domain}</a>
+        ) : (
+          <span class="eyebrow-dim">capability verb</span>
+        )}
+        {v.since && (<><span class="eyebrow-sep">·</span><span class="eyebrow-dim">since {v.since}</span></>)}
+      </div>
+      <h1 class="verb-h1"><span class="verb-cmd">maddu {v.verb}</span></h1>
+      {v.summary && <p class="lede">{v.summary}</p>}
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      {v.cliBlocks.length > 0 && (
+        <div class="ent-block">
+          <header class="ent-head"><span class="eyebrow">§ · CLI surface</span></header>
+          {v.cliIntro && <p class="ent-prose">{v.cliIntro}</p>}
+          {v.cliBlocks.map((b) => (
+            <pre class="ent-cli"><code>{b}</code></pre>
+          ))}
+          {v.cliNotes && <p class="ent-note">{v.cliNotes}</p>}
+        </div>
+      )}
+
+      {v.domainPurpose && (
+        <div class="ent-block">
+          <header class="ent-head"><span class="eyebrow">§ · In the {v.domain} domain</span></header>
+          <p class="ent-prose">{v.domainPurpose}</p>
+          {v.domainId && (
+            <a class="ent-back-link" href={`/capabilities#${v.domainId}`}>See the full {v.domain} card →</a>
+          )}
+        </div>
+      )}
+
+      <div class="ent-block">
+        <header class="ent-head"><span class="eyebrow">§ · Read in depth</span></header>
+        {v.deepDive ? (
+          <a class="ent-doc" href={v.deepDive.url} target="_blank" rel="noopener">
+            <span class="ent-doc-glyph" aria-hidden="true">↗</span>
+            <span class="ent-doc-body">
+              <span class="ent-doc-file">docs/{v.deepDive.file}</span>
+              <span class="ent-doc-sub">The canonical deep-dive in the framework repo.</span>
+            </span>
+          </a>
+        ) : (
+          <p class="ent-note ent-note--canonical">
+            No separate deep-dive doc — the <a href="/capabilities">charter row</a> and the CLI surface above
+            are the canonical depth for <code>maddu {v.verb}</code> (plumbing verb).
+          </p>
+        )}
+      </div>
+
+      <nav class="ent-nav">
+        <a class="ent-nav-link ent-nav-prev" href={`/capabilities/${prev.verb}`}>
+          <span class="ent-nav-dir">← prev</span>
+          <span class="ent-nav-verb">maddu {prev.verb}</span>
+        </a>
+        <a class="ent-nav-link ent-nav-next" href={`/capabilities/${next.verb}`}>
+          <span class="ent-nav-dir">next →</span>
+          <span class="ent-nav-verb">maddu {next.verb}</span>
+        </a>
+      </nav>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="§ · Back"
+    title="Capabilities — the full 62-verb ontology."
+    hint="Every verb across the eight purpose areas, with the charter that flags drift."
+    href="/capabilities"
+    tone="accent"
+  />
+</Layout>
+
+<style>
+  .page-head { padding: var(--m-space-16) 0 var(--m-space-8); }
+  .eyebrow-link { text-decoration: none; }
+  .eyebrow-link:hover { color: var(--m-accent); }
+  .lede { font-size: 17px; color: var(--m-fg-0); max-width: 70ch; }
+
+  .verb-h1 { margin: 0 0 var(--m-space-5); }
+  .verb-cmd {
+    font-family: var(--m-font-mono);
+    font-weight: 600;
+    font-size: clamp(30px, 5vw, 46px);
+    letter-spacing: -0.01em;
+    color: var(--m-accent);
+    text-shadow: 0 0 32px rgba(208, 255, 0, 0.25);
+  }
+
+  .ent-block {
+    border-top: 1px solid var(--m-line-soft);
+    padding-top: var(--m-space-5);
+    margin-bottom: var(--m-space-8);
+    max-width: 76ch;
+  }
+  .ent-head { margin-bottom: var(--m-space-4); }
+  .ent-prose { font-size: 15px; line-height: 1.6; color: var(--m-fg-1); margin: 0 0 var(--m-space-3); }
+
+  .ent-cli {
+    background: var(--m-bg-1);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent);
+    border-radius: var(--m-radius);
+    padding: var(--m-space-4) var(--m-space-5);
+    overflow-x: auto;
+    margin: 0 0 var(--m-space-3);
+  }
+  .ent-cli code {
+    font-family: var(--m-font-mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--m-fg-0);
+    white-space: pre;
+    background: none;
+    border: 0;
+    padding: 0;
+  }
+
+  .ent-note { font-size: 13.5px; line-height: 1.6; color: var(--m-fg-2); margin: 0; }
+  .ent-note--canonical {
+    background: var(--m-bg-2);
+    border: 1px dashed var(--m-line);
+    border-radius: var(--m-radius);
+    padding: var(--m-space-4) var(--m-space-5);
+  }
+  .ent-note code {
+    font-family: var(--m-font-mono);
+    font-size: 12px;
+    background: var(--m-bg-3);
+    padding: 1px 6px;
+    border-radius: var(--m-radius-sm);
+  }
+
+  .ent-back-link {
+    font-family: var(--m-font-mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--m-accent-2);
+    text-decoration: none;
+  }
+  .ent-back-link:hover { text-decoration: underline; }
+
+  .ent-doc {
+    display: flex;
+    align-items: center;
+    gap: var(--m-space-4);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent-2);
+    border-radius: var(--m-radius);
+    padding: var(--m-space-4) var(--m-space-5);
+    text-decoration: none;
+    transition: background 120ms, border-color 120ms;
+  }
+  .ent-doc:hover { background: var(--m-bg-3); border-left-color: var(--m-accent); }
+  .ent-doc-glyph { font-family: var(--m-font-mono); font-size: 22px; color: var(--m-accent-2); }
+  .ent-doc-body { display: flex; flex-direction: column; gap: 2px; }
+  .ent-doc-file { font-family: var(--m-font-mono); font-size: 14px; color: var(--m-fg-0); }
+  .ent-doc-sub { font-size: 12.5px; color: var(--m-fg-3); }
+
+  .ent-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--m-space-4);
+    border-top: 1px solid var(--m-line-soft);
+    padding-top: var(--m-space-5);
+    max-width: 76ch;
+  }
+  .ent-nav-link {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    text-decoration: none;
+    padding: var(--m-space-3) var(--m-space-4);
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+    background: var(--m-bg-2);
+    min-width: 0;
+  }
+  .ent-nav-link:hover { border-color: var(--m-accent); background: var(--m-bg-3); }
+  .ent-nav-next { text-align: right; margin-left: auto; }
+  .ent-nav-dir {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+  }
+  .ent-nav-verb { font-family: var(--m-font-mono); font-size: 13px; color: var(--m-accent); }
+</style>
