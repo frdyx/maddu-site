@@ -589,7 +589,7 @@ hr {
 
   /* Print URL strip in footer so a reader still knows where this came from. */
   .site-main::after {
-    content: "Source: maddu.dev — A local-first orchestration spine for AI agents.";
+    content: "Source: maddu.frdyx.com — A local-first orchestration spine for AI agents.";
     display: block;
     margin-top: 24pt;
     padding-top: 8pt;

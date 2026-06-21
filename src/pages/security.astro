@@ -98,7 +98,7 @@ const defenses: Defense[] = [
         eyebrow="Boundary map"
         title="Spawn boundary is the load-bearing line."
         subtitle="Everything past it is a worker subprocess. Everything before it is framework code that never touches a provider SDK."
-        meta="5 surfaces · 5 enforcement points"
+        meta="5 surfaces"
         tone="danger"
       >
         <Mermaid
@@ -205,7 +205,7 @@ flowchart LR
 
       <Callout tone="warn" title="Máddu is the posture layer" tag="not a vault">
         <p>
-          Máddu is the audit and posture layer. It is <strong>not</strong> a secret store, a vault, or a key rotator. Pair it with a real vault (Hashicorp, AWS Secrets Manager, Cloudflare Secrets, 1Password Connect — pick one). Use least-privilege IAM. Rotate keys.
+          Máddu is the audit and posture layer. It is <strong>not</strong> a secret store, a vault, or a key rotator. Pair it with a real vault (HashiCorp, AWS Secrets Manager, Cloudflare Secrets, 1Password Connect — pick one). Use least-privilege IAM. Rotate keys.
         </p>
         <p>
           Máddu's job is to make sure your agents don't leak what's in those stores. It's not the store itself.

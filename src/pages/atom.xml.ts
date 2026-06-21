@@ -6,7 +6,7 @@
 import type { APIRoute } from 'astro';
 import { RELEASES } from '../data/releases';
 
-const SITE = 'https://maddu.dev';
+const SITE = 'https://maddu.frdyx.com';
 
 function isoDay(d: string) {
   return d + 'T00:00:00Z';

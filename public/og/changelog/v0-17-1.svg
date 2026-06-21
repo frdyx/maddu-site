@@ -77,7 +77,7 @@
     
     <g transform="translate(880, 12)">
       <rect x="0" y="0" width="176" height="36" rx="4" fill="#F04E23" fill-opacity="0.10" stroke="#F04E23" stroke-opacity="0.4" stroke-width="1" />
-      <text x="88" y="24" fill="#F04E23" font-size="13" font-family="IBM Plex Mono" font-weight="500" text-anchor="middle" letter-spacing="2">maddu.dev/changelog/v0-17-1</text>
+      <text x="88" y="24" fill="#F04E23" font-size="13" font-family="IBM Plex Mono" font-weight="500" text-anchor="middle" letter-spacing="2">maddu.frdyx.com/changelog/v0-17-1</text>
     </g>
   </g>
 </svg>

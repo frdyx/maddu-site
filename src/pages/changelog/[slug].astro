@@ -58,7 +58,7 @@ export function getStaticPaths() {
 }
 
 const { release } = Astro.props as { release: Release };
-const siteUrl = 'https://maddu.dev';
+const siteUrl = 'https://maddu.frdyx.com';
 const ogImage = `${siteUrl}/og/changelog/${release.slug}.png`;
 const canonical = `${siteUrl}/changelog#${release.slug}`;
 const fullTitle = `${release.v} · ${release.headline} — Máddu changelog`;

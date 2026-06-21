@@ -6,7 +6,7 @@ import type { APIRoute } from 'astro';
 import { RELEASES } from '../data/releases';
 import capDetail from '../data/capabilities-detail.json';
 
-const SITE = 'https://maddu.dev';
+const SITE = 'https://maddu.frdyx.com';
 
 const PAGES = [
   { path: '/', priority: 1.0, changefreq: 'weekly' },

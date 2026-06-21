@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { RELEASES } from '../../data/releases';
 
-const SITE = 'https://maddu.dev';
+const SITE = 'https://maddu.frdyx.com';
 
 interface ApiRelease {
   version: string;

@@ -134,7 +134,7 @@ function card({ slug, eyebrow, title, tone = 'accent', stats }) {
     ${statBlocks}
     <g transform="translate(880, 12)">
       <rect x="0" y="0" width="176" height="36" rx="4" fill="${t.fill}" fill-opacity="0.10" stroke="${t.stroke}" stroke-opacity="0.4" stroke-width="1" />
-      <text x="88" y="24" fill="${t.eyebrow}" font-size="13" font-family="IBM Plex Mono" font-weight="500" text-anchor="middle" letter-spacing="2">maddu.dev${slug === 'index' ? '' : '/' + slug}</text>
+      <text x="88" y="24" fill="${t.eyebrow}" font-size="13" font-family="IBM Plex Mono" font-weight="500" text-anchor="middle" letter-spacing="2">maddu.frdyx.com${slug === 'index' ? '' : '/' + slug}</text>
     </g>
   </g>
 </svg>

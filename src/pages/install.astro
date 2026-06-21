@@ -12,13 +12,13 @@ import PageNext from '../components/PageNext.astro';
       <div class="eyebrow-chain">
         <span class="eyebrow">Install</span>
         <span class="eyebrow-sep">·</span>
-        <span class="eyebrow-dim eyebrow-warn">repo private</span>
+        <span class="eyebrow-dim">one line from GitHub</span>
         <span class="eyebrow-sep">·</span>
-        <span class="eyebrow-dim">public install opens when repo flips</span>
+        <span class="eyebrow-dim">npm package coming</span>
       </div>
-      <h1>Install when it's ready. <span class="dim-h1">Read while you wait.</span></h1>
+      <h1>Install in one line. <span class="dim-h1">Read before you do.</span></h1>
       <p class="lede">
-        Máddu's source is currently private. A public install command is wired and tested but won't work for anonymous users until the repository flips public. The shape below is what it will be; the alternative below is what to do meanwhile.
+        Máddu installs straight from the public GitHub repo — one command, run against the repo you're already in. The npm package is on its way; until it ships, the GitHub path is the canonical install. Both produce identical doctor output.
       </p>
     </div>
   </section>
@@ -27,33 +27,33 @@ import PageNext from '../components/PageNext.astro';
   <section class="section">
     <div class="container">
       <header class="section-head">
-        <span class="eyebrow">§ 01 · Public install · deferred</span>
-        <h2>The install command, once the repo opens.</h2>
-        <p>One-line install from npm or directly from GitHub. Both will work; both already produce identical doctor output (60 PASS / 0 WARN / 0 FAIL on a fresh foreign repo).</p>
+        <span class="eyebrow">§ 01 · Public install</span>
+        <h2>The install command.</h2>
+        <p>One-line install directly from GitHub today, from npm once it ships. Both produce identical doctor output (60 PASS / 0 WARN / 0 FAIL on a fresh foreign repo).</p>
       </header>
 
       <Workflow
-        eyebrow="When the repo flips public"
-        title="Two install paths. Same result."
-        meta="npm-pinned · git-shasum-pinned"
+        eyebrow="Two paths, same result"
+        title="From GitHub today. npm when it ships."
+        meta="git-shasum-pinned · npm-pinned"
         tone="accent"
       >
         <div class="install-grid">
           <article class="install-card install-card--primary">
             <header class="install-card-head">
               <span class="install-card-n">A</span>
-              <h3>From npm <span class="install-card-soon">soon</span></h3>
+              <h3>From GitHub</h3>
             </header>
-            <pre><code>npx maddu@latest init</code></pre>
-            <p>Pulls the latest tagged release from npm, runs the installer against the current repo. Recommended once the package ships.</p>
+            <pre><code>npx github:frdyx/maddu init</code></pre>
+            <p>Pulls straight from the public GitHub repo and runs the installer against the current repo. The canonical path until npm ships — and how you pin a specific commit or pre-release.</p>
           </article>
           <article class="install-card">
             <header class="install-card-head">
               <span class="install-card-n">B</span>
-              <h3>From GitHub <span class="install-card-soon">when public</span></h3>
+              <h3>From npm <span class="install-card-soon">soon</span></h3>
             </header>
-            <pre><code>npx github:frdyx/maddu init</code></pre>
-            <p>Pulls directly from the GitHub repo. Useful when you want a specific commit or pre-release.</p>
+            <pre><code>npx maddu@latest init</code></pre>
+            <p>Pulls the latest tagged release from npm. Recommended once the package ships.</p>
           </article>
         </div>
 
@@ -73,12 +73,9 @@ import PageNext from '../components/PageNext.astro';
         </Fragment>
       </Workflow>
 
-      <Callout tone="warn" title="Repository is currently private" tag="anonymous install will 404">
+      <Callout tone="ok" title="Works today, for anyone" tag="public repo">
         <p>
-          The <code>npx github:frdyx/maddu</code> path will fail with a 404 for anonymous users until the repo flips public. If you have authenticated access (collaborator), it works today.
-        </p>
-        <p>
-          npm publish + the repo flip are both on the pre-public checklist. No ETA published yet.
+          The repo is public — <code>npx github:frdyx/maddu init</code> runs for anyone, no auth required. The npm package is still in the publish queue; until it lands, the GitHub path is the one to use.
         </p>
       </Callout>
     </div>
@@ -88,9 +85,9 @@ import PageNext from '../components/PageNext.astro';
   <section class="section">
     <div class="container">
       <header class="section-head">
-        <span class="eyebrow">§ 02 · Meanwhile</span>
-        <h2>What to read while the install is gated.</h2>
-        <p>The site covers the full operator surface. None of it requires the install to make sense — the architecture, governance, threat model, and capability ontology are the whole product as far as understanding goes.</p>
+        <span class="eyebrow">§ 02 · Before you install</span>
+        <h2>Read this first. It's the whole product.</h2>
+        <p>None of it requires the install to make sense — the architecture, governance, threat model, and capability ontology are the whole product as far as understanding goes. Install once these match your posture.</p>
       </header>
 
       <div class="meanwhile-grid">
@@ -138,8 +135,8 @@ import PageNext from '../components/PageNext.astro';
   <section class="section">
     <div class="container">
       <header class="section-head">
-        <span class="eyebrow">§ 03 · Today's actions</span>
-        <h2>If you want to be ready when it opens.</h2>
+        <span class="eyebrow">§ 03 · First steps</span>
+        <h2>Four things to get right before you run it.</h2>
       </header>
 
       <ol class="ready-list">
@@ -167,8 +164,8 @@ import PageNext from '../components/PageNext.astro';
         <li>
           <span class="ready-n">04</span>
           <div class="ready-body">
-            <h3>Watch for the flip</h3>
-            <p>When the repo opens, this page will swap the deferred-install block for a live one-liner with copy buttons. No mailing list — bookmark <a href="/">the landing page</a>; the install path will be the first thing on it.</p>
+            <h3>Star the repo, watch releases</h3>
+            <p>Star <a href="https://github.com/frdyx/maddu">github.com/frdyx/maddu</a> and watch releases — that's how you'll hear when the npm package ships and when new versions land. No mailing list, no telemetry.</p>
           </div>
         </li>
       </ol>

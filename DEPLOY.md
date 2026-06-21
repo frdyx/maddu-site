@@ -66,4 +66,4 @@ Plus security headers (`X-Frame-Options: DENY`, strict referrer policy, locked-d
 - [ ] Mermaid diagrams render with color (substrate loop, architecture ontology, gauntlet, security boundary)
 - [ ] Scroll-spy works on `/architecture` and `/threat-model` (right rail follows scroll)
 - [ ] PageNext footers land correctly
-- [ ] `X-Frame-Options: DENY` set on responses (`curl -I https://maddu.dev/` should show it)
+- [ ] `X-Frame-Options: DENY` set on responses (`curl -I https://maddu.frdyx.com/` should show it)

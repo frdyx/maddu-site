@@ -63,7 +63,7 @@ const defenses: Defense[] = [
     id: 'secret-scan',
     tone: 'warn',
     title: 'Secret scan on tool argv',
-    attack: 'An agent might call a tool with a raw API key in the command line — for testing, for laziness, for hallucination. That argv string passes through Máddu\'s telemetry, the receipt log, the live event stream, and any cockpit observer. Once it\'s in the log, it stays in the log.',
+    attack: 'An agent might call a tool with a raw API key in the command line — for testing, for convenience, for hallucination. That argv string passes through Máddu\'s telemetry, the receipt log, the live event stream, and any cockpit observer. Once it\'s in the log, it stays in the log.',
     defense: 'Tool arguments pass a pattern scanner before any logging. AWS, OpenAI, Anthropic, GitHub, GitLab, Slack token shapes are detected and the tool call is refused. Raw values are never logged — only a SECRET_SCAN_BLOCKED event with the pattern name (no raw match content).',
     spineEvent: 'SECRET_SCAN_BLOCKED',
     spineEventTone: 'danger',
@@ -161,8 +161,8 @@ const defenses: Defense[] = [
 
       <dl class="tm-stats">
         <div><dt>Structural defenses</dt><dd>7</dd></div>
-        <div><dt>Rules they enforce</dt><dd>5 · 6 · 9</dd></div>
-        <div><dt>Spine event types</dt><dd>~30</dd></div>
+        <div><dt>Rules they enforce</dt><dd>4 · 5 · 6 · 9</dd></div>
+        <div><dt>Spine event types</dt><dd>~45</dd></div>
         <div><dt>Auto-repair</dt><dd>0</dd></div>
       </dl>
     </div>
@@ -324,7 +324,7 @@ flowchart LR
 
       <Callout tone="warn" title="Máddu is the posture layer, not the vault" tag="explicit boundary">
         <p>
-          Máddu is the audit and posture layer. It is <strong>not</strong> a secret store, a vault, or a key rotator. Pair it with a real vault — Hashicorp Vault, AWS Secrets Manager, Cloudflare Secrets, 1Password Connect, pick one. Use least-privilege IAM. Rotate keys on a schedule.
+          Máddu is the audit and posture layer. It is <strong>not</strong> a secret store, a vault, or a key rotator. Pair it with a real vault — HashiCorp Vault, AWS Secrets Manager, Cloudflare Secrets, 1Password Connect, pick one. Use least-privilege IAM. Rotate keys on a schedule.
         </p>
         <p>
           Máddu's job is to make sure your agents don't leak what's in those stores. It's not the store itself.

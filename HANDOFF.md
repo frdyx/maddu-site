@@ -233,7 +233,7 @@ gh repo create frdyx/maddu-site --private --source=. --remote=origin --push
 
 ### What's NOT happening
 
-- No custom domain at `maddu.dev` yet (that's a public-launch action).
+- No custom domain at `maddu.frdyx.com` yet (that's a public-launch action).
 - No GitHub Action deploy (the existing `.github/workflows/deploy.yml`
   targets Cloudflare; would need a Vercel variant or just use dashboard
   auto-deploys for now).
@@ -258,7 +258,7 @@ about execution, not decisions.
 5. **When the framework repo is ready to flip public**, plan both
    flips in the same window: framework public on GitHub → site
    production-aliased on Vercel → optional custom domain
-   `maddu.dev`. Drop any `noindex` meta added during preview.
+   `maddu.frdyx.com`. Drop any `noindex` meta added during preview.
 
 ---
 

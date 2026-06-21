@@ -2,7 +2,7 @@
 
   Máddu — orchestration spine
   Source · github.com/frdyx/maddu
-  Site   · maddu.dev
+  Site   · maddu.frdyx.com
 
 /* THANKS */
 
