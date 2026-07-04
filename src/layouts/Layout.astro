@@ -10,7 +10,7 @@ export interface Props {
 
 const {
   title,
-  description = 'Máddu — the local-first orchestration spine for AI agents. Files-only state, append-only event spine, no hosted backend.',
+  description = 'Máddu — the external, cooperative governance & coordination layer any CLI AI agent plugs into. Agents work as an auditable team: lanes, approvals, gates, replayable record. Local-first, no cloud, no key interception.',
   pathname = '/',
 } = Astro.props;
 
@@ -168,10 +168,18 @@ import SearchPalette from '../components/SearchPalette.astro';
           <span>Máddu</span>
         </div>
         <p class="site-foot-tagline">The Source of local truth.</p>
-        <p class="site-foot-meta">A local-first orchestration spine for AI agents. No SaaS, no telemetry, no relay. <span class="mono">{new Date().getFullYear()}</span></p>
+        <p class="site-foot-meta">The cooperative governance &amp; coordination layer for CLI AI agents. No SaaS, no telemetry, no relay. <span class="mono">{new Date().getFullYear()}</span></p>
         <p class="site-foot-privacy">
           <span class="site-foot-privacy-glyph" aria-hidden="true">◆</span>
           <span>This site sets no cookies, runs no analytics, loads no third-party scripts. The framework's posture is the site's posture.</span>
+        </p>
+        <p class="site-foot-credit">
+          <span class="site-foot-credit-label">Created by</span>
+          <a href="https://github.com/frdyx" target="_blank" rel="noopener author">Frdyx</a>
+          <span class="site-foot-credit-sep" aria-hidden="true">·</span>
+          <a href="https://frdyx.com" target="_blank" rel="noopener">frdyx.com</a>
+          <span class="site-foot-credit-sep" aria-hidden="true">·</span>
+          <a href="https://www.linkedin.com/in/freddy-gehlin-b86914124/" target="_blank" rel="noopener">LinkedIn</a>
         </p>
       </div>
       <div class="site-foot-col">
@@ -705,6 +713,21 @@ import SearchPalette from '../components/SearchPalette.astro';
       flex-shrink: 0;
     }
     .site-foot-posture { flex-direction: row !important; flex-wrap: wrap; }
+    .site-foot-credit {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: var(--m-space-4);
+      font-family: var(--m-font-mono);
+      font-size: 11.5px;
+      letter-spacing: 0.02em;
+      color: var(--m-fg-3);
+    }
+    .site-foot-credit-label { text-transform: uppercase; letter-spacing: 0.08em; color: var(--m-fg-4); }
+    .site-foot-credit a { color: var(--m-fg-1); border-bottom: none; }
+    .site-foot-credit a:hover { color: var(--m-accent); }
+    .site-foot-credit-sep { color: var(--m-fg-4); }
 
     @media (max-width: 720px) {
       .site-foot-inner { grid-template-columns: 1fr; gap: var(--m-space-6); }

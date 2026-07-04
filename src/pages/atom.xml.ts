@@ -31,7 +31,7 @@ export const GET: APIRoute = () => {
     '<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">\n' +
     `  <id>${SITE}/changelog</id>\n` +
     `  <title>Máddu changelog</title>\n` +
-    `  <subtitle>A local-first orchestration spine for AI agents — release history.</subtitle>\n` +
+    `  <subtitle>The cooperative governance layer for AI coding agents — release history.</subtitle>\n` +
     `  <link href="${SITE}/atom.xml" rel="self" type="application/atom+xml" />\n` +
     `  <link href="${SITE}/feed.json" rel="alternate" type="application/feed+json" />\n` +
     `  <link href="${SITE}/changelog" rel="alternate" type="text/html" />\n` +

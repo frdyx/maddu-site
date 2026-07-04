@@ -11,34 +11,36 @@ import SubstrateLoop from '../components/SubstrateLoop.astro';
 import PageNext from '../components/PageNext.astro';
 ---
 
-<Layout title="The local-first orchestration spine for AI agents" pathname="/">
+<Layout title="The governance & coordination layer for AI coding agents" pathname="/">
   <!-- ── HERO ─────────────────────────────────────────────────────── -->
   <section class="hero">
     <div class="container">
       <div class="eyebrow-chain">
-        <span class="eyebrow">v1.18</span>
+        <span class="eyebrow">v1.92</span>
         <span class="eyebrow-sep">·</span>
-        <span class="eyebrow-dim">local-first</span>
+        <span class="eyebrow-dim">no cloud</span>
         <span class="eyebrow-sep">·</span>
-        <span class="eyebrow-dim">runtime-agnostic</span>
+        <span class="eyebrow-dim">no database</span>
         <span class="eyebrow-sep">·</span>
-        <span class="eyebrow-dim">files-only</span>
+        <span class="eyebrow-dim">no provider SDKs in your code</span>
       </div>
       <h1 class="hero-title">
-        The orchestration spine<br />
-        that <em>outlives</em> every agent that touches it.
+        Your AI agents are temporary.<br />
+        The system that <em>governs</em> them shouldn't be.
       </h1>
       <p class="hero-lede">
-        A small Node process puts every approval, session, and slice of work onto an append-only event log on disk. A static-page cockpit lets you watch and replay it in any browser. Built for developers running <span class="verb">claude-code</span>, <span class="verb">codex</span>, or any agent CLI from the terminal.
+        Máddu gives <span class="verb">claude-code</span>, <span class="verb">codex</span>, and any CLI agent a shared lane map, approvals, and a replayable record — so they work as an auditable team. No proxy, no key interception, no backend stack: the agent calls Máddu; Máddu never sits in the request path. It runs as a small Node process with local-first, append-only files as the system of record.
+      </p>
+      <p class="hero-compare">
+        Tracing tools observe runs. Memory tools remember. <strong>Máddu governs how agents collaborate.</strong>
       </p>
       <div class="hero-actions">
-        <a class="btn btn-primary" href="/how-it-works">How it works <span aria-hidden="true">→</span></a>
-        <a class="btn" href="/architecture">Architecture deep-dive</a>
-        <a class="btn btn-ghost" href="/hard-rules">The 8+1 hard rules</a>
+        <a class="btn btn-primary btn-cmd" href="/install"><span class="cmd-prompt" aria-hidden="true">$</span> npx github:frdyx/maddu init</a>
+        <a class="btn" href="/how-it-works">Read the docs <span aria-hidden="true">→</span></a>
       </div>
       <dl class="hero-stats">
         <div><dt>Hard rules</dt><dd>8 + 1</dd></div>
-        <div><dt>Doctor gates</dt><dd>60</dd></div>
+        <div><dt>Doctor gates</dt><dd>69</dd></div>
         <div><dt>Stress scenarios</dt><dd>15</dd></div>
         <div><dt>Auto-repair</dt><dd>0</dd></div>
       </dl>
@@ -54,7 +56,10 @@ import PageNext from '../components/PageNext.astro';
         <span class="eyebrow">§ 01 · Definition</span>
         <h2>What it is, in one paragraph.</h2>
         <p>
-          Máddu is a <em>local-first orchestration spine for AI agents</em>. Not a model. Not an agent framework competing with Hermes or clawdbot. Not a SaaS. It's the layer underneath those — the audit, portability, and supply-chain posture of a system that lets you actually trust agent work.
+          Máddu is the <em>external, cooperative governance and coordination layer for CLI coding agents</em>. Not a model. Not an agent framework competing with Hermes or clawdbot. Not a SaaS. It's the layer underneath those — the lane map, the approval gates, and the shared coordination state that let several agents work one codebase as an auditable team. Cooperative means exactly this: the agent calls Máddu; Máddu never sits in the request path and never touches your keys.
+        </p>
+        <p>
+          What <strong>every</strong> install gets from day one is the always-on core: register a session, claim a lane, run a slice, stop it with a structured summary, let the gates check it — each one line on the spine. <strong>That disciplined loop is the product.</strong> Multi-agent orchestration — <span class="verb">coordinator</span>, <span class="verb">loop</span>, <span class="verb">pipeline</span>, <span class="verb">team</span> — is a powerful <em>opt-in</em> layer on top. Reach for it when a job fans out across lanes; skip it when it doesn't. Most work just needs the loop, and that's by design.
         </p>
       </header>
 
@@ -100,7 +105,7 @@ import PageNext from '../components/PageNext.astro';
           <h4>Failure mode it kills</h4>
           <ul>
             <li>An agent silently propagating a wrong call across handoffs</li>
-            <li>State-mutating actions firing with no audit trail</li>
+            <li>State-mutating actions firing with no gate and no record</li>
             <li>Cleanup that turns into a finger-pointing match</li>
             <li>Orchestration that dies when the vendor's API does</li>
           </ul>
@@ -128,10 +133,10 @@ import PageNext from '../components/PageNext.astro';
   <section class="section">
     <div class="container">
       <header class="section-head">
-        <span class="eyebrow">§ 03 · The substrate</span>
+        <span class="eyebrow">§ 03 · The spine</span>
         <h2>The one canonical flow.</h2>
         <p>
-          Máddu has one mental model and one default execution path. They're the same loop at two altitudes — the slash and autopilot surfaces are friendly wrappers over the substrate, never competing flows.
+          Máddu has one mental model and one default execution path. They're the same loop at two altitudes — the slash and autopilot surfaces are friendly wrappers over the spine, never competing flows. Every transition lands as one readable line on an append-only record: governance you can trust because you can read it.
         </p>
       </header>
 
@@ -292,7 +297,7 @@ flowchart LR
         <a class="deep-card deep-card--accent" href="/capabilities">
           <span class="deep-glyph">∷</span>
           <h3>Capabilities</h3>
-          <p>Every top-level verb traces to a stated purpose. Eight purpose areas. 62 verbs. One charter that flags drift.</p>
+          <p>Every top-level verb traces to a stated purpose. Eight purpose areas. 68 verbs. One charter that flags drift.</p>
           <span class="deep-cta">Open the verb map →</span>
         </a>
         <a class="deep-card deep-card--brand" href="/hard-rules">
@@ -359,7 +364,7 @@ flowchart LR
     letter-spacing: -0.02em;
     margin: 0 0 var(--m-space-6);
     color: var(--m-fg-0);
-    max-width: 18ch;
+    max-width: 24ch;
   }
   .hero-title em {
     color: var(--m-accent);
@@ -374,12 +379,28 @@ flowchart LR
     line-height: 1.55;
     margin-bottom: var(--m-space-4);
   }
+  .hero-compare {
+    font-size: 14px;
+    color: var(--m-fg-2);
+    max-width: 64ch;
+    margin: var(--m-space-4) 0 0;
+    padding-left: var(--m-space-3);
+    border-left: 2px solid var(--m-accent-2);
+    line-height: 1.5;
+  }
+  .hero-compare strong { color: var(--m-fg-0); }
   .hero-actions {
     display: flex;
     gap: var(--m-space-3);
     margin: var(--m-space-8) 0 var(--m-space-12);
     flex-wrap: wrap;
   }
+  .btn-cmd {
+    font-family: var(--m-font-mono);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .cmd-prompt { opacity: 0.6; margin-right: 2px; }
   .hero-stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));

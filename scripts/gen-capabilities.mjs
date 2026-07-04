@@ -94,6 +94,7 @@ function taglineFor(purposeRaw, tokens, verbSet, verb) {
   let frag = flattenMd(purposeRaw.slice(start, end))
     .replace(/^['’]s\s+/, '')          // strip a leading possessive ("'s drift check" → "drift check")
     .replace(/^[\s,;:.—-]+/, '')
+    .replace(/^(is|are)\s+(the\s+)?/i, '') // "is the read-only fleet view" → "read-only fleet view"
     .replace(/^(and|the)\s+/i, '')
     .replace(/[\s,;]+$/, '');
   if (frag.length > 200) frag = frag.slice(0, 200).replace(/\s\S*$/, '') + '…';

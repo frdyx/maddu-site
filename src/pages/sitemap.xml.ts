@@ -31,7 +31,7 @@ for (const r of RELEASES) {
 }
 
 // Per-verb capability entity pages — derived from the audited capability
-// detail map (scripts/gen-capabilities.mjs), so all 62 stay discoverable
+// detail map (scripts/gen-capabilities.mjs), so all 66 stay discoverable
 // and the list never has to be hand-maintained.
 for (const v of capDetail.verbs) {
   PAGES.push({ path: '/capabilities/' + v.verb, priority: 0.5, changefreq: 'monthly' });

@@ -14,7 +14,7 @@ export const GET: APIRoute = () => {
     title: 'Máddu changelog',
     home_page_url: `${SITE}/changelog`,
     feed_url: `${SITE}/feed.json`,
-    description: 'A local-first orchestration spine for AI agents — release history.',
+    description: 'The cooperative governance layer for AI coding agents — release history.',
     icon: `${SITE}/brand-mark.svg`,
     favicon: `${SITE}/favicon-32.png`,
     language: 'en',
