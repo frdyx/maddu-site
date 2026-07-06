@@ -52,6 +52,9 @@ import { VERSION_SHORT, VERBS_TOTAL, PURPOSE_AREAS, DOCTOR_GATES, STRESS_SCENARI
           { label: 'Máddu', verdict: 'governs how agents collaborate', emphasized: true },
         ]}
       />
+      <p class="hero-compare-more">
+        <a href="/compare">The full landscape — who we compete with, who we complement <span aria-hidden="true">→</span></a>
+      </p>
 
       <SubstrateLoop />
     </div>
@@ -462,6 +465,13 @@ flowchart LR
     gap: var(--m-space-3);
     margin: var(--m-space-8) 0 var(--m-space-12);
     flex-wrap: wrap;
+  }
+  .hero-compare-more {
+    margin: calc(-1 * var(--m-space-3)) 0 var(--m-space-8);
+    font-family: var(--m-font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
   .btn-cmd {
     font-family: var(--m-font-mono);

@@ -29,6 +29,13 @@ for (const f of FEATURE_SLUGS) {
   PAGES.push({ path: '/features/' + f, priority: 0.8, changefreq: 'monthly' });
 }
 
+// Comparison pages — the honest landscape map + per-matchup pages.
+PAGES.push({ path: '/compare', priority: 0.9, changefreq: 'monthly' });
+const COMPARE_SLUGS = ['claude-code', 'codex-cli', 'paperclip', 'orchestrators', 'langgraph', 'langfuse', 'temporal', 'enterprise'];
+for (const c of COMPARE_SLUGS) {
+  PAGES.push({ path: '/compare/' + c, priority: 0.7, changefreq: 'monthly' });
+}
+
 // Per-release stub pages — emitted but flagged noindex (release context
 // lives on /changelog itself); included here so sitemap crawlers can
 // discover the deep-link URLs for the social cards. Derived from the

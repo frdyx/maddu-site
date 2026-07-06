@@ -1,0 +1,156 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import PageNext from '../../components/PageNext.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+import { DOCTOR_GATES } from '../../data/stats';
+---
+
+<Layout title="Máddu + Claude Code" pathname="/compare/claude-code">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Compare</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">CLI coding agents</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">layer on top</span>
+      </div>
+      <h1>Máddu + Claude Code. <span class="dim-h1">The agent, and the record it leaves.</span></h1>
+      <p class="lede">
+        This isn't a versus. Claude Code is the best CLI coding agent shipping, and Máddu is the governance layer its own hooks attach to. The agent does the work; the spine remembers what was allowed.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · What Claude Code is</span>
+        <h2>A best-in-class agent with native governance hooks.</h2>
+        <p>
+          Claude Code is Anthropic's terminal coding agent, and it already ships a real orchestration surface: lifecycle hooks (SessionStart, SessionEnd, PreCompact and more), subagents, agent teams, and a memory system. Anthropic Dispatch — in beta for Pro and Max — lets you hand a task off from your phone and have Claude execute it on your desktop against your own files. Platform-native orchestration is not hypothetical; it is actively shipping. Máddu never competes with any of that.
+        </p>
+      </header>
+
+      <div class="vs-honest">
+        <h4>Where Claude Code is stronger — plainly</h4>
+        <ul>
+          <li>It is a best-in-class agent — the reasoning, tool use, and editing quality are the reason you're here.</li>
+          <li>Its native hooks are deterministic, first-party, and free — no extra layer needed to fire them.</li>
+          <li>Its ecosystem and release velocity dwarf Máddu's, and Dispatch is extending it into phone-to-desktop orchestration.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · Where Máddu differs</span>
+        <h2>Hooks fire in the session. The spine outlives it.</h2>
+      </header>
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">A record that survives the tool</span>
+            <span class="panel-aside">tamper-evident</span>
+          </div>
+          <p>Hooks and memory live inside Claude Code's world. Máddu's governance history is a hash-chained, append-only spine in <code>.maddu/</code> — it travels with <code>git clone</code>, verifies with <code>maddu spine verify</code>, and is still there after you swap the agent or the vendor churns.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">One policy across runtimes</span>
+            <span class="panel-aside">Codex · Gemini too</span>
+          </div>
+          <p>Native hooks bind you to one agent. Máddu is the same spine, the same {DOCTOR_GATES} deterministic gates, and the same approvals ledger whether the work ran under Claude Code, Codex, or Gemini. Your governance doesn't get rewritten when the tool does.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Hooks wired to the spine</span>
+            <span class="panel-aside">maddu hooks install</span>
+          </div>
+          <p>Máddu uses Claude Code's own machinery: <code>maddu hooks install</code> wires SessionStart to auto-register a session on the spine and PreCompact to checkpoint governance before context is compacted. Nothing intercepted, nothing proxied — the agent's hooks feed the record cooperatively.</p>
+        </div>
+      </div>
+
+      <Callout tone="accent" title="Layer on top, never against" tag="the framing">
+        <p>
+          Everything Anthropic ships to make Claude Code a better agent makes Máddu more useful, not less — more sessions, more subagents, more Dispatch handoffs are more events worth recording. Máddu's job starts exactly where Claude Code's session ends: keeping a durable, repo-owned account of what happened after the tab closes.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 03 · Choose honestly</span>
+        <h2>Most people should run both.</h2>
+      </header>
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Claude Code alone is enough when</span>
+          </div>
+          <ul class="vs-list">
+            <li>You're a single developer on a single tool, not switching runtimes</li>
+            <li>There is no audit requirement — nobody will ever ask what was allowed and when</li>
+            <li>The session's own memory and hooks cover everything you need to remember</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Add Máddu when</span>
+          </div>
+          <ul class="vs-list">
+            <li>The governance record must outlive the session — and the vendor</li>
+            <li>You run more than one runtime and want one policy across all of them</li>
+            <li>You're running parallel lanes and need exclusive claims, not colliding sessions</li>
+          </ul>
+        </div>
+      </div>
+      <p class="feat-note">
+        Related: <a href="/features/worktrees">worktree lanes</a> · <a href="/features/autonomy">earned autonomy</a> · <a href="/features/ci">governance in CI</a> · <a href="/hard-rules">the hard rules</a>
+      </p>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="Next comparison"
+    title="Máddu + Codex CLI."
+    hint="The governance mode OpenAI declined to build — and the hooks that make it possible anyway."
+    href="/compare/codex-cli"
+    tone="accent"
+  />
+  <CtaBlock />
+</Layout>
+
+<style>
+  .vs-honest {
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-warn);
+    border-radius: var(--m-radius);
+    max-width: 720px;
+  }
+  .vs-honest h4 {
+    margin: 0 0 var(--m-space-2);
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--m-warn);
+  }
+  .vs-honest ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+  .vs-honest li { font-size: 13.5px; color: var(--m-fg-1); }
+  .vs-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .vs-list li { font-size: 13.5px; color: var(--m-fg-1); line-height: 1.5; }
+  .feat-note {
+    margin-top: var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+  }
+  .feat-note code { font-size: 12px; }
+</style>

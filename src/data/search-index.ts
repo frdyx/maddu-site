@@ -29,6 +29,7 @@ export const SEARCH_INDEX: SearchEntry[] = [
   // ── PAGES ────────────────────────────────────────────────────────
   { kind: 'route', title: 'Overview',      url: '/',              group: 'page', keywords: 'overview landing home maddu hero',                                  desc: 'Hero + the substrate loop in motion' },
   { kind: 'route', title: 'Features',      url: '/features',      group: 'page', keywords: 'features marketing fleet autonomy focus learn discipline ci cost worktrees', desc: 'The discipline loop, plus everything it earns you' },
+  { kind: 'route', title: 'Compare',       url: '/compare',       group: 'page', keywords: 'compare comparison vs versus competitors landscape alternatives', desc: 'Where Máddu sits — and where it refuses to' },
   { kind: 'route', title: 'How it works',  url: '/how-it-works',  group: 'page', keywords: 'how it works substrate pipeline coordinator slice',                 desc: 'Walk the canonical flow stage by stage' },
   { kind: 'route', title: 'Architecture',  url: '/architecture',  group: 'page', keywords: 'architecture ontology layers fourteen 14',                          desc: 'The 14 layers, color-coded by purpose' },
   { kind: 'route', title: 'Security',      url: '/security',      group: 'page', keywords: 'security defenses structural posture',                              desc: '7 structural enforcement points' },
@@ -51,6 +52,16 @@ export const SEARCH_INDEX: SearchEntry[] = [
   { kind: 'sub', title: 'Governance in CI',          url: '/features/ci',         group: 'features', targetRoute: 'Features', keywords: 'ci headless gate rail pin pinned pre-push github actions', desc: 'Red only on gates you pinned' },
   { kind: 'sub', title: 'Focus Director',            url: '/features/focus',      group: 'features', targetRoute: 'Features', keywords: 'focus director drift toward lateral away goal anchors', desc: 'Drift, noticed — a choice, never a gate' },
   { kind: 'sub', title: 'Cost accounting',           url: '/features/cost',       group: 'features', targetRoute: 'Features', keywords: 'cost budget tokens usage ledger runaway session ceiling', desc: 'Catch a runaway session before it\'s a surprise' },
+
+  // ── COMPARISONS (sub of Compare) ─────────────────────────────────
+  { kind: 'sub', title: 'Máddu + Claude Code',              url: '/compare/claude-code',   group: 'compare', targetRoute: 'Compare', keywords: 'claude code anthropic hooks dispatch layer agent', desc: 'The layer its hooks attach to' },
+  { kind: 'sub', title: 'Máddu + Codex CLI',                url: '/compare/codex-cli',     group: 'compare', targetRoute: 'Compare', keywords: 'codex openai cli governed repo mode 18273 hooks', desc: 'The governed repo mode OpenAI declined to build' },
+  { kind: 'sub', title: 'Máddu vs Paperclip',               url: '/compare/paperclip',     group: 'compare', targetRoute: 'Compare', keywords: 'paperclip control plane locks budgets approvals org chart', desc: 'The record is the difference' },
+  { kind: 'sub', title: 'Máddu vs worktree orchestrators',  url: '/compare/orchestrators', group: 'compare', targetRoute: 'Compare', keywords: 'vibe kanban claude squad oh-my-claudecode ruflo kodo tmux worktree session', desc: 'Session managers vs a governance record' },
+  { kind: 'sub', title: 'Máddu vs LangGraph',               url: '/compare/langgraph',     group: 'compare', targetRoute: 'Compare', keywords: 'langgraph langchain crewai agents sdk framework graphs', desc: 'Not our market — and we say so' },
+  { kind: 'sub', title: 'Máddu + Langfuse',                 url: '/compare/langfuse',      group: 'compare', targetRoute: 'Compare', keywords: 'langfuse langsmith phoenix tracing observability otel export', desc: 'Traces watch the model; the spine records governance' },
+  { kind: 'sub', title: 'Máddu vs Temporal',                url: '/compare/temporal',      group: 'compare', targetRoute: 'Compare', keywords: 'temporal inngest dbos durable execution workflow replay', desc: 'Same durability philosophy, zero infrastructure' },
+  { kind: 'sub', title: 'Máddu vs enterprise control planes', url: '/compare/enterprise',  group: 'compare', targetRoute: 'Compare', keywords: 'github agent hq coder microsoft agt sso rbac enterprise identity', desc: 'They govern which agents; Máddu governs how' },
 
   // ── ARCHITECTURE LAYERS (sub of Architecture) ────────────────────
   { kind: 'sub', title: 'Invariants — the identity',          url: '/architecture#invariants',  group: 'architecture', targetRoute: 'Architecture', keywords: 'invariants hard rules identity 8+1 doctor enforced', desc: 'The 8+1 hard rules · doctor-enforced' },

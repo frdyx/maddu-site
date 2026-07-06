@@ -1,0 +1,155 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import PageNext from '../../components/PageNext.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+---
+
+<Layout title="Máddu + Langfuse" pathname="/compare/langfuse">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Compare</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">observability</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">partners, not competitors</span>
+      </div>
+      <h1>Máddu + Langfuse. <span class="dim-h1">Two streams, one join key.</span></h1>
+      <p class="lede">
+        Langfuse watches what the model did — tokens, latency, spans, prompt-level detail. Máddu records what was allowed, claimed, gated, and verified. These aren't rival tools; they're complementary streams, and <code>maddu export --otel</code> is the bridge.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · What Langfuse is</span>
+        <h2>Post-hoc observability for LLM behavior.</h2>
+        <p>
+          Langfuse (like LangSmith and Arize Phoenix) is a tracing platform: it captures tokens, latency, spans, and prompt-level forensics so you can analyze how a model behaved after the fact. It watches; it does not coordinate work or gate it. That's the right design for observability, and it is a mature, deep one. Máddu deliberately does none of it — no tracing UI, no prompt capture, no LLM-internals — because that's Langfuse's job, done well.
+        </p>
+      </header>
+
+      <div class="vs-honest">
+        <h4>Where Langfuse is stronger — plainly</h4>
+        <ul>
+          <li>Deep model observability — token, latency, and span analysis Máddu never attempts.</li>
+          <li>Prompt analytics and prompt-level forensics: what the model actually saw and produced.</li>
+          <li>Mature dashboards and SOC2-grade hosted offerings for teams that need them.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · Where Máddu differs</span>
+        <h2>Tracing tells you what the model did. The spine tells you what was allowed.</h2>
+      </header>
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">A governance stream</span>
+            <span class="panel-aside">not a trace</span>
+          </div>
+          <p>Máddu produces the record Langfuse doesn't: what was claimed, gated, approved, and verified. A hash-chained, append-only spine in <code>.maddu/</code> — the coordination and permission layer, not the model's token trail.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">The OTel bridge</span>
+            <span class="panel-aside">read-only</span>
+          </div>
+          <p><code>maddu export --otel</code> maps the spine to OTel log records with stable event names — <code>maddu.lane.claimed</code>, <code>maddu.slice.stopped</code> — carrying tamper-evidence fields as attributes. Read-only, stdout by default, no daemon, no stored credentials.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Join on session</span>
+            <span class="panel-aside">complementary</span>
+          </div>
+          <p>Both streams share a session id. Join Langfuse traces with Máddu's governance events and you see both halves at once: what the model did, and what governance permitted around it. Neither tool has to grow into the other.</p>
+        </div>
+      </div>
+
+      <Callout tone="accent" title="Deliberate non-goals" tag="by design">
+        <p>
+          Máddu has no tracing UI, captures no prompts, and inspects no LLM internals — on purpose. Those belong to Langfuse-class tools. The <code>--otel</code> export exists precisely so you don't have to choose: the governance record flows out as standard log records and lands next to your traces.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 03 · Choose honestly</span>
+        <h2>Not either/or — often both.</h2>
+      </header>
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Langfuse alone is enough when</span>
+          </div>
+          <ul class="vs-list">
+            <li>You need model-behavior analysis — tokens, latency, spans, prompts</li>
+            <li>Prompt-level forensics is the question you're actually asking</li>
+            <li>You want mature dashboards and a hosted, SOC2-grade offering</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Add Máddu when</span>
+          </div>
+          <ul class="vs-list">
+            <li>You also need a governance record — what was allowed and verified — in the repo</li>
+            <li>You want tamper-evidence on the coordination layer, not just observability</li>
+            <li>You'd like both streams joined on session id, with a read-only OTel export</li>
+          </ul>
+        </div>
+      </div>
+      <p class="feat-note">
+        Related: <a href="/architecture">the spine</a> · <a href="/how-it-works">how it works</a> · <a href="/hard-rules">the hard rules</a>
+      </p>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="Next comparison"
+    title="Máddu vs Temporal."
+    hint="Same durability philosophy, zero infrastructure."
+    href="/compare/temporal"
+    tone="accent"
+  />
+  <CtaBlock />
+</Layout>
+
+<style>
+  .vs-honest {
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-warn);
+    border-radius: var(--m-radius);
+    max-width: 720px;
+  }
+  .vs-honest h4 {
+    margin: 0 0 var(--m-space-2);
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--m-warn);
+  }
+  .vs-honest ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+  .vs-honest li { font-size: 13.5px; color: var(--m-fg-1); }
+  .vs-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .vs-list li { font-size: 13.5px; color: var(--m-fg-1); line-height: 1.5; }
+  .feat-note {
+    margin-top: var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+  }
+  .feat-note code { font-size: 12px; }
+</style>

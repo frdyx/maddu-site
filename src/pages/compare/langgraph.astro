@@ -1,0 +1,155 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import PageNext from '../../components/PageNext.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+---
+
+<Layout title="Máddu vs LangGraph" pathname="/compare/langgraph">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Compare</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">agent frameworks</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">not our market</span>
+      </div>
+      <h1>Máddu vs LangGraph. <span class="dim-h1">Different layers of the stack.</span></h1>
+      <p class="lede">
+        If you're building programmable agent graphs, durable state machines, or human-in-the-loop interrupts, LangGraph does that far better than Máddu ever will. The split is simpler than a feature fight: LangGraph is what you build <em>inside</em>; Máddu sits <em>outside</em>.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · What LangGraph is</span>
+        <h2>A framework for building agents.</h2>
+        <p>
+          LangGraph is a code-first framework for authoring agent applications as graphs: nodes, edges, shared state, streaming, human-in-the-loop interrupts, and time-travel debugging, all on its own runtime. Its improvement loop reaches into the cloud — LangSmith ingests traces to hosted sandboxes, and Context Hub is a cloud SaaS repository. It has a large, mature ecosystem, and it is genuinely excellent at what it does. Máddu will never compete on that ground; nor should it.
+        </p>
+      </header>
+
+      <div class="vs-honest">
+        <h4>Where LangGraph is stronger — plainly</h4>
+        <ul>
+          <li>Graph orchestration, shared state, and streaming as first-class building blocks.</li>
+          <li>Human-in-the-loop interrupts and time-travel debugging baked into the runtime.</li>
+          <li>A huge ecosystem — integrations, docs, and a hosted platform for the improvement loop.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · Where Máddu differs</span>
+        <h2>You build agents in a framework. You govern them from outside one.</h2>
+      </header>
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Outside, not inside</span>
+            <span class="panel-aside">zero code</span>
+          </div>
+          <p>LangGraph is a runtime your agent lives in — you write code against it. Máddu wraps whatever CLI agent you already run (Claude Code, Codex, Gemini, Aider) without a single line of application code. It governs the work; it isn't the work.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Local, not cloud</span>
+            <span class="panel-aside">no infrastructure</span>
+          </div>
+          <p>LangGraph's improvement loop is cloud-shaped: traces to LangSmith sandboxes, a SaaS Context Hub. Máddu's learn loop mines local transcripts and writes corrections to files on disk — <code>maddu learn</code> stays on your machine. No cloud, ever.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">A record, not a graph</span>
+            <span class="panel-aside">tamper-evident</span>
+          </div>
+          <p>A framework produces application behavior. Máddu produces a governance record: a hash-chained, append-only spine in <code>.maddu/</code>, verifiable with <code>maddu spine verify</code> — what was allowed, claimed, gated, and verified, owned by the repo.</p>
+        </div>
+      </div>
+
+      <Callout tone="accent" title="Not a competitor — a different question" tag="the real split">
+        <p>
+          LangGraph (with CrewAI and the OpenAI Agents SDK) answers "how do I build an agent?" Máddu answers "how do I govern the coding agents already working on my repo?" You can build with LangGraph and still want the second answer — they don't overlap, and Máddu will never pretend they do.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 03 · Choose honestly</span>
+        <h2>Two defensible choices.</h2>
+      </header>
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Choose LangGraph when</span>
+          </div>
+          <ul class="vs-list">
+            <li>You're building an agent product — graphs, durable state, interrupts</li>
+            <li>You want time-travel debugging and streaming as runtime primitives</li>
+            <li>A hosted platform for the trace-and-improve loop is a feature, not a cost</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Choose Máddu when</span>
+          </div>
+          <ul class="vs-list">
+            <li>You're governing CLI coding agents working on your existing repos</li>
+            <li>The governance record must live in the repo, with zero code to add</li>
+            <li>No cloud is a requirement — the learn loop stays entirely on disk</li>
+          </ul>
+        </div>
+      </div>
+      <p class="feat-note">
+        Related: <a href="/features/autonomy">earned autonomy</a> · <a href="/features/learn">the learn loop</a> · <a href="/hard-rules">the hard rules</a>
+      </p>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="Next comparison"
+    title="Máddu + Langfuse."
+    hint="Traces tell you what the model did; the spine tells you what was allowed."
+    href="/compare/langfuse"
+    tone="accent"
+  />
+  <CtaBlock />
+</Layout>
+
+<style>
+  .vs-honest {
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-warn);
+    border-radius: var(--m-radius);
+    max-width: 720px;
+  }
+  .vs-honest h4 {
+    margin: 0 0 var(--m-space-2);
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--m-warn);
+  }
+  .vs-honest ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+  .vs-honest li { font-size: 13.5px; color: var(--m-fg-1); }
+  .vs-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .vs-list li { font-size: 13.5px; color: var(--m-fg-1); line-height: 1.5; }
+  .feat-note {
+    margin-top: var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+  }
+  .feat-note code { font-size: 12px; }
+</style>
