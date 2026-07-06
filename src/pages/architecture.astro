@@ -6,6 +6,7 @@ import Callout from '../components/Callout.astro';
 import Legend from '../components/Legend.astro';
 import LayerIndex from '../components/LayerIndex.astro';
 import PageNext from '../components/PageNext.astro';
+import { SLASH_COMMANDS, EVENT_TYPES, DOCTOR_GATES, AUDIT_CHECKS, STRESS_SCENARIOS } from '../data/stats';
 
 // Each layer maps to one of the brand-token "purpose" tones so the page
 // reads as a color-coded ontology, not a flat list. Tones reused across
@@ -39,7 +40,7 @@ const layers: Layer[] = [
     title: 'Operator surface — zero learning curve',
     short: 'Operator',
     blurb: 'Operator types a slash command or a sentence. Verbose CLI stays for scripting. No one memorizes `maddu cmd subcmd --flag value`. The bar is OMC: a brand-new user ships a slice without ever opening the docs.',
-    chips: ['/slash', 'natural language', '23 on-ramps'],
+    chips: ['/slash', 'natural language', `${SLASH_COMMANDS} on-ramps`],
   },
   {
     n: '02',
@@ -101,8 +102,8 @@ const layers: Layer[] = [
     tone: 'spine',
     title: 'The spine — single source of truth',
     short: 'Spine',
-    blurb: 'Append-only NDJSON under .maddu/events/. ~45 event types covering session lifecycle, lane operations, slices, approvals, triggers, token usage, trust audits, MCP provenance, secret-scan blocks, governance changes, audit reports. A forward prev_hash hash-chain makes interior tampering evident. Verified, never auto-repaired.',
-    chips: ['NDJSON', '~45 event types', 'prev_hash chain', 'no auto-repair'],
+    blurb: `Append-only NDJSON under .maddu/events/. ${EVENT_TYPES} event types covering session lifecycle, lane operations, slices, approvals, triggers, token usage, trust audits, MCP provenance, secret-scan blocks, governance changes, audit reports. A forward prev_hash hash-chain makes interior tampering evident. Verified, never auto-repaired.`,
+    chips: ['NDJSON', `${EVENT_TYPES} event types`, 'prev_hash chain', 'no auto-repair'],
   },
   {
     n: '09',
@@ -128,8 +129,8 @@ const layers: Layer[] = [
     tone: 'quality',
     title: 'Quality & invariant enforcement',
     short: 'Quality',
-    blurb: '69 doctor gates on every install and upgrade. 16-check charter-drift audit, now including architecture-drift. 15-scenario stress harness. Four-version upgrade matrix. Framework-source self-test vs host-project test. Layout-refusal at every release boundary. Review, test, lint, format at slice level. Enforcement, not aspiration.',
-    chips: ['69 gates', '15 stress scenarios', 'architecture-drift'],
+    blurb: `${DOCTOR_GATES} doctor gates on every install and upgrade. ${AUDIT_CHECKS}-check charter-drift audit, now including architecture-drift. ${STRESS_SCENARIOS}-scenario stress harness. Four-version upgrade matrix. Framework-source self-test vs host-project test. Layout-refusal at every release boundary. Review, test, lint, format at slice level. Enforcement, not aspiration.`,
+    chips: [`${DOCTOR_GATES} gates`, `${STRESS_SCENARIOS} stress scenarios`, 'architecture-drift'],
   },
   {
     n: '12',
@@ -248,7 +249,7 @@ flowchart TB
     end
 
     subgraph SPINE["LAYER 8 · THE SPINE"]
-        EV[("NDJSON · ~45 event types")]:::spine
+        EV[("NDJSON · ${EVENT_TYPES} event types")]:::spine
         VFY["spine verify · prev_hash chain · no auto-repair"]:::accent2
     end
 
@@ -263,8 +264,8 @@ flowchart TB
     end
 
     subgraph QA["LAYER 11 · QUALITY"]
-        DOC["doctor · 69 gates"]:::ok
-        AUDIT["audit · charter-drift · 16 checks"]:::ok
+        DOC["doctor · ${DOCTOR_GATES} gates"]:::ok
+        AUDIT["audit · charter-drift · ${AUDIT_CHECKS} checks"]:::ok
         ADRIFT["architecture · drift ratchet"]:::ok
     end
 

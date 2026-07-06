@@ -10,6 +10,7 @@ const SITE = 'https://maddu.frdyx.com';
 
 const PAGES = [
   { path: '/', priority: 1.0, changefreq: 'weekly' },
+  { path: '/features', priority: 0.9, changefreq: 'monthly' },
   { path: '/how-it-works', priority: 0.9, changefreq: 'monthly' },
   { path: '/architecture', priority: 0.9, changefreq: 'monthly' },
   { path: '/security', priority: 0.9, changefreq: 'monthly' },
@@ -21,6 +22,12 @@ const PAGES = [
   { path: '/changelog', priority: 0.6, changefreq: 'weekly' },
   { path: '/manifesto', priority: 0.8, changefreq: 'monthly' },
 ];
+
+// Feature landing pages — the marketing layer over the capability docs.
+const FEATURE_SLUGS = ['discipline', 'worktrees', 'autonomy', 'learn', 'fleet', 'ci', 'focus', 'cost'];
+for (const f of FEATURE_SLUGS) {
+  PAGES.push({ path: '/features/' + f, priority: 0.8, changefreq: 'monthly' });
+}
 
 // Per-release stub pages — emitted but flagged noindex (release context
 // lives on /changelog itself); included here so sitemap crawlers can

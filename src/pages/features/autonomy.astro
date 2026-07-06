@@ -1,0 +1,124 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import EventStream from '../../components/EventStream.astro';
+import PageNext from '../../components/PageNext.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+---
+
+<Layout title="Earned autonomy — trust earned on the record" pathname="/features/autonomy">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Feature</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">maddu autonomy</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">since v1.92.0</span>
+      </div>
+      <h1>Trust earned on the record. <span class="dim-h1">Not asserted.</span></h1>
+      <p class="lede">
+        A lane loosens only when its verified history says it should. Máddu scores each lane over witnessed outcomes and recommends a rung — it never grants the trust itself.
+      </p>
+      <pre class="feat-cli"><code>$ maddu autonomy
+cockpit-shell · wilson=0.81 · rung=established · recommendation=none</code></pre>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · The problem</span>
+        <h2>Loosening the reins on a vibe is a guess.</h2>
+        <p>
+          Deciding a lane has "earned" more room is usually a feeling, not a measurement. Feelings reward the agent that <em>claims</em> to be clean, not the one whose record proves it — and they're easy to farm with cheap deliverables.
+        </p>
+      </header>
+
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Scored, not sensed</span>
+            <span class="panel-aside">deterministic</span>
+          </div>
+          <p>A Wilson lower bound (<code>z=1.96</code>) over witnessed-clean versus witnessed-dirty slice outcomes. The same record produces the same score — a bound that stays conservative until the evidence is real.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">A three-rung ladder</span>
+            <span class="panel-aside">observe → relax</span>
+          </div>
+          <p>Lanes sit at <em>observe</em>, <em>established</em>, or <em>relaxation-candidate</em>. A daily clean-credit cap blunts deliverable-farming, so a burst of trivial wins can't buy a rung.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Recommend-only</span>
+            <span class="panel-aside">by contract</span>
+          </div>
+          <p>Nothing here writes governance config. Applying a recommendation is the operator running <code>maddu governance set</code> — a deliberate act, on the record, that the feature will never take for you.</p>
+        </div>
+      </div>
+
+      <Callout tone="warn" title="The phase floor is absolute" tag="phase-floor">
+        <p>
+          Recommendations are muted while any phase is active — a scored lane can't argue its way past an in-flight phase. <code>AUTONOMY_SCORED</code> lands on explicit runs; <code>AUTONOMY_RECOMMENDATION</code> only on a rung change, spine-deduped so it never repeats itself.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · On the record</span>
+        <h2>What earning a rung looks like on the spine.</h2>
+      </header>
+      <EventStream
+        eyebrow="Scored run, then a rung change"
+        source=".maddu/events/2026-07-05.ndjson"
+        entries={[
+          { time: '11:20:08.114', type: 'AUTONOMY_SCORED',          tone: 'accent',   payload: 'lane=cockpit-shell · wilson=0.79 · clean=41 · dirty=3',   actor: 'operator' },
+          { time: '11:20:08.142', type: 'AUTONOMY_RECOMMENDATION',  tone: 'approval', payload: 'lane=cockpit-shell · observe→established · thresholds=hash:9f2c', actor: 'operator' },
+          { time: '11:22:47.663', type: 'GOVERNANCE_SET',           tone: 'ok',       payload: 'tier=standard · by=operator · source=recommendation',    actor: 'operator' },
+        ]}
+      />
+      <p class="feat-note">
+        Surfaced by <a href="/capabilities/orient"><code>maddu orient</code></a> and <code>maddu governance show</code> next to the tier it informs. Thresholds override via <code>.maddu/config/autonomy.json</code>, hashed onto every event so a score is always reproducible from its inputs.
+      </p>
+      <p class="feat-note">
+        Related verbs: <a href="/capabilities/autonomy"><code>maddu autonomy</code></a> · <a href="/capabilities/governance"><code>maddu governance</code></a> · <a href="/capabilities/phase"><code>maddu phase</code></a> · <a href="/capabilities/slice-stop"><code>maddu slice-stop</code></a>
+      </p>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="Next feature"
+    title="Failure learning — a fix learned once propagates across the fleet."
+    hint="Mine past sessions for corrections, then federate the portable ones across your repos."
+    href="/features/learn"
+    tone="accent"
+  />
+  <CtaBlock />
+</Layout>
+
+<style>
+  .feat-cli {
+    margin: var(--m-space-5) 0 0;
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent);
+    border-radius: var(--m-radius);
+    font-family: var(--m-font-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--m-fg-1);
+    overflow-x: auto;
+  }
+  .feat-note {
+    margin-top: var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+  }
+  .feat-note code { font-size: 12px; }
+</style>

@@ -9,6 +9,8 @@
 // group is the short lowercase tag rendered upper-cased on the right
 // of each row (e.g. PAGE, RULES, SECURITY).
 
+import { VERBS_TOTAL, PURPOSE_AREAS, RELEASE_COUNT, VERSION, DOCTOR_GATES } from './stats';
+
 export type SearchKind = 'route' | 'sub' | 'action';
 
 export interface SearchEntry {
@@ -26,18 +28,29 @@ export interface SearchEntry {
 export const SEARCH_INDEX: SearchEntry[] = [
   // ── PAGES ────────────────────────────────────────────────────────
   { kind: 'route', title: 'Overview',      url: '/',              group: 'page', keywords: 'overview landing home maddu hero',                                  desc: 'Hero + the substrate loop in motion' },
+  { kind: 'route', title: 'Features',      url: '/features',      group: 'page', keywords: 'features marketing fleet autonomy focus learn discipline ci cost worktrees', desc: 'The discipline loop, plus everything it earns you' },
   { kind: 'route', title: 'How it works',  url: '/how-it-works',  group: 'page', keywords: 'how it works substrate pipeline coordinator slice',                 desc: 'Walk the canonical flow stage by stage' },
   { kind: 'route', title: 'Architecture',  url: '/architecture',  group: 'page', keywords: 'architecture ontology layers fourteen 14',                          desc: 'The 14 layers, color-coded by purpose' },
   { kind: 'route', title: 'Security',      url: '/security',      group: 'page', keywords: 'security defenses structural posture',                              desc: '7 structural enforcement points' },
   { kind: 'route', title: 'Threat model',  url: '/threat-model',  group: 'page', keywords: 'threat model attack defense residual risk vulnerability',           desc: 'Threats named, defenses named, residual risk named' },
   { kind: 'route', title: 'Governance',    url: '/governance',    group: 'page', keywords: 'governance gauntlet tiers strict standard relaxed approval',         desc: 'The gauntlet and three tiers that fit it' },
   { kind: 'route', title: 'Hard rules',    url: '/hard-rules',    group: 'page', keywords: 'hard rules invariants 8+1 charter posture absent',                  desc: 'The 8+1 invariants in full' },
-  { kind: 'route', title: 'Capabilities',  url: '/capabilities',  group: 'page', keywords: 'capabilities verbs ontology commands 68 cli',                       desc: 'Every verb earns its place — 68 across 8 areas' },
-  { kind: 'route', title: 'Install',       url: '/install',       group: 'page', keywords: 'install setup npx npm github deferred private',                    desc: 'Coming soon when the repo flips public' },
-  { kind: 'route', title: 'Changelog',     url: '/changelog',     group: 'page', keywords: 'changelog releases history versions arc v0.17 v1.0 v1.4 v1.18 v1.76 v1.86 v1.87 v1.92 ci autonomy fleet audit',     desc: '122 releases — v0.17.1 → v1.92.2' },
+  { kind: 'route', title: 'Capabilities',  url: '/capabilities',  group: 'page', keywords: 'capabilities verbs ontology commands cli',                          desc: `Every verb earns its place — ${VERBS_TOTAL} across ${PURPOSE_AREAS} areas` },
+  { kind: 'route', title: 'Install',       url: '/install',       group: 'page', keywords: 'install setup npx npm github public one command',                  desc: 'One command — npx github:frdyx/maddu init' },
+  { kind: 'route', title: 'Changelog',     url: '/changelog',     group: 'page', keywords: 'changelog releases history versions arc v0.17 v1.0 v1.4 v1.18 v1.76 v1.86 v1.87 v1.92 v1.93 ci autonomy fleet worktrees audit',     desc: `${RELEASE_COUNT} releases — v0.17.1 → v${VERSION}` },
   { kind: 'route', title: 'Manifesto',     url: '/manifesto',     group: 'page', keywords: 'manifesto why prose position bet north star essay long form',      desc: 'The position, in prose · 7 sections' },
   { kind: 'route', title: 'Brand',         url: '/brand',         group: 'page', keywords: 'brand assets logo color tokens typography mark wordmark plex',     desc: 'Logo · color tokens · typography stack · downloads' },
   { kind: 'route', title: 'Privacy',       url: '/privacy',       group: 'page', keywords: 'privacy cookies analytics no telemetry posture',                    desc: 'No cookies · no analytics · no third-party scripts' },
+
+  // ── FEATURES (sub of Features) ───────────────────────────────────
+  { kind: 'sub', title: 'Session discipline',        url: '/features/discipline', group: 'features', targetRoute: 'Features', keywords: 'hooks session discipline unrecorded compaction checkpoint precompact agents', desc: 'Never start building unrecorded' },
+  { kind: 'sub', title: 'Worktree lanes',            url: '/features/worktrees',  group: 'features', targetRoute: 'Features', keywords: 'worktree lanes parallel isolated checkout git branch merged abandoned keep', desc: 'Parallel agents, isolated checkouts, one spine' },
+  { kind: 'sub', title: 'Earned autonomy',           url: '/features/autonomy',   group: 'features', targetRoute: 'Features', keywords: 'autonomy trust wilson ladder observe established relaxation recommend', desc: 'Trust is earned on the record, not asserted' },
+  { kind: 'sub', title: 'Failure learning',          url: '/features/learn',      group: 'features', targetRoute: 'Features', keywords: 'learn sync federation corrections vendor memory claude portable', desc: 'A fix learned once propagates across the fleet' },
+  { kind: 'sub', title: 'Fleet view',                url: '/features/fleet',      group: 'features', targetRoute: 'Features', keywords: 'fleet upgrade staged plan apply stale offline snapshot halt-on-red', desc: 'Every install on your machine, at a glance' },
+  { kind: 'sub', title: 'Governance in CI',          url: '/features/ci',         group: 'features', targetRoute: 'Features', keywords: 'ci headless gate rail pin pinned pre-push github actions', desc: 'Red only on gates you pinned' },
+  { kind: 'sub', title: 'Focus Director',            url: '/features/focus',      group: 'features', targetRoute: 'Features', keywords: 'focus director drift toward lateral away goal anchors', desc: 'Drift, noticed — a choice, never a gate' },
+  { kind: 'sub', title: 'Cost accounting',           url: '/features/cost',       group: 'features', targetRoute: 'Features', keywords: 'cost budget tokens usage ledger runaway session ceiling', desc: 'Catch a runaway session before it\'s a surprise' },
 
   // ── ARCHITECTURE LAYERS (sub of Architecture) ────────────────────
   { kind: 'sub', title: 'Invariants — the identity',          url: '/architecture#invariants',  group: 'architecture', targetRoute: 'Architecture', keywords: 'invariants hard rules identity 8+1 doctor enforced', desc: 'The 8+1 hard rules · doctor-enforced' },
@@ -51,7 +64,7 @@ export const SEARCH_INDEX: SearchEntry[] = [
   { kind: 'sub', title: 'The spine',                           url: '/architecture#spine',       group: 'architecture', targetRoute: 'Architecture', keywords: 'spine ndjson event log single source of truth', desc: 'Single source of truth · append-only NDJSON' },
   { kind: 'sub', title: 'Projections',                         url: '/architecture#projections', group: 'architecture', targetRoute: 'Architecture', keywords: 'projections plans kanban receipts derived rebuildable', desc: 'Rebuildable · never authoritative' },
   { kind: 'sub', title: 'Security & supply chain',             url: '/architecture#security',    group: 'architecture', targetRoute: 'Architecture', keywords: 'security supply chain trust mcp pin sha256', desc: 'Structural · not advisory' },
-  { kind: 'sub', title: 'Quality & enforcement',               url: '/architecture#quality',     group: 'architecture', targetRoute: 'Architecture', keywords: 'quality doctor audit gates 69 stress harness architecture drift self-test', desc: '69 gates on every install and upgrade' },
+  { kind: 'sub', title: 'Quality & enforcement',               url: '/architecture#quality',     group: 'architecture', targetRoute: 'Architecture', keywords: 'quality doctor audit gates stress harness architecture drift self-test', desc: `${DOCTOR_GATES} gates on every install and upgrade` },
   { kind: 'sub', title: 'Memory & accounting',                 url: '/architecture#memory',      group: 'architecture', targetRoute: 'Architecture', keywords: 'memory accounting hindsight skills receipt log cost', desc: 'Work outlives the agent' },
   { kind: 'sub', title: 'Cockpit',                             url: '/architecture#cockpit',     group: 'architecture', targetRoute: 'Architecture', keywords: 'cockpit observe replay static page browser', desc: 'Observe & replay · never command' },
 
@@ -105,6 +118,7 @@ export const SEARCH_INDEX: SearchEntry[] = [
   { kind: 'sub', title: 'VII — Invariants you don\'t argue about',     url: '/manifesto', group: 'manifesto', targetRoute: 'Manifesto', keywords: 'manifesto section 7 vii invariants charter velocity hundred releases', desc: 'The bet, in one sentence' },
 
   // ── CHANGELOG RELEASES (sub of Changelog) ────────────────────────
+  { kind: 'sub', title: 'v1.93.0 — Worktree lanes',                             url: '/changelog#v1-93-0', group: 'release', targetRoute: 'Changelog', keywords: 'v1.93.0 v1 93 0 feature worktree lanes isolated checkout parallel agents split spine root resolver coherence', desc: 'Parallel agents, isolated checkouts, one spine' },
   { kind: 'sub', title: 'v1.92.2 — focus: verbosity is not drift',              url: '/changelog#v1-92-2', group: 'release', targetRoute: 'Changelog', keywords: 'v1.92.2 v1 92 2 patch focus director drift absolute anchor metric false positive stemming incident', desc: 'Absolute-anchor drift metric · calibrated on the incident' },
   { kind: 'sub', title: 'v1.92.0 — Earned autonomy (maddu autonomy)',           url: '/changelog#v1-92-0', group: 'release', targetRoute: 'Changelog', keywords: 'v1.92.0 v1 92 0 feature autonomy earned trust score wilson lane rung ladder recommend only governance', desc: 'Per-lane trust score from the verified record · recommend-only' },
   { kind: 'sub', title: 'v1.91.2 — doctor watches the global binary',           url: '/changelog#v1-91-2', group: 'release', targetRoute: 'Changelog', keywords: 'v1.91.2 v1 91 2 hardening doctor global binary currency stale npm shadow incident', desc: 'Stale global npm binary → WARN with the remedy' },

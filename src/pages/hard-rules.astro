@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import Rule from '../components/Rule.astro';
 import Callout from '../components/Callout.astro';
 import PageNext from '../components/PageNext.astro';
+import { DOCTOR_GATES, VERBS_TOTAL, PURPOSE_AREAS } from '../data/stats';
 ---
 
 <Layout title="Hard rules" pathname="/hard-rules">
@@ -23,7 +24,7 @@ import PageNext from '../components/PageNext.astro';
       <dl class="hr-stats">
         <div><dt>Hard rules</dt><dd>8</dd></div>
         <div><dt>Permanent additions</dt><dd>1</dd></div>
-        <div><dt>Doctor gates total</dt><dd>60</dd></div>
+        <div><dt>Doctor gates total</dt><dd>{DOCTOR_GATES}</dd></div>
         <div><dt>Auto-repair</dt><dd>0</dd></div>
       </dl>
     </div>
@@ -127,7 +128,7 @@ import PageNext from '../components/PageNext.astro';
   <PageNext
     eyebrow="§ 03 · Continue"
     title="Capabilities — every verb earns its place."
-    hint="The verb ontology. 68 verbs across 8 purpose areas. One charter that flags drift."
+    hint={`The verb ontology. ${VERBS_TOTAL} verbs across ${PURPOSE_AREAS} purpose areas. One charter that flags drift.`}
     href="/capabilities"
     tone="accent"
   />

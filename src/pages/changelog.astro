@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import Callout from '../components/Callout.astro';
 import TocIndex from '../components/TocIndex.astro';
 import PageNext from '../components/PageNext.astro';
+import { VERSION, DOCTOR_GATES, AUDIT_CHECKS } from '../data/stats';
 
 type ReleaseType = 'milestone' | 'feature' | 'hardening' | 'polish' | 'patch';
 
@@ -21,6 +22,14 @@ interface Release {
 }
 
 const RELEASES: Release[] = [
+  {
+    version: 'v1.93.0',
+    id: 'v1-93-0',
+    date: '2026-07-05',
+    type: 'feature',
+    headline: 'Worktree lanes — parallel agents, isolated checkouts, one spine',
+    summary: 'maddu lane claim <id> --worktree provisions an isolated git worktree at .maddu/worktrees/<lane>/ on branch maddu/lane/<lane>, bound to the claim — parallel agents stop sharing a checkout while every event still lands on the primary spine (a work-root / state-root split makes a silently forked record impossible: a broken pointer fails loudly instead). Release is a verified disposition: lane release --worktree merged|abandoned|keep — merged checks the branch really is an ancestor of the integration ref and refuses to orphan un-integrated work. Máddu never runs your merge; it verifies you did. A new WARN-tier worktree-lane-coherence doctor gate names drifted worktrees — orphaned, wrong branch, dirty — before they bite. Gate budget 70/70.',
+  },
   {
     version: 'v1.92.2',
     id: 'v1-92-2',
@@ -1231,13 +1240,13 @@ function typeMeta(t: ReleaseType) {
       </div>
       <h1>{RELEASES.length} releases. <span class="dim-h1">One charter held.</span></h1>
       <p class="lede">
-        The arc that took Máddu from a private 18-gate baseline to v1.92.2 — spine tamper-evidence, failure learning, portable blueprints, a debt ledger, architecture-drift detection, a fully decomposed cockpit, the offline fleet view, a cross-project audit program, the headless <code>maddu ci</code> gate rail, sterile phases, and recommend-only earned autonomy graded from the verified record. Every release kept the layout-refusal invariant at 4/4, took the doctor from 18 → 69 gates, and never broke a posted invariant. Color-coded by release type — milestones, features, hardening, polish, patches.
+        The arc that took Máddu from a private 18-gate baseline to v{VERSION}. Spine tamper-evidence, failure learning, portable blueprints, architecture-drift detection, the offline fleet view, the headless <code>maddu ci</code> gate rail, sterile phases, earned autonomy, worktree lanes. Every release grew the doctor from 18 to {DOCTOR_GATES} gates — and never broke a posted invariant. Color-coded by release type.
       </p>
 
       <dl class="cl-stats">
         <div><dt>Releases</dt><dd>{RELEASES.length}</dd></div>
-        <div><dt>Doctor gates added</dt><dd>+51</dd></div>
-        <div><dt>Audit self-checks</dt><dd>16</dd></div>
+        <div><dt>Doctor gates added</dt><dd>+{DOCTOR_GATES - 18}</dd></div>
+        <div><dt>Audit self-checks</dt><dd>{AUDIT_CHECKS}</dd></div>
         <div><dt>Invariants broken</dt><dd>0</dd></div>
       </dl>
 
@@ -1304,10 +1313,10 @@ function typeMeta(t: ReleaseType) {
 
   <PageNext
     eyebrow="§ · Continue"
-    title="Install — the deferred path, and what to read meanwhile."
-    hint="Coming soon when the repo flips public. Until then, six pages of substantive content to walk."
+    title="Install — one command, audited from the first event."
+    hint="npx github:frdyx/maddu init, then maddu doctor proves the install. The repo is public."
     href="/install"
-    tone="warn"
+    tone="accent"
   />
 </Layout>
 

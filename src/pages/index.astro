@@ -9,6 +9,9 @@ import Rule from '../components/Rule.astro';
 import Legend from '../components/Legend.astro';
 import SubstrateLoop from '../components/SubstrateLoop.astro';
 import PageNext from '../components/PageNext.astro';
+import CompareStrip from '../components/CompareStrip.astro';
+import CtaBlock from '../components/CtaBlock.astro';
+import { VERSION_SHORT, VERBS_TOTAL, PURPOSE_AREAS, DOCTOR_GATES, STRESS_SCENARIOS, HARD_RULES } from '../data/stats';
 ---
 
 <Layout title="The governance & coordination layer for AI coding agents" pathname="/">
@@ -16,7 +19,7 @@ import PageNext from '../components/PageNext.astro';
   <section class="hero">
     <div class="container">
       <div class="eyebrow-chain">
-        <span class="eyebrow">v1.92</span>
+        <span class="eyebrow">{VERSION_SHORT}</span>
         <span class="eyebrow-sep">·</span>
         <span class="eyebrow-dim">no cloud</span>
         <span class="eyebrow-sep">·</span>
@@ -29,21 +32,26 @@ import PageNext from '../components/PageNext.astro';
         The system that <em>governs</em> them shouldn't be.
       </h1>
       <p class="hero-lede">
-        Máddu gives <span class="verb">claude-code</span>, <span class="verb">codex</span>, and any CLI agent a shared lane map, approvals, and a replayable record — so they work as an auditable team. No proxy, no key interception, no backend stack: the agent calls Máddu; Máddu never sits in the request path. It runs as a small Node process with local-first, append-only files as the system of record.
-      </p>
-      <p class="hero-compare">
-        Tracing tools observe runs. Memory tools remember. <strong>Máddu governs how agents collaborate.</strong>
+        Máddu gives <span class="verb">claude-code</span>, <span class="verb">codex</span>, and any CLI agent a shared lane map, approvals, and a replayable record — so they work as an auditable team. Local-first files as the system of record. Never in the request path. Never near your keys.
       </p>
       <div class="hero-actions">
         <a class="btn btn-primary btn-cmd" href="/install"><span class="cmd-prompt" aria-hidden="true">$</span> npx github:frdyx/maddu init</a>
         <a class="btn" href="/how-it-works">Read the docs <span aria-hidden="true">→</span></a>
       </div>
       <dl class="hero-stats">
-        <div><dt>Hard rules</dt><dd>8 + 1</dd></div>
-        <div><dt>Doctor gates</dt><dd>69</dd></div>
-        <div><dt>Stress scenarios</dt><dd>15</dd></div>
+        <div><dt>Hard rules</dt><dd>{HARD_RULES}</dd></div>
+        <div><dt>Doctor gates</dt><dd>{DOCTOR_GATES}</dd></div>
+        <div><dt>Stress scenarios</dt><dd>{STRESS_SCENARIOS}</dd></div>
         <div><dt>Auto-repair</dt><dd>0</dd></div>
       </dl>
+
+      <CompareStrip
+        items={[
+          { label: 'Tracing tools', verdict: 'observe runs' },
+          { label: 'Memory layers', verdict: 'remember' },
+          { label: 'Máddu', verdict: 'governs how agents collaborate', emphasized: true },
+        ]}
+      />
 
       <SubstrateLoop />
     </div>
@@ -59,7 +67,10 @@ import PageNext from '../components/PageNext.astro';
           Máddu is the <em>external, cooperative governance and coordination layer for CLI coding agents</em>. Not a model. Not an agent framework competing with Hermes or clawdbot. Not a SaaS. It's the layer underneath those — the lane map, the approval gates, and the shared coordination state that let several agents work one codebase as an auditable team. Cooperative means exactly this: the agent calls Máddu; Máddu never sits in the request path and never touches your keys.
         </p>
         <p>
-          What <strong>every</strong> install gets from day one is the always-on core: register a session, claim a lane, run a slice, stop it with a structured summary, let the gates check it — each one line on the spine. <strong>That disciplined loop is the product.</strong> Multi-agent orchestration — <span class="verb">coordinator</span>, <span class="verb">loop</span>, <span class="verb">pipeline</span>, <span class="verb">team</span> — is a powerful <em>opt-in</em> layer on top. Reach for it when a job fans out across lanes; skip it when it doesn't. Most work just needs the loop, and that's by design.
+          What <strong>every</strong> install gets from day one is the always-on core: register a session, claim a lane, run a slice, stop it with a structured summary, let the gates check it — each one line on the spine. <strong>That disciplined loop is the product.</strong>
+        </p>
+        <p>
+          Multi-agent orchestration — <span class="verb">coordinator</span>, <span class="verb">loop</span>, <span class="verb">pipeline</span>, <span class="verb">team</span> — is a powerful <em>opt-in</em> layer on top. Reach for it when a job fans out across lanes; skip it when it doesn't. Most work just needs the loop, and that's by design.
         </p>
       </header>
 
@@ -129,11 +140,75 @@ import PageNext from '../components/PageNext.astro';
     </div>
   </section>
 
+  <!-- ── FEATURES — what it does for you ─────────────────────────── -->
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 03 · What it does for you</span>
+        <h2>The discipline loop, plus everything it earns you.</h2>
+        <p>Eight things an install actually gives you — each with its own page.</p>
+      </header>
+      <div class="feat-grid">
+        <a class="deep-card deep-card--accent" href="/features/discipline">
+          <span class="deep-glyph">⌗</span>
+          <h3>Session discipline</h3>
+          <p>Hooks auto-register every session, close it cleanly, and checkpoint governance before every context compaction. Never build unrecorded.</p>
+          <span class="deep-cta">/features/discipline →</span>
+        </a>
+        <a class="deep-card deep-card--accent-2" href="/features/worktrees">
+          <span class="deep-glyph">⑂</span>
+          <h3>Worktree lanes</h3>
+          <p>Each lane can claim its own isolated git worktree — parallel agents never share a checkout, every event lands on one spine. New in 1.93.</p>
+          <span class="deep-cta">/features/worktrees →</span>
+        </a>
+        <a class="deep-card deep-card--warn" href="/features/autonomy">
+          <span class="deep-glyph">⟁</span>
+          <h3>Earned autonomy</h3>
+          <p>A deterministic trust ladder over verified slice outcomes recommends — never applies — relaxing a lane's governance. Trust is earned on the record.</p>
+          <span class="deep-cta">/features/autonomy →</span>
+        </a>
+        <a class="deep-card deep-card--accent" href="/features/learn">
+          <span class="deep-glyph">∴</span>
+          <h3>Failure learning</h3>
+          <p>Mines past sessions for failed→succeeded tool calls and distils corrections. A fix learned once propagates across your repos.</p>
+          <span class="deep-cta">/features/learn →</span>
+        </a>
+        <a class="deep-card deep-card--accent-2" href="/features/fleet">
+          <span class="deep-glyph">⛁</span>
+          <h3>Fleet view</h3>
+          <p>Every install on your machine at a glance — stale, live, or abandoned — with staged upgrades that stop on the first red. Offline.</p>
+          <span class="deep-cta">/features/fleet →</span>
+        </a>
+        <a class="deep-card deep-card--ok" href="/features/ci">
+          <span class="deep-glyph">✓</span>
+          <h3>Governance in CI</h3>
+          <p>The headless, LLM-free gate rail. Red only on gates <em>you</em> pinned — framework churn never breaks your pipeline.</p>
+          <span class="deep-cta">/features/ci →</span>
+        </a>
+        <a class="deep-card deep-card--brand" href="/features/focus">
+          <span class="deep-glyph">⊙</span>
+          <h3>Focus Director</h3>
+          <p>Tags every turn toward, lateral, or away from the declared goal and flags sustained drift. Asks — never blocks.</p>
+          <span class="deep-cta">/features/focus →</span>
+        </a>
+        <a class="deep-card deep-card--danger" href="/features/cost">
+          <span class="deep-glyph">¤</span>
+          <h3>Cost accounting</h3>
+          <p>Token rollups per session, day, runtime, and model — with an opt-in budget gate that catches a runaway session before it's a surprise.</p>
+          <span class="deep-cta">/features/cost →</span>
+        </a>
+      </div>
+      <p class="see-all">
+        <a class="btn" href="/features">All features <span aria-hidden="true">→</span></a>
+      </p>
+    </div>
+  </section>
+
   <!-- ── DIAGRAM — quick mental model ────────────────────────────── -->
   <section class="section">
     <div class="container">
       <header class="section-head">
-        <span class="eyebrow">§ 03 · The spine</span>
+        <span class="eyebrow">§ 04 · The spine</span>
         <h2>The one canonical flow.</h2>
         <p>
           Máddu has one mental model and one default execution path. They're the same loop at two altitudes — the slash and autopilot surfaces are friendly wrappers over the spine, never competing flows. Every transition lands as one readable line on an append-only record: governance you can trust because you can read it.
@@ -236,7 +311,7 @@ flowchart LR
   <section class="section">
     <div class="container">
       <header class="section-head">
-        <span class="eyebrow">§ 04 · The identity</span>
+        <span class="eyebrow">§ 05 · The identity</span>
         <h2>The 8+1 hard rules.</h2>
         <p>
           Not policy on top of features. The things every feature has to be compatible with to exist at all. <span class="verb">maddu doctor</span> proves them on every install and every upgrade.
@@ -266,7 +341,7 @@ flowchart LR
   <section class="section">
     <div class="container">
       <header class="section-head">
-        <span class="eyebrow">§ 05 · Go deeper</span>
+        <span class="eyebrow">§ 06 · Go deeper</span>
         <h2>The full ontology, one layer at a time.</h2>
       </header>
       <div class="deep-grid">
@@ -297,7 +372,7 @@ flowchart LR
         <a class="deep-card deep-card--accent" href="/capabilities">
           <span class="deep-glyph">∷</span>
           <h3>Capabilities</h3>
-          <p>Every top-level verb traces to a stated purpose. Eight purpose areas. 68 verbs. One charter that flags drift.</p>
+          <p>Every top-level verb traces to a stated purpose. {PURPOSE_AREAS} purpose areas. {VERBS_TOTAL} verbs. One charter that flags drift.</p>
           <span class="deep-cta">Open the verb map →</span>
         </a>
         <a class="deep-card deep-card--brand" href="/hard-rules">
@@ -312,6 +387,7 @@ flowchart LR
 
   <PageNext
     eyebrow="§ 07 · Continue"
+
     title="How it works — walk the canonical flow stage by stage."
     hint="Substrate loop, pipelines, the coordinator primitive, slice-stops, hindsight, replay determinism."
     href="/how-it-works"
@@ -322,7 +398,7 @@ flowchart LR
   <section class="section absent-section">
     <div class="container">
       <header class="section-head">
-        <span class="eyebrow eyebrow-danger">§ 06 · The posture</span>
+        <span class="eyebrow eyebrow-danger">§ 08 · The posture</span>
         <h2>Deliberately absent. <span class="dim">Not missing features.</span></h2>
         <p>Every "no" is what makes the "yes"es trustworthy.</p>
       </header>
@@ -338,6 +414,8 @@ flowchart LR
       </ul>
     </div>
   </section>
+
+  <CtaBlock />
 </Layout>
 
 <style>
@@ -379,16 +457,6 @@ flowchart LR
     line-height: 1.55;
     margin-bottom: var(--m-space-4);
   }
-  .hero-compare {
-    font-size: 14px;
-    color: var(--m-fg-2);
-    max-width: 64ch;
-    margin: var(--m-space-4) 0 0;
-    padding-left: var(--m-space-3);
-    border-left: 2px solid var(--m-accent-2);
-    line-height: 1.5;
-  }
-  .hero-compare strong { color: var(--m-fg-0); }
   .hero-actions {
     display: flex;
     gap: var(--m-space-3);
@@ -432,7 +500,8 @@ flowchart LR
   .eyebrow-danger { color: var(--m-danger); }
 
   /* Deep-dive grid — tone-coded per card */
-  .deep-grid {
+  .deep-grid,
+  .feat-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: var(--m-space-4);
@@ -454,6 +523,7 @@ flowchart LR
   .deep-card--warn       { border-top-color: var(--m-warn); }
   .deep-card--danger     { border-top-color: var(--m-danger); }
   .deep-card--brand      { border-top-color: var(--m-brand); }
+  .deep-card--ok         { border-top-color: var(--m-ok); }
   .deep-card:hover {
     background: var(--m-bg-3);
     transform: translateY(-2px);
@@ -461,6 +531,9 @@ flowchart LR
     color: var(--m-fg-1);
     border-bottom-color: transparent;
   }
+  .deep-card--ok:hover       { border-color: var(--m-ok); }
+  .deep-card--ok .deep-glyph { color: var(--m-ok); }
+  .deep-card--ok .deep-cta   { color: var(--m-ok); }
   .deep-card--accent:hover   { border-color: var(--m-accent); box-shadow: var(--m-glow-accent); }
   .deep-card--accent-2:hover { border-color: var(--m-accent-2); box-shadow: var(--m-glow-accent-2); }
   .deep-card--warn:hover     { border-color: var(--m-warn); box-shadow: var(--m-glow-warn); }

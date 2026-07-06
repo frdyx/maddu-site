@@ -1,0 +1,190 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+import { VERSION_SHORT } from '../../data/stats';
+
+const features = [
+  {
+    slug: 'discipline',
+    glyph: '⌗',
+    tone: 'accent',
+    title: 'Session discipline',
+    hook: 'Never start building unrecorded.',
+    blurb:
+      'One command wires Claude Code hooks so every session auto-registers to the spine, closes cleanly, and writes a governance checkpoint before every context compaction.',
+  },
+  {
+    slug: 'worktrees',
+    glyph: '⑂',
+    tone: 'accent-2',
+    title: 'Worktree lanes',
+    hook: 'Parallel agents, isolated checkouts, one spine.',
+    blurb:
+      'A lane claim can provision its own git worktree — agents stop sharing a checkout, release is a verified disposition, and the record never forks. New in 1.93.',
+  },
+  {
+    slug: 'autonomy',
+    glyph: '⟁',
+    tone: 'warn',
+    title: 'Earned autonomy',
+    hook: 'Trust is earned on the record, not asserted.',
+    blurb:
+      'A deterministic Wilson-scored trust ladder over verified slice outcomes recommends — never applies — relaxing or reverting a lane\'s governance tier.',
+  },
+  {
+    slug: 'learn',
+    glyph: '∴',
+    tone: 'accent',
+    title: 'Failure learning',
+    hook: 'A fix learned once propagates across the fleet.',
+    blurb:
+      'Mines past sessions for failed→succeeded tool calls and distils typed corrections. learn sync federates the portable ones across your repos, approval-only and redacted.',
+  },
+  {
+    slug: 'fleet',
+    glyph: '⛁',
+    tone: 'accent-2',
+    title: 'Fleet view + staged upgrades',
+    hook: 'Know which of your installs are stale — offline.',
+    blurb:
+      'Every Máddu install on your machine at a glance: version, liveness, drift from fleet-latest. Staged delivery snapshots first and stops on the first red doctor.',
+  },
+  {
+    slug: 'ci',
+    glyph: '✓',
+    tone: 'ok',
+    title: 'Governance in CI',
+    hook: 'Red only on gates you pinned.',
+    blurb:
+      'maddu ci runs every deterministic gate headlessly — no LLM, no network — and exits nonzero only on gates the repo pinned as required. Framework churn never breaks your pipeline.',
+  },
+  {
+    slug: 'focus',
+    glyph: '⊙',
+    tone: 'brand',
+    title: 'Focus Director',
+    hook: 'Drift, noticed. A choice, never a gate.',
+    blurb:
+      'An opt-in, domain-blind instrument that tags each turn toward, lateral, or away from the declared goal — and flags sustained drift as a swap / revert / continue decision.',
+  },
+  {
+    slug: 'cost',
+    glyph: '¤',
+    tone: 'danger',
+    title: 'Cost accounting',
+    hook: 'Catch a runaway session before it\'s a surprise.',
+    blurb:
+      'Token and call rollups per session, day, runtime, and model — with an opt-in cost-budget gate that WARNs when recent spend crosses your ceiling.',
+  },
+];
+---
+
+<Layout title="Features" pathname="/features">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Features</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">{VERSION_SHORT}</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">the discipline loop, plus everything it earns you</span>
+      </div>
+      <h1>What an install actually gives you.</h1>
+      <p class="lede">
+        The always-on loop — register, claim, slice, stop, gate — is the product. These eight are what it earns you on top. Each links to its own page; each page shows the real CLI and the real spine events.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="fh-grid">
+        {features.map((f) => (
+          <a class:list={['fh-card', `fh-card--${f.tone}`]} href={`/features/${f.slug}`}>
+            <span class="fh-glyph" aria-hidden="true">{f.glyph}</span>
+            <h3>{f.title}</h3>
+            <p class="fh-hook">{f.hook}</p>
+            <p class="fh-blurb">{f.blurb}</p>
+            <span class="fh-cta">/features/{f.slug} →</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <CtaBlock />
+</Layout>
+
+<style>
+  .fh-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--m-space-4);
+  }
+  .fh-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--m-space-2);
+    padding: var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-top: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+    color: var(--m-fg-1);
+    transition: border-color 120ms, transform 120ms, box-shadow 120ms, background 120ms;
+  }
+  .fh-card:hover {
+    background: var(--m-bg-3);
+    transform: translateY(-2px);
+    box-shadow: var(--m-shadow-md);
+    border-bottom-color: transparent;
+  }
+  .fh-card--accent   { border-top-color: var(--m-accent); }
+  .fh-card--accent-2 { border-top-color: var(--m-accent-2); }
+  .fh-card--warn     { border-top-color: var(--m-warn); }
+  .fh-card--danger   { border-top-color: var(--m-danger); }
+  .fh-card--brand    { border-top-color: var(--m-brand); }
+  .fh-card--ok       { border-top-color: var(--m-ok); }
+  .fh-card--accent:hover   { border-color: var(--m-accent); box-shadow: var(--m-glow-accent); }
+  .fh-card--accent-2:hover { border-color: var(--m-accent-2); box-shadow: var(--m-glow-accent-2); }
+  .fh-card--warn:hover     { border-color: var(--m-warn); box-shadow: var(--m-glow-warn); }
+  .fh-card--danger:hover   { border-color: var(--m-danger); box-shadow: var(--m-glow-danger); }
+  .fh-card--brand:hover    { border-color: var(--m-brand); box-shadow: var(--m-glow-brand); }
+  .fh-card--ok:hover       { border-color: var(--m-ok); }
+  .fh-glyph {
+    font-family: var(--m-font-mono);
+    font-size: 22px;
+    line-height: 1;
+    color: var(--m-fg-2);
+  }
+  .fh-card--accent .fh-glyph   { color: var(--m-accent); }
+  .fh-card--accent-2 .fh-glyph { color: var(--m-accent-2); }
+  .fh-card--warn .fh-glyph     { color: var(--m-warn); }
+  .fh-card--danger .fh-glyph   { color: var(--m-danger); }
+  .fh-card--brand .fh-glyph    { color: var(--m-brand); }
+  .fh-card--ok .fh-glyph       { color: var(--m-ok); }
+  .fh-card h3 {
+    margin: 0;
+    font-size: 18px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--m-fg-0);
+  }
+  .fh-hook {
+    margin: 0;
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--m-fg-1);
+  }
+  .fh-blurb { margin: 0; font-size: 13px; color: var(--m-fg-2); }
+  .fh-cta {
+    margin-top: auto;
+    padding-top: var(--m-space-2);
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+  }
+</style>

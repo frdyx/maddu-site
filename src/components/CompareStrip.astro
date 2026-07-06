@@ -1,0 +1,63 @@
+---
+// CompareStrip — the category-positioning strip. Three short columns that
+// place Máddu against adjacent tool categories. The final column is the
+// emphasized one (accent tint + glow), per the navy-noir signature.
+interface Item {
+  label: string;
+  verdict: string;
+  emphasized?: boolean;
+}
+interface Props {
+  items: Item[];
+}
+const { items } = Astro.props;
+---
+
+<div class="compare-strip" role="list">
+  {items.map((it) => (
+    <div class:list={['compare-col', { 'compare-col--em': it.emphasized }]} role="listitem">
+      <span class="compare-label">{it.label}</span>
+      <span class="compare-verdict">{it.verdict}</span>
+    </div>
+  ))}
+</div>
+
+<style>
+  .compare-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--m-space-3);
+    margin: var(--m-space-6) 0;
+  }
+  .compare-col {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+  }
+  .compare-label {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+  }
+  .compare-verdict {
+    font-family: var(--m-font-cond);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--m-fg-1);
+    line-height: 1.25;
+  }
+  .compare-col--em {
+    border-color: color-mix(in srgb, var(--m-accent) 45%, var(--m-line));
+    border-top-color: var(--m-accent);
+    box-shadow: var(--m-glow-accent);
+    background: color-mix(in srgb, var(--m-accent) 4%, var(--m-bg-2));
+  }
+  .compare-col--em .compare-label { color: var(--m-accent); }
+  .compare-col--em .compare-verdict { color: var(--m-fg-0); }
+</style>

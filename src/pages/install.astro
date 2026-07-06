@@ -4,6 +4,7 @@ import Callout from '../components/Callout.astro';
 import Workflow from '../components/Workflow.astro';
 import Stages from '../components/Stages.astro';
 import PageNext from '../components/PageNext.astro';
+import { DOCTOR_GATES, VERBS_TOTAL, PURPOSE_AREAS } from '../data/stats';
 ---
 
 <Layout title="Install" pathname="/install">
@@ -29,7 +30,7 @@ import PageNext from '../components/PageNext.astro';
       <header class="section-head">
         <span class="eyebrow">§ 01 · Public install</span>
         <h2>The install command.</h2>
-        <p>One-line install directly from GitHub today, from npm once it ships. Both produce identical doctor output (60 PASS / 0 WARN / 0 FAIL on a fresh foreign repo).</p>
+        <p>One-line install directly from GitHub today, from npm once it ships. Both produce identical doctor output (77 pass · 1 warn · 0 fail on a fresh foreign repo — the warn is just 'no project test run yet').</p>
       </header>
 
       <Workflow
@@ -60,7 +61,7 @@ import PageNext from '../components/PageNext.astro';
         <Stages
           stages={[
             { label: 'init',    sub: 'scaffold',  tone: 'accent' },
-            { label: 'doctor',  sub: '69 gates',  tone: 'ok' },
+            { label: 'doctor',  sub: `${DOCTOR_GATES} gates`,  tone: 'ok' },
             { label: 'start',   sub: 'localhost', tone: 'accent-2' },
             { label: 'brief',   sub: 'orient',    tone: 'framework' },
             { label: 'ship',    sub: 'pipeline',  tone: 'accent' },
@@ -124,7 +125,7 @@ import PageNext from '../components/PageNext.astro';
         <a class="meanwhile-card meanwhile-card--accent" href="/capabilities">
           <span class="meanwhile-eyebrow">§ Capabilities</span>
           <h3>The verb ontology</h3>
-          <p>68 verbs across 8 purpose areas. Every one earns its place. ~4 min read.</p>
+          <p>{VERBS_TOTAL} verbs across {PURPOSE_AREAS} purpose areas. Every one earns its place. ~4 min read.</p>
           <span class="meanwhile-cta">Open →</span>
         </a>
       </div>
