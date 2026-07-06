@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import Callout from '../../components/Callout.astro';
 import PageNext from '../../components/PageNext.astro';
 import CtaBlock from '../../components/CtaBlock.astro';
+import CapabilityMatrix from '../../components/CapabilityMatrix.astro';
 import { DOCTOR_GATES } from '../../data/stats';
 ---
 
@@ -84,8 +85,19 @@ import { DOCTOR_GATES } from '../../data/stats';
 
   <section class="section">
     <div class="container">
+      <CapabilityMatrix
+        players={['github-agent-hq', 'coder', 'microsoft-agt']}
+        eyebrow="§ 03 · The matrix"
+        title="Axis by axis."
+        subtitle="The fifteen research axes, focused on this matchup. Conservative marks — shipped, documented surfaces only."
+      />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
       <header class="section-head">
-        <span class="eyebrow">§ 03 · Choose honestly</span>
+        <span class="eyebrow">§ 04 · Choose honestly</span>
         <h2>Know which buyer you are.</h2>
       </header>
       <div class="grid-2">

@@ -2,6 +2,8 @@
 import Layout from '../../layouts/Layout.astro';
 import Callout from '../../components/Callout.astro';
 import CtaBlock from '../../components/CtaBlock.astro';
+import CapabilityMatrix from '../../components/CapabilityMatrix.astro';
+import { HUB_PLAYERS } from '../../data/capability-matrix';
 import { VERSION_SHORT, DOCTOR_GATES } from '../../data/stats';
 
 const axesHeld = [
@@ -176,11 +178,16 @@ const categories = [
           Both analyses named the same top ergonomics gaps: collision-free parallel sessions and an exportable event stream. v1.93 shipped both — <a href="/features/worktrees">worktree lanes</a> and <code>maddu export --otel</code>.
         </p>
       </Callout>
+
+      <CapabilityMatrix players={HUB_PLAYERS} />
+      <p class="cm-note">
+        Cells resolve conservatively to shipped, documented surfaces — where the two analyses disagreed, the stricter mark wins. Each <a href="#landscape">matchup page</a> carries its own focused cut of this table.
+      </p>
     </div>
   </section>
 
   <!-- Category map -->
-  <section class="section">
+  <section class="section" id="landscape">
     <div class="container">
       <header class="section-head">
         <span class="eyebrow">§ 03 · The landscape</span>
@@ -235,6 +242,12 @@ const categories = [
 </Layout>
 
 <style>
+  .cm-note {
+    margin-top: var(--m-space-3);
+    font-size: 12.5px;
+    color: var(--m-fg-3);
+    max-width: 78ch;
+  }
   .score-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
