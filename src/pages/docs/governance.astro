@@ -1,0 +1,99 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+<DocsLayout title="Governance" pathname="/docs/governance" section="Core concepts">
+  <h1>Governance</h1>
+  <p class="dx-lede">
+    A scratch app shouldn't drown in approval friction, and a consequential system shouldn't get to skip it. Governance makes operational discipline a per-workspace dial &mdash; without ever touching the structural invariants.
+  </p>
+
+  <h2>The gauntlet</h2>
+  <p>
+    Every state-mutating auto-trigger walks the gauntlet before it can fire. It is the brake on the failure mode where an agent confidently propagates a wrong call across handoffs with nothing to stop it. Read-only actions pass straight through &mdash; still logged as events &mdash; while mutating actions walk every gate:
+  </p>
+  <ul>
+    <li><strong>Allowlist</strong> &mdash; the action must be listed in <code>triggers.json</code>, or it is refused with an <code>APPROVAL_REQUESTED</code> event.</li>
+    <li><strong>Cooldown</strong> &mdash; the trigger's cooldown must be respected, or it is refused.</li>
+    <li><strong>Tier</strong> &mdash; the governance tier decides whether the action needs operator approval, a conditional slice-stop check, or an auto-fire.</li>
+    <li><strong>Fire</strong> &mdash; a <code>TRIGGER_FIRED</code> event lands on the spine with a <code>triggered_by</code> provenance stamp.</li>
+  </ul>
+  <p>
+    Either way, every mutating action ends up on the spine, with or without operator approval upstream. This is Rule #9, permanent since v0.19.0.
+  </p>
+
+  <h2>The three tiers</h2>
+  <p>
+    Governance is a per-workspace dial set in <code>.maddu/config/governance.json</code>. Switch it with one slash command &mdash; <code>/maddu-governance &lt;mode&gt;</code> writes an audit event &mdash; and the cockpit shows the current tier prominently so the operator never forgets which posture they are in.
+  </p>
+
+  <h3>Strict &mdash; consequential</h3>
+  <p>
+    For production-adjacent code, anything billable, anything you can't un-ship in five minutes.
+  </p>
+  <ul>
+    <li>Every mutating action requires explicit operator approval at slice-stop</li>
+    <li>Cooldowns enforced hard, no override</li>
+    <li>The worker env allowlist is the only thing workers see</li>
+    <li>Approval refusal kills the slice immediately</li>
+  </ul>
+
+  <h3>Standard &mdash; default</h3>
+  <p>
+    The right default for most working projects and daily development.
+  </p>
+  <ul>
+    <li>Allowlist and cooldown enforced</li>
+    <li>Approval prompted at slice-stops on mutating actions</li>
+    <li>Operator can pre-approve common patterns</li>
+    <li>Reasonable friction, no surprises</li>
+  </ul>
+
+  <h3>Relaxed &mdash; exploration</h3>
+  <p>
+    For scratch projects, exploration, and fast iteration where mistakes are cheap.
+  </p>
+  <ul>
+    <li>Allowlist and cooldown still enforced (structural)</li>
+    <li>Approval gates skipped at slice-stops</li>
+    <li>Everything still logged with provenance</li>
+    <li>The audit trail survives even when real-time gating doesn't</li>
+  </ul>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>Hard rules are immutable regardless of tier.</strong> The 8+1 rules &mdash; files-only state, append-only spine, no hosted backend, no broad new deps, no provider SDKs in app code, no token export, brand boundary, lane ownership, and the gauntlet itself &mdash; never change. Tiers tune <em>operational</em> friction; they never loosen <em>structural</em> integrity.</p>
+  </div>
+
+  <h2>The approval flow</h2>
+  <p>
+    In strict and standard tiers, the approval gate runs at slice-stop. When a worker proposes a mutating action, the gauntlet records an <code>APPROVAL_REQUESTED</code> event (tool, args-shape, and why) and surfaces an approval card in the cockpit. The operator's call is logged on both sides:
+  </p>
+  <ul>
+    <li><strong>Granted</strong> &mdash; <code>APPROVAL_GRANTED</code> lands, the worker proceeds, and it emits <code>TRIGGER_FIRED</code> with <code>triggered_by</code> provenance.</li>
+    <li><strong>Denied</strong> &mdash; <code>APPROVAL_DENIED</code> lands and the slice closes.</li>
+  </ul>
+  <p>
+    A relaxed-tier workspace skips real-time gating, but the audit ledger reads the same way at the end. Replay reconstructs the full approval history deterministically.
+  </p>
+
+  <h2>Slice-stop discipline</h2>
+  <p>
+    Every working slice ends at a slice-stop. That's not just a memo to the spine &mdash; in strict and standard tiers it is where the gauntlet's approval gate actually runs. The structured form makes operator approval cheap: enough on the screen to make an informed call without reading the diff.
+  </p>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>Lane ownership is the concurrency half of governance.</strong> Rule #8 keeps two agents from holding the same lane; cross-lane work goes through a mailbox NDJSON, never shared mutation. Force-claims leave a <code>contested-claim</code> audit, bounding the blast radius of any single agent's mistake to one file area at a time.</p>
+  </div>
+
+  <div class="dx-pager">
+    <a class="dx-pager-link" href="/docs/architecture">
+      <span class="dx-pager-dir">&larr; Prev</span>
+      <span class="dx-pager-title">Architecture</span>
+    </a>
+    <a class="dx-pager-link is-next" href="/docs/hard-rules">
+      <span class="dx-pager-dir">Next &rarr;</span>
+      <span class="dx-pager-title">Hard rules</span>
+    </a>
+  </div>
+</DocsLayout>

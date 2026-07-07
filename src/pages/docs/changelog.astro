@@ -1,0 +1,50 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+import { VERSION, RELEASE_COUNT, DOCTOR_GATES } from '../../data/stats';
+import { RELEASES } from '../../data/releases';
+---
+<DocsLayout title="Changelog" pathname="/docs/changelog" section="Reference">
+  <h1>Changelog</h1>
+  <p class="dx-lede">Every Máddu release is recorded — one dated entry, typed by intent, from a single source that drives the site, the API, and the feeds. Nothing ships unlogged.</p>
+
+  <h2>Release cadence</h2>
+  <p>Máddu ships in small, frequent releases rather than big-bang drops. The public arc runs from <code>v0.17.1</code> to the current <code>v{VERSION}</code> — {RELEASE_COUNT} releases across about seven weeks. Each one is a self-contained slice: a feature, a hardening pass, a fix, or a polish, never a grab-bag.</p>
+  <p>Every release grew the doctor from an 18-gate baseline to {DOCTOR_GATES} gates without ever breaking a posted invariant. The spine format, the slash names, the cockpit routes, and the CLI surface have stayed stable since <code>v1.0.0</code>.</p>
+
+  <p>Releases carry one of five types, so you can scan the log by intent:</p>
+  <ul>
+    <li><strong>Milestone</strong> — an anchor release that later work had to keep green.</li>
+    <li><strong>Feature</strong> — a new capability or verb.</li>
+    <li><strong>Hardening</strong> — a tightened guarantee or new guardrail.</li>
+    <li><strong>Polish</strong> — refactors and surfacing with no behavior change.</li>
+    <li><strong>Patch</strong> — a targeted fix, often an incident catch.</li>
+  </ul>
+
+  <div class="dx-note"><span class="dx-note-glyph" aria-hidden="true">◆</span><p><strong>One source, no drift.</strong> The release list lives in a single data file. The interactive <code>/changelog</code> page, the JSON API, and both feeds all render from it, so a new release propagates everywhere in one stroke.</p></div>
+
+  <h2>Recent releases</h2>
+  <p>The most recent entries, newest first. See the full log for the complete history.</p>
+  <ul>
+    {RELEASES.slice(0, 6).map((r) => (
+      <li><strong>{r.v}</strong> &middot; <em>{r.type}</em> — {r.headline}</li>
+    ))}
+  </ul>
+
+  <h2>The full log and feeds</h2>
+  <p>The complete, interactive changelog — all releases, color-coded by type, with an in-page index — lives at <a href="/changelog">/changelog</a>.</p>
+  <p>To follow releases from a reader or a script, subscribe to the feeds:</p>
+  <ul>
+    <li><a href="/atom.xml">/atom.xml</a> — Atom feed for feed readers.</li>
+    <li><a href="/feed.json">/feed.json</a> — JSON Feed for scripts and integrations.</li>
+  </ul>
+
+  <div class="dx-cards">
+    <a class="dx-card" href="/changelog"><span class="dx-card-title"><span>Full changelog</span><span>&rarr;</span></span><p>Every release, color-coded by type, with a jump index.</p></a>
+    <a class="dx-card" href="/docs/compare"><span class="dx-card-title"><span>Compare</span><span>&rarr;</span></span><p>Where Máddu sits against tracing and memory tools.</p></a>
+  </div>
+
+  <div class="dx-pager">
+    <a class="dx-pager-link" href="/docs/compare"><span class="dx-pager-dir">&larr; Prev</span><span class="dx-pager-title">Compare</span></a>
+    <span></span>
+  </div>
+</DocsLayout>

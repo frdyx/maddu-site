@@ -1,0 +1,90 @@
+---
+// DRAFT — docs-style landing built on DocsLayout. Demonstrates the sidebar +
+// TOC shell with representative Máddu content. Not linked from the marketing
+// nav yet; reachable at /docs for review.
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="Introduction" pathname="/docs" section="Getting started">
+  <h1>Máddu — the source of local truth</h1>
+  <p class="dx-lede">
+    Máddu is the external, cooperative governance &amp; coordination layer any CLI AI
+    agent plugs into. Agents work as an auditable team — lanes, approvals, gates, and a
+    replayable record — all local-first, on disk. No cloud, no telemetry, no key interception.
+  </p>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>Tracing tools observe runs. Memory tools remember. Máddu governs how agents collaborate</strong> — it's the discipline layer, not another dashboard.</p>
+  </div>
+
+  <h2>Install</h2>
+  <p>From any git repo with Node.js ≥ 20, one command installs the runtime, cockpit, and state directory. It touches only <code>.maddu/</code>, <code>maddu/</code>, and <code>maddu.json</code> — nothing else in your tree.</p>
+
+  <div class="dx-code">
+    <div class="dx-code-head"><span class="dx-code-dot"></span> terminal</div>
+    <pre><code><span class="tok-c"># install the latest from GitHub</span>
+npx github:frdyx/maddu init
+
+<span class="tok-c"># verify the install + hard rules</span>
+maddu doctor</code></pre>
+  </div>
+
+  <h2>How it works</h2>
+  <p>
+    Everything reduces to <strong>one substrate loop</strong>. Each transition writes exactly
+    one event to the append-only spine on disk, so any run replays end to end.
+  </p>
+  <ul>
+    <li><strong>register</strong> — a session joins the record</li>
+    <li><strong>claim</strong> — a lane is locked so two agents never touch the same files</li>
+    <li><strong>slice</strong> — a unit of work runs under that lane</li>
+    <li><strong>stop</strong> — the slice closes with a receipt</li>
+    <li><strong>release</strong> — the lane frees for the next agent</li>
+    <li><strong>close</strong> — the session leaves the record</li>
+  </ul>
+
+  <h3>One default execution path</h3>
+  <p>
+    The slash and autopilot surfaces are friendly wrappers over that same loop — never
+    competing flows. A non-trivial task defaults to a <em>pipeline</em>; ad-hoc autopilot is
+    reserved for genuine one-offs.
+  </p>
+
+  <h2>The guarantees</h2>
+  <p>Nine hard rules govern the framework layer and are verified by <code>maddu doctor</code> on every run:</p>
+  <ul>
+    <li>Files-only state · append-only spine · no hosted backends</li>
+    <li>No provider SDKs in framework code · no token export</li>
+    <li>Three-layer brand boundary · lane ownership</li>
+    <li>Every auto-trigger crosses the gauntlet — permanent</li>
+  </ul>
+
+  <h2>Next steps</h2>
+  <div class="dx-cards">
+    <a class="dx-card" href="/docs/install">
+      <span class="dx-card-title"><span>Install</span><span>→</span></span>
+      <p>Get Máddu running in your repo in under a minute.</p>
+    </a>
+    <a class="dx-card" href="/docs/how-it-works">
+      <span class="dx-card-title"><span>How it works</span><span>→</span></span>
+      <p>The substrate loop, pipelines, and the coordinator primitive.</p>
+    </a>
+    <a class="dx-card" href="/docs/architecture">
+      <span class="dx-card-title"><span>Architecture</span><span>→</span></span>
+      <p>The three layers and how state flows through the spine.</p>
+    </a>
+    <a class="dx-card" href="/docs/hard-rules">
+      <span class="dx-card-title"><span>Hard rules</span><span>→</span></span>
+      <p>The nine invariants doctor enforces — and why they hold.</p>
+    </a>
+  </div>
+
+  <div class="dx-pager">
+    <span></span>
+    <a class="dx-pager-link is-next" href="/docs/install">
+      <span class="dx-pager-dir">Next →</span>
+      <span class="dx-pager-title">Install</span>
+    </a>
+  </div>
+</DocsLayout>

@@ -1,0 +1,114 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+<DocsLayout title="Hard rules" pathname="/docs/hard-rules" section="Core concepts">
+  <h1>The 8+1 hard rules</h1>
+  <p class="dx-lede">
+    Nine invariants define what a Máddu install <em>is</em>. They aren't policy layered on top of features — they're the things every feature has to be compatible with to exist at all.
+  </p>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>These govern the framework layer only.</strong> The rules constrain Máddu's own code — <code>.maddu/</code> and <code>maddu/</code> — never the product you're building. Your app may use any SDK, hosted backend, or database it needs. <code>maddu doctor</code> proves the rules on every install and every upgrade; a repo that violates one isn't a Máddu repo.</p>
+  </div>
+
+  <h2>The eight structural rules</h2>
+  <p>Each rule is named, enforced by a doctor gate, and load-bearing. For each, the guarantee comes with a deliberate absence — the "no" that makes the "yes" hold.</p>
+
+  <h3>1. Files-only state</h3>
+  <p>Every state write is append-only NDJSON, a rebuildable JSON projection, or a typed Markdown/JSON definition. If you can't <code>cat</code> it, Máddu didn't write it. Portability and audit are downstream of this single decision.</p>
+  <ul>
+    <li><strong>Enforced by:</strong> <code>files-only-state</code> gate, plus layout-refusal.</li>
+    <li><strong>Deliberately absent:</strong> no SQLite, no embedded database, no hosted database.</li>
+  </ul>
+
+  <h3>2. Append-only event spine</h3>
+  <p><code>.maddu/events/*.ndjson</code> is the single source of truth. Projections rebuild from it and are never authoritative. Auto-decisions append their own event carrying <code>triggered_by</code> provenance — derived is not the same as projected.</p>
+  <ul>
+    <li><strong>Enforced by:</strong> <code>maddu spine verify</code>, plus the <code>plan-state-derivable</code> and <code>kanban-coherent</code> gates. Verifiable, not declared.</li>
+    <li><strong>Deliberately absent:</strong> no auto-repair, ever. Verify detects, surfaces, and stops — it never silently heals.</li>
+  </ul>
+
+  <h3>3. No hosted backends</h3>
+  <p>Provider APIs are called from local subprocess workers only. A bridge listens on localhost and dies when you kill the process; the cockpit is a static page served by that bridge. Nothing leaves the machine.</p>
+  <ul>
+    <li><strong>Enforced by:</strong> architectural design plus the no-network-app-code check.</li>
+    <li><strong>Deliberately absent:</strong> no SaaS, no telemetry, no relay, no "Máddu Cloud."</li>
+  </ul>
+
+  <h3>4. No broad new dependencies</h3>
+  <p>Node stdlib where possible. The <code>dependencies</code> block stays empty or narrowly scoped. Every dependency is a supply-chain surface, and every supply-chain surface needs <code>maddu trust</code> provenance. The cheapest defense is the dependency you didn't take.</p>
+  <ul>
+    <li><strong>Enforced by:</strong> the <code>dependency-freshness</code> and <code>dep-pinning-respected</code> gates.</li>
+    <li><strong>Deliberately absent:</strong> no sprawling dependency tree to audit or pin.</li>
+  </ul>
+
+  <h3>5. No provider SDKs in app code</h3>
+  <p>Bridge, cockpit, and harness never import <code>anthropic</code>, <code>openai</code>, <code>@google/generative-ai</code>, or any other provider SDK. Provider calls live only in worker subprocesses, with credentials injected at spawn.</p>
+  <ul>
+    <li><strong>Enforced by:</strong> layout-refusal (doctor fails if an SDK leaks into app code) plus the active secret scan.</li>
+    <li><strong>Deliberately absent:</strong> no provider credentials in scope of framework code.</li>
+  </ul>
+
+  <h3>6. No token export</h3>
+  <p>OAuth tokens live in OS device-bound paths — <code>~/.config/maddu/auth/</code> on Linux/macOS, <code>%APPDATA%\maddu\auth\</code> on Windows. <code>maddu export</code> scrubs them; <code>maddu import</code> refuses to overwrite them.</p>
+  <ul>
+    <li><strong>Enforced by:</strong> device-bound paths plus export/import contracts.</li>
+    <li><strong>Deliberately absent:</strong> no cross-machine token sync, by design.</li>
+  </ul>
+
+  <h3>7. Three-layer brand boundary</h3>
+  <p>The framework shell brand (Máddu), the app brand (the consumer project), and the content brand (whatever the project ships) never mix. The cockpit's <code>tokens.css</code> is owned by Máddu and must not be referenced from app or content code. This keeps the orchestration layer recognizable across every project that adopts it.</p>
+  <ul>
+    <li><strong>Enforced by:</strong> architectural boundary.</li>
+    <li><strong>Deliberately absent:</strong> no brand bleed between the three layers.</li>
+  </ul>
+
+  <h3>8. Lane ownership</h3>
+  <p>Claim a lane before editing its file area. No two agents may hold the same lane concurrently. Cross-lane work goes through the mailbox bus (<code>.maddu/lanes/&lt;lane&gt;/mailbox.ndjson</code>), never shared mutation. Force-claims leave a contested-claim audit trail. This is concurrency without locks.</p>
+  <ul>
+    <li><strong>Enforced by:</strong> the <code>rule-8-team-lane-disjoint</code> and <code>lane-force-discipline</code> gates.</li>
+    <li><strong>Deliberately absent:</strong> no worker queue and no mutex layer — lane discipline replaces both at a higher altitude.</li>
+  </ul>
+
+  <h2>+1 — the permanent addition</h2>
+
+  <h3>9. Every auto-trigger crosses the gauntlet</h3>
+  <p>Permanent since v0.19.0. No spine-, state-, or workspace-mutating command auto-fires without all four of:</p>
+  <ul>
+    <li>a <code>tier:'mutating'</code> entry,</li>
+    <li>an allowlist entry in <code>.maddu/config/triggers.json</code>,</li>
+    <li>a respected cooldown, and</li>
+    <li>a <code>TRIGGER_FIRED</code> event carrying <code>triggered_by</code> provenance.</li>
+  </ul>
+  <p>This is the rule that prevents the "confidently wrong, unsupervised, running away" failure mode. Read-only actions pass through (still logged); anything that mutates state must satisfy every gate. See <a href="/docs/governance">Governance</a> for the gauntlet in full.</p>
+  <ul>
+    <li><strong>Enforced by:</strong> <code>strict-mode-approval-active</code> plus <code>triggers.json</code>.</li>
+    <li><strong>Deliberately absent:</strong> no unsupervised auto-fire path around the gauntlet.</li>
+  </ul>
+
+  <h2>Read it as a posture</h2>
+  <p>The hard rules describe what Máddu is; the absences describe what it refuses to be. Together they're the identity — not a wishlist of features still to come. The charter source of truth lives in the framework repo at <code>docs/charter.md</code>.</p>
+
+  <div class="dx-cards">
+    <a class="dx-card" href="/docs/governance">
+      <span class="dx-card-title"><span>Governance</span><span>&rarr;</span></span>
+      <p>The gauntlet and the three tiers that scale discipline with consequence.</p>
+    </a>
+    <a class="dx-card" href="/docs/security">
+      <span class="dx-card-title"><span>Security</span><span>&rarr;</span></span>
+      <p>Seven structural enforcement points, from worker isolation to the gauntlet.</p>
+    </a>
+  </div>
+
+  <div class="dx-pager">
+    <a class="dx-pager-link" href="/docs/governance">
+      <span class="dx-pager-dir">&larr; Prev</span>
+      <span class="dx-pager-title">Governance</span>
+    </a>
+    <a class="dx-pager-link is-next" href="/docs/security">
+      <span class="dx-pager-dir">Next &rarr;</span>
+      <span class="dx-pager-title">Security</span>
+    </a>
+  </div>
+</DocsLayout>

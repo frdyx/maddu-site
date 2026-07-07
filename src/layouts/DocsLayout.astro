@@ -1,0 +1,526 @@
+---
+// ── DRAFT docs shell ─────────────────────────────────────────────────
+// A familiar developer-docs layout — left sidebar tree · reading column ·
+// right "on this page" TOC — dressed in the Máddu navy-noir tokens.
+// Standalone from Layout.astro so the marketing shell is untouched while
+// this draft is evaluated. Nav tree is inline (small enough); the TOC is
+// generated client-side from the H2/H3 in the content slot.
+export interface Props {
+  title: string;
+  description?: string;
+  /** Path of current page — drives sidebar active-state. */
+  pathname?: string;
+  /** Short label above the H1 (section the page belongs to). */
+  section?: string;
+}
+
+const {
+  title,
+  description = 'Máddu — the local-first governance & coordination layer any CLI AI agent plugs into.',
+  pathname = '/docs',
+  section,
+} = Astro.props;
+
+// Grouped sidebar — the shape people expect from a tool's docs.
+const groups = [
+  {
+    label: 'Getting started',
+    items: [
+      { href: '/docs', label: 'Introduction' },
+      { href: '/docs/install', label: 'Install' },
+      { href: '/docs/how-it-works', label: 'How it works' },
+    ],
+  },
+  {
+    label: 'Core concepts',
+    items: [
+      { href: '/docs/architecture', label: 'Architecture' },
+      { href: '/docs/governance', label: 'Governance' },
+      { href: '/docs/hard-rules', label: 'Hard rules' },
+      { href: '/docs/security', label: 'Security' },
+    ],
+  },
+  {
+    label: 'Features',
+    items: [
+      { href: '/docs/features', label: 'Overview' },
+      { href: '/docs/features/discipline', label: 'Session discipline' },
+      { href: '/docs/features/autonomy', label: 'Earned autonomy' },
+      { href: '/docs/features/fleet', label: 'Fleet view' },
+      { href: '/docs/features/cost', label: 'Cost & budget' },
+    ],
+  },
+  {
+    label: 'Reference',
+    items: [
+      { href: '/docs/capabilities', label: 'Verbs' },
+      { href: '/docs/compare', label: 'Compare' },
+      { href: '/docs/changelog', label: 'Changelog' },
+    ],
+  },
+];
+
+const fullTitle = `${title} · Máddu Docs`;
+const siteUrl = 'https://maddu.frdyx.com';
+const canonical = siteUrl + (pathname === '/' ? '/' : pathname.replace(/\/$/, ''));
+const ogImage = siteUrl + '/og/index.png';
+
+import SearchPalette from '../components/SearchPalette.astro';
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content={description} />
+  <meta name="theme-color" content="#050B17" />
+  <title>{fullTitle}</title>
+  <link rel="icon" type="image/svg+xml" href="/brand-mark.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <link rel="preload" href="/fonts/plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="canonical" href={canonical} />
+  <meta property="og:title" content={fullTitle} />
+  <meta property="og:description" content={description} />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:image" content={ogImage} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={fullTitle} />
+  <meta name="twitter:description" content={description} />
+</head>
+<body class="dx-body">
+  <a class="skip-link" href="#dx-main">Skip to content</a>
+
+  <!-- ── Slim top bar ─────────────────────────────────────────────── -->
+  <header class="dx-topbar">
+    <div class="dx-topbar-inner">
+      <button class="dx-menu-btn" id="dxMenu" aria-label="Toggle sidebar" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <a class="dx-brand" href="/docs" aria-label="Máddu docs home">
+        <img src="/brand-mark.svg" alt="" width="20" height="20" />
+        <span class="dx-brand-name">Máddu</span>
+        <span class="dx-brand-badge">Docs</span>
+      </a>
+      <div class="dx-topbar-spacer"></div>
+      <button class="dx-search" id="dxSearch" aria-label="Search (Ctrl+K)">
+        <span class="dx-search-glyph" aria-hidden="true">⌕</span>
+        <span class="dx-search-label">Search docs</span>
+        <kbd class="dx-search-kbd"><span class="dx-mod">⌘</span>K</kbd>
+      </button>
+      <a class="dx-icon-link" href="https://github.com/frdyx/maddu" target="_blank" rel="noopener" aria-label="Máddu on GitHub">
+        <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
+      <a class="dx-icon-link dx-site-link" href="/" aria-label="Back to marketing site">↗ Site</a>
+    </div>
+  </header>
+
+  <SearchPalette />
+
+  <div class="dx-shell">
+    <!-- ── Left sidebar ───────────────────────────────────────────── -->
+    <aside class="dx-sidebar" id="dxSidebar" aria-label="Documentation">
+      <nav class="dx-nav">
+        {groups.map((group) => (
+          <div class="dx-nav-group">
+            <p class="dx-nav-label">{group.label}</p>
+            <ul class="dx-nav-list">
+              {group.items.map((item) => (
+                <li>
+                  <a
+                    href={item.href}
+                    class:list={['dx-nav-link', pathname === item.href && 'is-active']}
+                    aria-current={pathname === item.href ? 'page' : undefined}
+                  >{item.label}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </nav>
+    </aside>
+    <div class="dx-scrim" id="dxScrim" aria-hidden="true"></div>
+
+    <!-- ── Reading column ─────────────────────────────────────────── -->
+    <main class="dx-main" id="dx-main" tabindex="-1">
+      <article class="dx-article">
+        {section && <p class="dx-kicker">{section}</p>}
+        <slot />
+      </article>
+    </main>
+
+    <!-- ── Right "on this page" TOC ───────────────────────────────── -->
+    <aside class="dx-toc" aria-label="On this page">
+      <p class="dx-toc-label">On this page</p>
+      <nav class="dx-toc-nav" id="dxToc"></nav>
+    </aside>
+  </div>
+
+  <script>
+    // Sidebar drawer toggle (mobile).
+    const menuBtn = document.getElementById('dxMenu');
+    const sidebar = document.getElementById('dxSidebar');
+    const scrim = document.getElementById('dxScrim');
+    const closeSidebar = () => {
+      sidebar?.classList.remove('is-open');
+      scrim?.classList.remove('is-open');
+      menuBtn?.setAttribute('aria-expanded', 'false');
+    };
+    menuBtn?.addEventListener('click', () => {
+      const open = sidebar?.classList.toggle('is-open');
+      scrim?.classList.toggle('is-open', !!open);
+      menuBtn.setAttribute('aria-expanded', String(!!open));
+    });
+    scrim?.addEventListener('click', closeSidebar);
+
+    // Search palette (shared global from SearchPalette).
+    document.getElementById('dxSearch')?.addEventListener('click', () => {
+      (window as any).__maddu_openSearch?.();
+    });
+    const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+    document.querySelectorAll('.dx-mod').forEach((el) => {
+      el.textContent = isMac ? '⌘' : 'Ctrl ';
+    });
+
+    // Build the right-side TOC from the article's h2/h3, add anchor ids,
+    // and scroll-spy the active entry.
+    const slugify = (s: string) =>
+      s.toLowerCase().replace(/[^a-z0-9 -]/g, '').replace(/\s+/g, '-')
+        .replace(/-+/g, '-').replace(/^-|-$/g, '');
+    const article = document.querySelector('.dx-article');
+    const tocNav = document.getElementById('dxToc');
+    const headings = Array.from(
+      article?.querySelectorAll<HTMLElement>('h2, h3') ?? []
+    );
+    const used = new Set<string>();
+    const links = new Map<string, HTMLAnchorElement>();
+    headings.forEach((h) => {
+      let id = h.id || slugify(h.textContent || '');
+      if (!id) return;
+      let base = id, n = 2;
+      while (used.has(id)) id = base + '-' + n++;
+      used.add(id);
+      h.id = id;
+      const a = document.createElement('a');
+      a.href = '#' + id;
+      a.textContent = h.textContent || '';
+      a.className = 'dx-toc-link' + (h.tagName === 'H3' ? ' is-sub' : '');
+      tocNav?.appendChild(a);
+      links.set(id, a);
+    });
+
+    if ('IntersectionObserver' in window && headings.length) {
+      let activeId = '';
+      const setActive = (id: string) => {
+        if (id === activeId) return;
+        links.get(activeId)?.classList.remove('is-active');
+        links.get(id)?.classList.add('is-active');
+        activeId = id;
+      };
+      const io = new IntersectionObserver((entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) setActive(visible[0].target.id);
+      }, { rootMargin: '-72px 0px -70% 0px', threshold: 0 });
+      headings.forEach((h) => io.observe(h));
+    }
+
+    // Close the mobile drawer after following an in-page link.
+    tocNav?.addEventListener('click', closeSidebar);
+    sidebar?.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('a')) closeSidebar();
+    });
+  </script>
+
+  <style is:global>
+    @import '../styles/base.css';
+
+    .skip-link {
+      position: fixed; top: 8px; left: 8px; z-index: 100;
+      transform: translateY(-200%);
+      background: var(--m-accent); color: var(--m-bg-0);
+      font-family: var(--m-font-mono); font-size: 12px; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 8px 14px; border-radius: var(--m-radius);
+      transition: transform 140ms ease-out; border-bottom: 0;
+    }
+    .skip-link:focus { transform: translateY(0); color: var(--m-bg-0); border-bottom: 0; }
+
+    :focus-visible { outline: 2px solid var(--m-accent); outline-offset: 2px; border-radius: 2px; }
+
+    .dx-body {
+      background:
+        radial-gradient(1200px 600px at 100% -10%, rgba(86, 184, 255, 0.06), transparent 60%),
+        radial-gradient(900px 500px at -10% 10%, rgba(208, 255, 0, 0.035), transparent 55%),
+        var(--m-bg-0);
+      min-height: 100vh;
+    }
+
+    /* ── Top bar ─────────────────────────────────────────────────── */
+    .dx-topbar {
+      position: sticky; top: 0; z-index: 40;
+      height: var(--m-nav-h);
+      background: var(--m-bg-1, rgba(5, 11, 23, 0.82));
+      backdrop-filter: blur(18px) saturate(120%);
+      -webkit-backdrop-filter: blur(18px) saturate(120%);
+      border-bottom: 1px solid var(--m-line);
+    }
+    .dx-topbar-inner {
+      height: 100%;
+      display: flex; align-items: center; gap: 14px;
+      padding: 0 clamp(14px, 2vw, 24px);
+    }
+    .dx-brand { display: flex; align-items: center; gap: 9px; border-bottom: none; }
+    .dx-brand img { filter: drop-shadow(0 0 6px rgba(240, 78, 35, 0.55)); }
+    .dx-brand-name {
+      font-family: var(--m-font-cond); font-weight: 700; font-size: 18px;
+      letter-spacing: 0.05em; text-transform: uppercase; color: var(--m-fg-0);
+    }
+    .dx-brand-badge {
+      font-family: var(--m-font-mono); font-size: 10px; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--m-accent-2);
+      padding: 2px 7px; border: 1px solid rgba(86, 184, 255, 0.4);
+      border-radius: var(--m-radius-sm);
+    }
+    .dx-topbar-spacer { flex: 1; }
+
+    .dx-search {
+      display: flex; align-items: center; gap: 9px;
+      padding: 7px 12px; background: var(--m-bg-2);
+      border: 1px solid var(--m-line); border-radius: var(--m-radius);
+      font-family: var(--m-font-mono); font-size: 11px;
+      letter-spacing: 0.06em; color: var(--m-fg-3); cursor: pointer;
+      transition: border-color 120ms, color 120ms; min-width: 200px;
+    }
+    .dx-search:hover { border-color: var(--m-accent); color: var(--m-accent); }
+    .dx-search-glyph { color: var(--m-accent); font-size: 13px; }
+    .dx-search-label { letter-spacing: 0.05em; text-transform: uppercase; flex: 1; text-align: left; }
+    .dx-search-kbd {
+      font-family: var(--m-font-mono); font-size: 10px; padding: 1px 6px;
+      background: var(--m-bg-3); border: 1px solid var(--m-line-soft);
+      border-radius: 3px; color: var(--m-fg-2);
+    }
+    .dx-icon-link {
+      display: flex; align-items: center; justify-content: center;
+      height: 34px; padding: 0 10px; color: var(--m-fg-2);
+      background: var(--m-bg-2); border: 1px solid var(--m-line);
+      border-radius: var(--m-radius); border-bottom: 1px solid var(--m-line);
+      transition: color 120ms, border-color 120ms;
+    }
+    .dx-icon-link:hover { color: var(--m-accent); border-color: var(--m-accent); }
+    .dx-site-link {
+      font-family: var(--m-font-mono); font-size: 11px; letter-spacing: 0.06em;
+      text-transform: uppercase; gap: 4px;
+    }
+
+    .dx-menu-btn {
+      display: none; width: 36px; height: 36px;
+      flex-direction: column; justify-content: center; align-items: center; gap: 4px;
+      background: transparent; border: 1px solid var(--m-line);
+      border-radius: var(--m-radius); cursor: pointer; padding: 0;
+    }
+    .dx-menu-btn span { display: block; width: 16px; height: 1.5px; background: var(--m-fg-1); }
+
+    /* ── Shell grid: sidebar · content · toc ─────────────────────── */
+    .dx-shell {
+      display: grid;
+      grid-template-columns: 264px minmax(0, 1fr) 232px;
+      max-width: 1560px;
+      margin: 0 auto;
+      align-items: start;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────────────── */
+    .dx-sidebar {
+      position: sticky; top: var(--m-nav-h);
+      height: calc(100vh - var(--m-nav-h));
+      overflow-y: auto;
+      padding: var(--m-space-6) var(--m-space-4) var(--m-space-10) clamp(12px, 1.6vw, 22px);
+      border-right: 1px solid var(--m-line-soft);
+    }
+    .dx-nav-group { margin-bottom: var(--m-space-6); }
+    .dx-nav-label {
+      font-family: var(--m-font-mono); font-size: 10.5px; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--m-fg-3);
+      margin: 0 0 var(--m-space-2); padding: 0 10px;
+    }
+    .dx-nav-list { list-style: none; margin: 0; padding: 0; }
+    .dx-nav-list li { margin: 1px 0; }
+    .dx-nav-link {
+      display: block; padding: 6px 10px; border-radius: var(--m-radius);
+      font-size: 13.5px; color: var(--m-fg-1); border-bottom: none;
+      border-left: 2px solid transparent;
+      transition: color 110ms, background 110ms, border-color 110ms;
+    }
+    .dx-nav-link:hover { color: var(--m-fg-0); background: var(--m-bg-2); border-bottom: none; }
+    .dx-nav-link.is-active {
+      color: var(--m-accent); background: var(--m-accent-glow-bg);
+      border-left-color: var(--m-accent);
+      box-shadow: inset 1px 0 0 var(--m-accent);
+    }
+
+    /* ── Main reading column ─────────────────────────────────────── */
+    .dx-main { min-width: 0; padding: var(--m-space-10) clamp(24px, 4vw, 72px) var(--m-space-20); }
+    .dx-article { max-width: 760px; }
+    .dx-kicker {
+      font-family: var(--m-font-mono); font-size: var(--m-type-xs);
+      letter-spacing: 0.18em; text-transform: uppercase; color: var(--m-accent);
+      margin: 0 0 var(--m-space-3);
+    }
+    .dx-article h1 {
+      font-family: var(--m-font-cond); font-weight: 700;
+      font-size: clamp(30px, 4vw, var(--m-type-h1)); line-height: 1.1;
+      letter-spacing: -0.01em; margin: 0 0 var(--m-space-4); color: var(--m-fg-0);
+    }
+    .dx-article .dx-lede {
+      font-size: 17px; line-height: 1.6; color: var(--m-fg-1);
+      margin: 0 0 var(--m-space-8); max-width: min(72ch, 100%);
+    }
+    .dx-article h2 {
+      font-family: var(--m-font-cond); font-weight: 600; font-size: var(--m-type-h2);
+      letter-spacing: -0.005em; color: var(--m-fg-0);
+      margin: var(--m-space-10) 0 var(--m-space-4);
+      padding-top: var(--m-space-3);
+      scroll-margin-top: calc(var(--m-nav-h) + 16px);
+    }
+    .dx-article h3 {
+      font-family: var(--m-font-cond); font-weight: 600; font-size: var(--m-type-h3);
+      color: var(--m-fg-0); margin: var(--m-space-8) 0 var(--m-space-3);
+      scroll-margin-top: calc(var(--m-nav-h) + 16px);
+    }
+    .dx-article p { color: var(--m-fg-1); line-height: var(--m-line-body); margin: 0 0 var(--m-space-4); max-width: min(72ch, 100%); }
+    .dx-article ul, .dx-article ol { color: var(--m-fg-1); line-height: var(--m-line-body); margin: 0 0 var(--m-space-4); padding-left: 1.3em; max-width: min(72ch, 100%); }
+    .dx-article li { margin: 4px 0; }
+    .dx-article li::marker { color: var(--m-fg-3); }
+    .dx-article a { color: var(--m-accent-2); }
+    .dx-article strong { color: var(--m-fg-0); }
+    .dx-article code:not(pre code) {
+      font-family: var(--m-font-mono); font-size: 0.88em;
+      background: var(--m-bg-3); border: 1px solid var(--m-line-soft);
+      border-radius: var(--m-radius-sm); padding: 1px 5px; color: var(--m-fg-0);
+    }
+    .dx-article hr { margin: var(--m-space-10) 0; }
+
+    /* Prose code block */
+    .dx-code {
+      background: var(--m-bg-true-black); border: 1px solid var(--m-line);
+      border-radius: var(--m-radius-lg); overflow: hidden;
+      margin: 0 0 var(--m-space-6);
+    }
+    .dx-code-head {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px; border-bottom: 1px solid var(--m-line-soft);
+      font-family: var(--m-font-mono); font-size: 10.5px;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--m-fg-3);
+      background: var(--m-bg-2);
+    }
+    .dx-code-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--m-accent-2); box-shadow: 0 0 8px var(--m-accent-2); }
+    .dx-code pre { margin: 0; padding: 16px 18px; overflow-x: auto; background: none; border: 0; }
+    .dx-code code {
+      font-family: var(--m-font-mono); font-size: 13px; line-height: 1.7;
+      color: var(--m-fg-1); background: none; border: 0; padding: 0;
+    }
+    .dx-code .tok-c { color: var(--m-fg-3); }
+    .dx-code .tok-k { color: var(--m-accent); }
+    .dx-code .tok-s { color: var(--m-accent-2); }
+
+    /* Callout */
+    .dx-note {
+      display: flex; gap: 12px; padding: 14px 16px;
+      background: var(--m-accent-2-glow-bg); border: 1px solid rgba(86, 184, 255, 0.28);
+      border-left: 2px solid var(--m-accent-2); border-radius: var(--m-radius);
+      margin: 0 0 var(--m-space-6);
+    }
+    .dx-note-glyph { color: var(--m-accent-2); flex-shrink: 0; font-size: 14px; margin-top: 2px; }
+    .dx-note p { margin: 0; font-size: 14px; color: var(--m-fg-1); }
+
+    /* Card grid (next steps) */
+    .dx-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: var(--m-space-4) 0 var(--m-space-6); }
+    .dx-card {
+      display: block; padding: 16px 18px; border-bottom: none;
+      background: var(--m-bg-2); border: 1px solid var(--m-line);
+      border-radius: var(--m-radius-lg);
+      transition: border-color 120ms, transform 120ms, box-shadow 120ms;
+    }
+    .dx-card:hover { border-color: var(--m-accent-dim); transform: translateY(-2px); box-shadow: var(--m-shadow-md); border-bottom: none; }
+    .dx-card-title { font-family: var(--m-font-cond); font-weight: 600; font-size: 15px; color: var(--m-fg-0); margin: 0 0 4px; display: flex; align-items: center; justify-content: space-between; }
+    .dx-card-title span:last-child { color: var(--m-accent); }
+    .dx-card p { font-size: 13px; color: var(--m-fg-2); margin: 0; }
+
+    /* Prev/next pager */
+    .dx-pager { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: var(--m-space-12); padding-top: var(--m-space-6); border-top: 1px solid var(--m-line-soft); }
+    .dx-pager-link {
+      display: flex; flex-direction: column; gap: 4px; padding: 14px 16px;
+      border: 1px solid var(--m-line); border-radius: var(--m-radius-lg);
+      border-bottom: 1px solid var(--m-line); color: var(--m-fg-0);
+      transition: border-color 120ms; background: var(--m-bg-2);
+    }
+    .dx-pager-link:hover { border-color: var(--m-accent-dim); border-bottom-color: var(--m-accent-dim); }
+    .dx-pager-link.is-next { text-align: right; }
+    .dx-pager-dir { font-family: var(--m-font-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--m-fg-3); }
+    .dx-pager-title { font-family: var(--m-font-cond); font-weight: 600; font-size: 15px; }
+
+    /* ── Right TOC ───────────────────────────────────────────────── */
+    .dx-toc {
+      position: sticky; top: var(--m-nav-h);
+      height: calc(100vh - var(--m-nav-h));
+      overflow-y: auto;
+      padding: var(--m-space-10) clamp(14px, 1.4vw, 22px) var(--m-space-10) var(--m-space-4);
+    }
+    .dx-toc-label {
+      font-family: var(--m-font-mono); font-size: 10.5px; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--m-fg-3); margin: 0 0 var(--m-space-3);
+    }
+    .dx-toc-nav { display: flex; flex-direction: column; gap: 1px; border-left: 1px solid var(--m-line-soft); }
+    .dx-toc-link {
+      padding: 4px 0 4px 14px; margin-left: -1px;
+      border-left: 2px solid transparent; border-bottom: none;
+      font-size: 12.5px; color: var(--m-fg-3); line-height: 1.4;
+      transition: color 110ms, border-color 110ms;
+    }
+    .dx-toc-link.is-sub { padding-left: 26px; font-size: 12px; }
+    .dx-toc-link:hover { color: var(--m-fg-1); border-bottom: none; }
+    .dx-toc-link.is-active { color: var(--m-accent); border-left-color: var(--m-accent); }
+
+    .dx-scrim { display: none; }
+
+    /* ── Responsive ──────────────────────────────────────────────── */
+    /* Drop the right TOC first. */
+    @media (max-width: 1180px) {
+      .dx-shell { grid-template-columns: 264px minmax(0, 1fr); }
+      .dx-toc { display: none; }
+    }
+    /* Collapse the sidebar into a drawer. */
+    @media (max-width: 900px) {
+      .dx-shell { grid-template-columns: minmax(0, 1fr); }
+      .dx-menu-btn { display: flex; order: -1; }
+      .dx-sidebar {
+        position: fixed; top: var(--m-nav-h); left: 0; z-index: 45;
+        width: 280px; max-width: 84vw;
+        height: calc(100vh - var(--m-nav-h));
+        background: var(--m-bg-0); border-right: 1px solid var(--m-line);
+        transform: translateX(-102%); transition: transform 200ms ease;
+      }
+      .dx-sidebar.is-open { transform: translateX(0); box-shadow: var(--m-shadow-lg); }
+      .dx-scrim.is-open {
+        display: block; position: fixed; inset: var(--m-nav-h) 0 0 0; z-index: 44;
+        background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px);
+      }
+      .dx-search { min-width: 0; }
+      .dx-search-label { display: none; }
+      .dx-site-link { display: none; }
+    }
+    @media (max-width: 560px) {
+      .dx-search-kbd { display: none; }
+      .dx-pager { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
+    }
+  </style>
+</body>
+</html>

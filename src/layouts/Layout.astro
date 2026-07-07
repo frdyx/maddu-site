@@ -16,13 +16,9 @@ const {
 
 const nav = [
   { href: '/', label: 'Overview', glyph: '◈' },
+  { href: '/docs', label: 'Docs', glyph: '❖' },
   { href: '/features', label: 'Features', glyph: '✦' },
   { href: '/compare', label: 'Compare', glyph: '⇄' },
-  { href: '/how-it-works', label: 'How it works', glyph: '↳' },
-  { href: '/architecture', label: 'Architecture', glyph: '◆' },
-  { href: '/security', label: 'Security', glyph: '⛨' },
-  { href: '/governance', label: 'Governance', glyph: '⚖' },
-  { href: '/hard-rules', label: 'Rules', glyph: '※' },
   { href: '/capabilities', label: 'Verbs', glyph: '∷' },
   { href: '/install', label: 'Install', glyph: '⤓' },
 ];
@@ -54,6 +50,7 @@ const ogSlug = pathname === '/' ? 'index' : pathname.replace(/^\/|\/$/g, '').spl
 const ogImage = siteUrl + '/og/' + (OG_SLUGS.has(ogSlug) ? ogSlug : 'index') + '.png';
 
 import SearchPalette from '../components/SearchPalette.astro';
+import { VERSION } from '../data/stats';
 ---
 
 <!doctype html>
@@ -168,6 +165,7 @@ import SearchPalette from '../components/SearchPalette.astro';
         <div class="site-foot-brand">
           <img src="/brand-mark.svg" alt="" width="18" height="18" />
           <span>Máddu</span>
+          <a class="site-foot-ver" href="/changelog">v{VERSION}</a>
         </div>
         <p class="site-foot-tagline">The Source of local truth.</p>
         <p class="site-foot-meta">The cooperative governance &amp; coordination layer for CLI AI agents. No SaaS, no telemetry, no relay. <span class="mono">{new Date().getFullYear()}</span></p>
@@ -184,10 +182,13 @@ import SearchPalette from '../components/SearchPalette.astro';
           <a href="https://www.linkedin.com/in/freddy-gehlin-b86914124/" target="_blank" rel="noopener">LinkedIn</a>
         </p>
       </div>
-      <div class="site-foot-col">
+      <div class="site-foot-col site-foot-col--pages">
         <h4>Pages</h4>
-        <ul>
+        <ul class="site-foot-links">
           {nav.map((item) => <li><a href={item.href}>{item.label}</a></li>)}
+          <li><a href="/docs/how-it-works">How it works</a></li>
+          <li><a href="/docs/architecture">Architecture</a></li>
+          <li><a href="/docs/hard-rules">Hard rules</a></li>
           <li><a href="/threat-model">Threat model</a></li>
           <li><a href="/manifesto">Manifesto</a></li>
           <li><a href="/changelog">Changelog</a></li>
@@ -663,7 +664,7 @@ import SearchPalette from '../components/SearchPalette.astro';
     }
     .site-foot-inner {
       display: grid;
-      grid-template-columns: 2fr 1fr 1.4fr;
+      grid-template-columns: 1.7fr 1.7fr 1fr;
       gap: var(--m-space-10);
     }
     .site-foot-col h4 {
@@ -677,6 +678,8 @@ import SearchPalette from '../components/SearchPalette.astro';
     .site-foot-col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
     .site-foot-col a { color: var(--m-fg-1); border-bottom: none; font-size: 13px; }
     .site-foot-col a:hover { color: var(--m-accent); }
+    /* Pages list is long — lay it out in two columns so the footer isn't a tall stack. */
+    .site-foot-links { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 22px; }
     .site-foot-brand {
       display: flex; align-items: center; gap: 8px;
       font-family: var(--m-font-cond);
@@ -686,6 +689,17 @@ import SearchPalette from '../components/SearchPalette.astro';
       color: var(--m-fg-0);
       margin-bottom: var(--m-space-3);
     }
+    .site-foot-ver {
+      font-family: var(--m-font-mono);
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      color: var(--m-accent);
+      border: 1px solid var(--m-accent-dim);
+      border-radius: var(--m-radius-sm);
+      padding: 1px 7px;
+      border-bottom: 1px solid var(--m-accent-dim);
+    }
+    .site-foot-ver:hover { color: var(--m-accent); background: var(--m-accent-glow-bg); border-bottom: 1px solid var(--m-accent-dim); }
     .site-foot-tagline {
       font-family: var(--m-font-mono);
       font-size: 12px;

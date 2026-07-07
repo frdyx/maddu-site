@@ -1,0 +1,87 @@
+---
+import DocsLayout from '../../../layouts/DocsLayout.astro';
+import EventStream from '../../../components/EventStream.astro';
+---
+
+<DocsLayout title="Fleet view" pathname="/docs/features/fleet" section="Features">
+  <h1>Fleet view</h1>
+  <p class="dx-lede">
+    See every Máddu install on your machine at a glance &mdash; stale, live, or abandoned &mdash;
+    then push framework updates to them in stages that stop on the first red doctor. All offline.
+  </p>
+
+  <div class="dx-code">
+    <div class="dx-code-head"><span class="dx-code-dot"></span> terminal</div>
+    <pre><code><span class="tok-c">$</span> maddu fleet
+repo             version    liveness    behind
+maddu-site       v1.93.0    active      &mdash;
+frdyx            v1.91.2    dormant     2 releases
+snyggare         v1.86.0    abandoned   7 releases</code></pre>
+  </div>
+
+  <p>
+    One table for the whole machine: version, liveness, and how far each install has drifted from
+    fleet-latest. Every number comes from each repo's on-disk projection, computed without executing
+    it &mdash; no network, no side effects.
+  </p>
+
+  <h2>What it does</h2>
+  <div class="dx-cards">
+    <div class="dx-card">
+      <span class="dx-card-title"><span>Read, never run</span></span>
+      <p><code>maddu fleet</code> reports version, liveness, and how far behind fleet-latest for every install &mdash; computed from each repo's on-disk projection <strong>without</strong> executing it. No network, no side effects, just the machine as it stands.</p>
+    </div>
+    <div class="dx-card">
+      <span class="dx-card-title"><span>Plan before you touch</span></span>
+      <p><code>fleet upgrade --plan</code> previews a staged delivery: which repos are eligible because they're quiescent, which are blocked by an active lane, a dirty tree, or recent activity &mdash; plus the managed-byte delta each one would receive.</p>
+    </div>
+    <div class="dx-card">
+      <span class="dx-card-title"><span>Deliver, then verify</span></span>
+      <p><code>fleet upgrade --apply --only|--all</code> snapshots managed bytes &mdash; never the spine &mdash; upgrades, then runs per-repo doctor. First red doctor stops the run cold, so a bad delivery can't cascade across the fleet.</p>
+    </div>
+  </div>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>Doctor watches your global binary.</strong> Since v1.91.2 doctor also checks the global npm binary. A stale <code>npm i -g</code> maddu shadowing a newer checkout earns a direction-aware WARN &mdash; it names which one is ahead, so you fix the shadow instead of debugging a phantom version.</p>
+  </div>
+
+  <h2>On the record</h2>
+  <p>
+    A staged upgrade writes one event per transition to the spine &mdash; the scan, the rendered
+    plan, a per-repo snapshot, the upgrade, and the doctor verdict. When a doctor comes back red the
+    run halts and the halt is recorded, so the whole delivery replays end to end.
+  </p>
+
+  <EventStream
+    eyebrow="Fleet upgrade, plan to verify"
+    source=".maddu/events/2026-07-06.ndjson"
+    entries={[
+      { time: '08:31:04.210', type: 'FLEET_SCANNED',       tone: 'framework', payload: 'installs=9 · stale=4 · abandoned=1',              actor: 'operator' },
+      { time: '08:31:59.077', type: 'FLEET_PLAN_RENDERED', tone: 'accent',    payload: 'eligible=3 · blocked=2 · delta=+184KB',           actor: 'operator' },
+      { time: '08:32:40.512', type: 'FLEET_SNAPSHOT_TAKEN', tone: 'session',  payload: 'repo=frdyx · managed_bytes · spine=excluded',     actor: 'operator' },
+      { time: '08:32:41.883', type: 'FLEET_REPO_UPGRADED', tone: 'ok',        payload: 'repo=frdyx · v1.91.2→v1.93.0',                    actor: 'operator' },
+      { time: '08:32:44.601', type: 'DOCTOR_RAN',          tone: 'ok',        payload: 'repo=frdyx · gates=70 pass · 0 fail',             actor: 'doctor' },
+      { time: '08:33:12.940', type: 'FLEET_HALTED',        tone: 'danger',    payload: 'repo=snyggare · doctor=red · run stopped',        actor: 'doctor' },
+    ]}
+  />
+
+  <h2>Related verbs</h2>
+  <div class="dx-cards">
+    <a class="dx-card" href="/capabilities/fleet"><span class="dx-card-title"><span>maddu fleet</span><span>&rarr;</span></span><p>Scan, plan, and stage upgrades across every install.</p></a>
+    <a class="dx-card" href="/capabilities/doctor"><span class="dx-card-title"><span>maddu doctor</span><span>&rarr;</span></span><p>The per-repo gate that halts a bad delivery.</p></a>
+    <a class="dx-card" href="/capabilities/upgrade"><span class="dx-card-title"><span>maddu upgrade</span><span>&rarr;</span></span><p>Move a single repo to the latest framework.</p></a>
+    <a class="dx-card" href="/capabilities/workspace"><span class="dx-card-title"><span>maddu workspace</span><span>&rarr;</span></span><p>Register repos into the device-local fleet.</p></a>
+  </div>
+
+  <div class="dx-pager">
+    <a class="dx-pager-link" href="/docs/features/autonomy">
+      <span class="dx-pager-dir">&larr; Prev</span>
+      <span class="dx-pager-title">Earned autonomy</span>
+    </a>
+    <a class="dx-pager-link is-next" href="/docs/features/cost">
+      <span class="dx-pager-dir">Next &rarr;</span>
+      <span class="dx-pager-title">Cost &amp; budget</span>
+    </a>
+  </div>
+</DocsLayout>

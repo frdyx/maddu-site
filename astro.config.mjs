@@ -9,6 +9,16 @@ export default defineConfig({
   base: process.env.MADDU_BASE || '/',
   output: 'static',
   trailingSlash: 'never',
+  // Deep reference pages moved into the /docs section — old URLs redirect
+  // so external links and search results keep resolving. Portable static
+  // meta-refresh pages (work on Loopia/Apache + Cloudflare alike).
+  redirects: {
+    '/how-it-works': '/docs/how-it-works',
+    '/architecture': '/docs/architecture',
+    '/governance': '/docs/governance',
+    '/hard-rules': '/docs/hard-rules',
+    '/security': '/docs/security',
+  },
   build: {
     inlineStylesheets: 'auto',
   },

@@ -1,17 +1,140 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import Mermaid from '../components/Mermaid.astro';
-import Workflow from '../components/Workflow.astro';
-import Stages from '../components/Stages.astro';
-import Annotated from '../components/Annotated.astro';
-import Callout from '../components/Callout.astro';
-import Rule from '../components/Rule.astro';
-import Legend from '../components/Legend.astro';
-import SubstrateLoop from '../components/SubstrateLoop.astro';
-import PageNext from '../components/PageNext.astro';
 import CompareStrip from '../components/CompareStrip.astro';
 import CtaBlock from '../components/CtaBlock.astro';
-import { VERSION_SHORT, VERBS_TOTAL, PURPOSE_AREAS, DOCTOR_GATES, STRESS_SCENARIOS, HARD_RULES } from '../data/stats';
+import SubstrateLoop from '../components/SubstrateLoop.astro';
+import EventStream from '../components/EventStream.astro';
+import { VERSION_SHORT, VERBS_TOTAL, DOCTOR_GATES, HARD_RULES, RELEASE_COUNT, EVENT_TYPES } from '../data/stats';
+import { RELEASES } from '../data/releases';
+
+// Marketing homepage — leads with verification + the record-as-contract, then
+// the seven shapes of work. Reference material (architecture, governance,
+// verbs) lives in the dedicated docs section at /docs; this page sells there.
+
+// The three-legged trust claim — the spine's identity.
+const contractLegs = [
+  {
+    n: '01',
+    tone: 'accent-2',
+    title: 'Tamper-evident',
+    lead: 'Append-only + hash-chained',
+    body: 'Every event is one line on a log that only grows, each hashed over the last. Nothing already written can change unnoticed.',
+  },
+  {
+    n: '02',
+    tone: 'accent',
+    title: 'Replayable',
+    lead: 'Deterministic projections',
+    body: 'Everything under .maddu/state/ is a projection — rebuilt from the spine, discarded on conflict. The spine always wins; there is no repair.',
+  },
+  {
+    n: '03',
+    tone: 'brand',
+    title: 'Independently checkable',
+    lead: 'Published, versioned contract',
+    body: 'Every event conforms to a real JSON Schema, fingerprinted so it can’t silently drift. A third party who trusts neither you nor Máddu can validate your record with off-the-shelf tooling.',
+  },
+];
+
+// Seven shapes of work over the same substrate. Diagrams are the navy-noir
+// SVGs from the maddu repo (recolored to brand tokens), served from /images;
+// click to enlarge via the lightbox at the foot of the page.
+const useCases = [
+  {
+    n: '01', emoji: '🔍', title: 'Verify the agent instead of trusting it', svg: '/images/use-case-verify.svg',
+    intro: 'For anyone who’s been burned by “done ✅, tests pass” that wasn’t. Generation stopped being the bottleneck — verification is. An agent’s chat summary is the actor grading its own work; Máddu makes the record the witness instead.',
+    cmd: `maddu hooks install
+# sessions auto-register; nothing runs unrecorded
+# … agent works, then:
+maddu slice-stop "…"
+# deliverables + gates + learnings → one line on the spine
+maddu learn scan
+# hedged "should work" claims vs OBSERVED proof
+maddu orient
+# goal progress verified by commands, not vibes`,
+    caption: 'Every completion claim is joined against observed evidence — real gate passes, verified deliverables, actual diffs. A model checking a model is a second opinion; this is evidence.',
+  },
+  {
+    n: '02', emoji: '🚀', title: 'The independent app builder', svg: '/images/use-case-builder.svg',
+    intro: 'For the solo dev shipping a real product with Claude Code or Codex. You don’t want ceremony — you want to say “ship the login form,” walk away, and trust what you find. The discipline loop runs underneath without you thinking about it.',
+    cmd: `npx github:frdyx/maddu init && maddu hooks install
+# once
+/maddu-autopilot ship the login form
+# end-to-end pipeline
+# overnight? every iteration lands as a slice-stop with gate results
+maddu orient
+# morning: the timeline, not a 100k-line transcript`,
+    caption: 'Overnight autonomous runs become reviewable: pre-compaction checkpoints mark what survived context loss, the focus instrument tags each turn toward / lateral / away from your declared goal, and the morning is a ten-minute skim of slice-stops with gate badges — not an archaeology dig.',
+  },
+  {
+    n: '03', emoji: '👥', title: 'A team sharing one repo', svg: '/images/use-case-team.svg',
+    intro: 'For teams whose agents (and humans) keep stepping on each other. The record syncs through the git remote you already have — no server, no daemon, no new credentials, no vendor between you and your own history.',
+    cmd: `maddu spine sync init
+# opt in; this checkout gets its own partition
+maddu spine sync
+# commit own segments → pull → validate → audited push
+maddu status
+# contentions surface BY NAME — never silent double-writes`,
+    caption: 'Each checkout appends only to its own partition, so git never line-merges the record. Identity rides your remote’s own access control. Concurrent claims on the same lane don’t corrupt anything — the merged read surfaces them as contentions with the superseded sessions named.',
+  },
+  {
+    n: '04', emoji: '🐝', title: 'A swarm of parallel agents', svg: '/images/use-case-swarm.svg',
+    intro: 'For operators running 3–20 coding agents at once — Agent Teams, Conductor, Claude Squad, or your own scripts. Git worktrees became the consensus isolation primitive; Máddu is the durable record underneath whichever spawner you use, not a competing one.',
+    cmd: `maddu lane claim payments --worktree
+# isolated checkout, bound to the claim
+# … each agent works its own lane, appends to the SAME primary spine …
+maddu lane release payments --worktree merged
+# explicit disposition — verified, not asserted`,
+    caption: 'One agent per lane is a hard rule, --worktree gives each its own checkout on its own branch, and the merged disposition actually checks git merge-base — Máddu never runs your merge, it verifies you did. The dashboards vanish when the run ends; the record survives it.',
+  },
+  {
+    n: '05', emoji: '✅', title: 'CI for agents', svg: '/images/use-case-ci.svg',
+    intro: 'For repos that want agent work held to the same bar as human PRs. One CI step reads the record and exits nonzero when the evidence is missing — deterministic, no LLM, no network.',
+    cmd: `# .github/workflows/agents.yml
+- run: npx github:frdyx/maddu ci
+# gates ran? deliverables real? secrets clean? claims backed?`,
+    caption: 'You pin which gates are required (maddu ci pin), so framework upgrades can never turn your pipeline red without your opt-in. The same exit code drives GitHub Actions, GitLab, or a fully-offline git pre-push hook.',
+  },
+  {
+    n: '06', emoji: '🎓', title: 'Governed experience data', svg: '/images/use-case-export.svg',
+    intro: 'For teams fine-tuning small models on their own agent trajectories — and anyone who owes an auditor an account. The 2026 training stack standardized the trajectory format, but the leading protocol leaves redaction, secrets, and governance out of scope. That’s the part Máddu does.',
+    cmd: `maddu experience
+# the spine as trajectories of typed steps + outcome signals
+maddu evolve plan
+# evidence-gated recs — or an honest "change nothing"
+maddu experience export --format atdp --out exp.atdp.json
+# the governed boundary
+maddu export --otel
+# or: OpenTelemetry logs into the stack you already run`,
+    caption: 'The export is deterministic (byte-identical re-runs — that is the audit trail), refuses outright on any secret-shaped value with no override flag, and ships trainingEligibility: false until you — not a regex — judge the data. The honest on-ramp into trajectory-curation pipelines, not a dataset grab; a building block for record-keeping regimes like the EU AI Act (Art. 12), not a compliance product.',
+  },
+  {
+    n: '07', emoji: '🏭', title: 'The SLM factory — governing model training', svg: '/images/use-case-slm.svg',
+    intro: 'For teams fine-tuning domain-specific small models. TRL/PEFT train, vLLM serves, SWE-bench and BFCL evaluate — excellent tools, none of them the neutral record of what happened between the steps. Máddu is: datasets, runs, evals, and promotions land as hash-pinned manifests, and a checkpoint’s stage is derived from the record.',
+    cmd: `maddu model dataset snapshot models/tickets-v3.json
+# license, split, provenance — recorded + pinned
+maddu model train complete models/run-42.json
+# config of record: base hash, seed, commit
+maddu model eval record models/eval-7.json
+# + critical regressions: acknowledged or blocking
+maddu model promote models/promote.json
+# the approval ride — no auto-decide near production
+maddu model gates install
+# 12 ML-lifecycle gates in .maddu/gates/ — yours, ci-pinnable`,
+    caption: 'Every promotion above candidate waits for an explicit per-request decision — standing approval policies are deliberately inert near production. Rollback is strictly downward; re-promotion goes through the full ride, and the spine verifier holds the ladder tamper-evident on replay. The honesty line is structural: Máddu records what your tools declared and pins the bytes — it never trains, serves, evaluates, or decides a model is good.',
+  },
+];
+
+const features = [
+  { tone: 'accent',   glyph: '⌗', title: 'Session discipline', body: 'Hooks auto-register every session, close it cleanly, and checkpoint governance before every compaction. Never build unrecorded.', href: '/features/discipline' },
+  { tone: 'accent-2', glyph: '⑂', title: 'Worktree lanes',     body: 'Each lane claims its own isolated git worktree — parallel agents never share a checkout, every event lands on one spine.', href: '/features/worktrees' },
+  { tone: 'warn',     glyph: '⟁', title: 'Earned autonomy',    body: 'A deterministic trust ladder over verified outcomes recommends relaxing a lane’s governance — never applies it.', href: '/features/autonomy' },
+  { tone: 'accent',   glyph: '∴', title: 'Failure learning',   body: 'Mines past sessions for failed→succeeded tool calls and distils corrections. A fix learned once propagates across repos.', href: '/features/learn' },
+  { tone: 'accent-2', glyph: '⛁', title: 'Fleet view',         body: 'Every install on your machine at a glance — stale, live, abandoned — with staged upgrades that stop on the first red.', href: '/features/fleet' },
+  { tone: 'ok',       glyph: '✓', title: 'Governance in CI',   body: 'The headless, LLM-free gate rail. Red only on the gates you pinned — framework churn never breaks your pipeline.', href: '/features/ci' },
+  { tone: 'brand',    glyph: '⊙', title: 'Focus Director',     body: 'Tags every turn toward, lateral, or away from the declared goal and flags sustained drift. Asks — never blocks.', href: '/features/focus' },
+  { tone: 'danger',   glyph: '¤', title: 'Cost & budget',      body: 'Token rollups per session, day, runtime, and model — with an opt-in gate that catches a runaway before it surprises you.', href: '/features/cost' },
+];
 ---
 
 <Layout title="The governance & coordination layer for AI coding agents" pathname="/">
@@ -19,31 +142,23 @@ import { VERSION_SHORT, VERBS_TOTAL, PURPOSE_AREAS, DOCTOR_GATES, STRESS_SCENARI
   <section class="hero">
     <div class="container">
       <div class="eyebrow-chain">
-        <span class="eyebrow">{VERSION_SHORT}</span>
+        <span class="eyebrow">Local-first</span>
         <span class="eyebrow-sep">·</span>
-        <span class="eyebrow-dim">no cloud</span>
+        <span class="eyebrow-dim">files-only</span>
         <span class="eyebrow-sep">·</span>
-        <span class="eyebrow-dim">no database</span>
-        <span class="eyebrow-sep">·</span>
-        <span class="eyebrow-dim">no provider SDKs in your code</span>
+        <span class="eyebrow-dim">cooperative</span>
       </div>
       <h1 class="hero-title">
         Your AI agents are temporary.<br />
-        The system that <em>governs</em> them shouldn't be.
+        The system that <em>governs</em> them shouldn&rsquo;t be.
       </h1>
       <p class="hero-lede">
-        Máddu gives <span class="verb">claude-code</span>, <span class="verb">codex</span>, and any CLI agent a shared lane map, approvals, and a replayable record — so they work as an auditable team. Local-first files as the system of record. Never in the request path. Never near your keys.
+        Máddu is a local-first orchestration spine for AI agents — the external, cooperative layer any coding agent plugs into to work as an auditable team. The agent calls Máddu; Máddu never sits in the request path and never touches your keys.
       </p>
       <div class="hero-actions">
         <a class="btn btn-primary btn-cmd" href="/install"><span class="cmd-prompt" aria-hidden="true">$</span> npx github:frdyx/maddu init</a>
-        <a class="btn" href="/how-it-works">Read the docs <span aria-hidden="true">→</span></a>
+        <a class="btn" href="/docs">Read the docs <span aria-hidden="true">→</span></a>
       </div>
-      <dl class="hero-stats">
-        <div><dt>Hard rules</dt><dd>{HARD_RULES}</dd></div>
-        <div><dt>Doctor gates</dt><dd>{DOCTOR_GATES}</dd></div>
-        <div><dt>Stress scenarios</dt><dd>{STRESS_SCENARIOS}</dd></div>
-        <div><dt>Auto-repair</dt><dd>0</dd></div>
-      </dl>
 
       <CompareStrip
         items={[
@@ -52,378 +167,283 @@ import { VERSION_SHORT, VERBS_TOTAL, PURPOSE_AREAS, DOCTOR_GATES, STRESS_SCENARI
           { label: 'Máddu', verdict: 'governs how agents collaborate', emphasized: true },
         ]}
       />
-      <p class="hero-compare-more">
-        <a href="/compare">The full landscape — who we compete with, who we complement <span aria-hidden="true">→</span></a>
-      </p>
 
       <SubstrateLoop />
     </div>
   </section>
 
-  <!-- ── WHAT IT IS ──────────────────────────────────────────────── -->
+  <!-- ── PROBLEM → SOLUTION ──────────────────────────────────────── -->
   <section class="section">
     <div class="container">
       <header class="section-head">
-        <span class="eyebrow">§ 01 · Definition</span>
-        <h2>What it is, in one paragraph.</h2>
-        <p>
-          Máddu is the <em>external, cooperative governance and coordination layer for CLI coding agents</em>. Not a model. Not an agent framework competing with Hermes or clawdbot. Not a SaaS. It's the layer underneath those — the lane map, the approval gates, and the shared coordination state that let several agents work one codebase as an auditable team. Cooperative means exactly this: the agent calls Máddu; Máddu never sits in the request path and never touches your keys.
-        </p>
-        <p>
-          What <strong>every</strong> install gets from day one is the always-on core: register a session, claim a lane, run a slice, stop it with a structured summary, let the gates check it — each one line on the spine. <strong>That disciplined loop is the product.</strong>
-        </p>
-        <p>
-          Multi-agent orchestration — <span class="verb">coordinator</span>, <span class="verb">loop</span>, <span class="verb">pipeline</span>, <span class="verb">team</span> — is a powerful <em>opt-in</em> layer on top. Reach for it when a job fans out across lanes; skip it when it doesn't. Most work just needs the loop, and that's by design.
-        </p>
-      </header>
-
-      <div class="grid-3">
-        <div class="panel">
-          <div class="panel-head">
-            <span class="panel-title">Local-first</span>
-            <span class="panel-aside">rule #1 · #3</span>
-          </div>
-          <p>State is files on your disk. NDJSON event log, JSON projections, typed Markdown. If you can't <code>cat</code> it, Máddu didn't write it.</p>
-        </div>
-        <div class="panel">
-          <div class="panel-head">
-            <span class="panel-title">Runtime-agnostic</span>
-            <span class="panel-aside">vendor-portable</span>
-          </div>
-          <p>Drive it with <span class="verb">claude-code</span>, <span class="verb">codex</span>, <span class="verb">gemini</span>, or any subprocess-spawnable agent CLI. The coordinator is a Máddu primitive.</p>
-        </div>
-        <div class="panel">
-          <div class="panel-head">
-            <span class="panel-title">Audit by construction</span>
-            <span class="panel-aside">rule #2 · #9</span>
-          </div>
-          <p>Every transition is one event on the spine. Replay is deterministic. Provenance is stamped at the source, never inferred.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── WHY IT EXISTS ───────────────────────────────────────────── -->
-  <section class="section">
-    <div class="container">
-      <header class="section-head">
-        <span class="eyebrow">§ 02 · The gap</span>
-        <h2>Capability gets the attention. <span class="dim">Accountability is the actual gap.</span></h2>
-        <p>
-          Multi-agent systems don't usually fail by crashing. They fail by being confidently wrong, propagating that wrong decision across fuzzy natural-language handoffs, and leaving nobody able to say what happened or whose fault it was. That's the failure mode Máddu is built around.
-        </p>
+        <span class="eyebrow">The problem</span>
+        <h2>&ldquo;Done ✅, tests pass.&rdquo; <span class="dim">Was it?</span></h2>
+        <p>Generation stopped being the bottleneck — verification is. An agent&rsquo;s chat summary is the actor grading its own work. Máddu makes the record the witness instead: an append-only, tamper-evident, independently-checkable log of what your agents actually did.</p>
       </header>
 
       <div class="split">
         <div class="split-col split-col--fails">
-          <h4>Failure mode it kills</h4>
+          <h4>Without a governance layer</h4>
           <ul>
-            <li>An agent silently propagating a wrong call across handoffs</li>
-            <li>State-mutating actions firing with no gate and no record</li>
-            <li>Cleanup that turns into a finger-pointing match</li>
-            <li>Orchestration that dies when the vendor's API does</li>
+            <li>An agent silently propagates a wrong call across handoffs</li>
+            <li>State-mutating actions fire with no gate and no record</li>
+            <li>Cleanup turns into a finger-pointing match</li>
+            <li>Orchestration dies when the vendor's API does</li>
           </ul>
         </div>
         <div class="split-col split-col--works">
-          <h4>Posture it builds instead</h4>
+          <h4>With Máddu underneath</h4>
           <ul>
-            <li>Every handoff = one event, provenance-stamped</li>
+            <li>Every handoff is one event, provenance-stamped</li>
             <li>Every mutating action crosses an allowlist + cooldown gauntlet</li>
-            <li>Replay reconstructs full history deterministically</li>
+            <li>Replay reconstructs the full history deterministically</li>
             <li>Orchestration runs on any agent CLI, on any machine, offline</li>
           </ul>
         </div>
       </div>
-
-      <Callout tone="warn" title="Construction-lawsuit chain of custody" tag="design model">
-        <p>
-          Logs and receipts aren't enough. The model that fits the problem is an immutable record of who changed what, when, and why — that survives the agent that produced it. That's why the spine is append-only NDJSON, projections rebuild from it and are never authoritative, and <strong>there is no auto-repair</strong>. Verifiable, not declared.
-        </p>
-      </Callout>
     </div>
   </section>
 
-  <!-- ── FEATURES — what it does for you ─────────────────────────── -->
+  <!-- ── THE RECORD IS A CONTRACT (pillar) ───────────────────────── -->
+  <section class="section contract-section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">The record is a contract</span>
+        <h2>Not a log you&rsquo;re asked to trust. <span class="dim">A contract a third party can verify.</span></h2>
+        <p>The record is <em>how</em> the governance earns trust. Three properties make it evidence instead of assertion.</p>
+      </header>
+      <div class="contract-grid">
+        {contractLegs.map((leg) => (
+          <article class={`contract-card m-card m-card--${leg.tone}`}>
+            <span class="contract-n">{leg.n}</span>
+            <span class="contract-lead">{leg.lead}</span>
+            <h3 class="contract-title">{leg.title}</h3>
+            <p>{leg.body}</p>
+          </article>
+        ))}
+      </div>
+      <div class="contract-artifact">
+        <code class="schema-chip">docs/event-schema.json &middot; draft 2020-12 &middot; x-contractVersion 1.1.0 &middot; {EVENT_TYPES} event types</code>
+        <p>
+          Validate your governance record against its own published contract with <code>ajv</code>, <code>check-jsonschema</code>, or any validator — the witness is a contract a third party can verify, not a log you&rsquo;re asked to trust. And it&rsquo;s safe to hand over: every event&rsquo;s payload is redacted at the write boundary, so the record you share can&rsquo;t leak a pasted secret.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SEVEN WAYS PEOPLE RUN IT ────────────────────────────────── -->
   <section class="section">
     <div class="container">
       <header class="section-head">
-        <span class="eyebrow">§ 03 · What it does for you</span>
-        <h2>The discipline loop, plus everything it earns you.</h2>
-        <p>Eight things an install actually gives you — each with its own page.</p>
+        <span class="eyebrow">Seven ways people run it</span>
+        <h2>Same substrate. <span class="dim">Seven shapes of work.</span></h2>
+        <p>Same substrate, seven shapes of work. Every workflow below is real commands against the same append-only record — pick the one that looks like your week.</p>
+      </header>
+      <div class="usecases">
+        {useCases.map((u) => (
+          <article class="usecase m-card">
+            <div class="usecase-head">
+              <span class="usecase-n">{u.n}</span>
+              <h3 class="usecase-title"><span class="usecase-emoji" aria-hidden="true">{u.emoji}</span> {u.title}</h3>
+            </div>
+            <p class="usecase-intro">{u.intro}</p>
+            <pre class="usecase-code"><code>{u.cmd.split('\n').map((line) => (
+              <span class:list={['ucode-line', /^\s*#/.test(line) && 'is-comment']}>{line + '\n'}</span>
+            ))}</code></pre>
+            <button class="usecase-figure" data-lightbox={u.svg} data-title={u.title} aria-label={`Enlarge diagram: ${u.title}`}>
+              <img class="usecase-svg" src={u.svg} alt={`${u.title} — navy-noir diagram`} loading="lazy" width="1480" height="400" />
+              <span class="usecase-zoom" aria-hidden="true">⤢ enlarge</span>
+            </button>
+            <p class="usecase-caption">{u.caption}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ── HOW IT WORKS (brief) ────────────────────────────────────── -->
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">How it works</span>
+        <h2>Three parts. <span class="dim">Nothing else.</span></h2>
+        <p>The spine is the truth; the bridge runs the gates; the cockpit only watches. Everything under <span class="mono">.maddu/state/</span> is a projection — rebuildable, discarded on conflict. The spine always wins.</p>
+      </header>
+      <div class="grid-3 parts-grid">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Spine</span><span class="panel-aside">append-only</span></div>
+          <p>The single source of truth: append-only NDJSON on disk, hash-chained. Every session, approval, and slice is one line. Replays deterministically — there is no <code>maddu spine repair</code>, by design.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Bridge</span><span class="panel-aside">127.0.0.1:4177</span></div>
+          <p>One local Node process. Runs the gates, spawns workers with credentials handed in at spawn-time, imports zero provider SDKs, calls no cloud. The agent calls it; it never sits in the request path.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Cockpit</span><span class="panel-aside">read-only</span></div>
+          <p>A static window over the spine — observe and replay, never command. Dogfooded on Máddu&rsquo;s own repo; every tile reads live from the append-only record.</p>
+        </div>
+      </div>
+      <div class="loop-strip" role="list">
+        {['register','claim','slice','stop','release','close'].map((step, i) => (
+          <div class="loop-step" role="listitem">
+            <span class="loop-num">{String(i + 1).padStart(2, '0')}</span>
+            <span class="loop-verb">{step}</span>
+          </div>
+        ))}
+      </div>
+
+      <EventStream
+        eyebrow="What lands on disk · sample slice trace"
+        title="spine · turn 12"
+      />
+
+      <p class="loop-more">
+        <a class="btn" href="/docs/how-it-works">See how it works <span aria-hidden="true">→</span></a>
+        <a class="btn btn-ghost" href="/docs/architecture">Architecture <span aria-hidden="true">→</span></a>
+      </p>
+    </div>
+  </section>
+
+  <!-- ── WHAT IT IS / IS NOT ─────────────────────────────────────── -->
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">Cooperative &amp; external</span>
+        <h2>What it is. <span class="dim">What it isn&rsquo;t.</span></h2>
+      </header>
+      <div class="split">
+        <div class="split-col split-col--works">
+          <h4>Máddu is</h4>
+          <ul>
+            <li>External, cooperative, local-first, files-only</li>
+            <li>A verification substrate — the record is the witness</li>
+            <li>Runtime-agnostic — Claude Code, Codex, any CLI</li>
+            <li>Governance that travels with <code>git clone</code></li>
+          </ul>
+        </div>
+        <div class="split-col">
+          <h4>Máddu is not</h4>
+          <ul>
+            <li>Not a hosted backend, not in the request path</li>
+            <li>Not a memory, tracer, or model client — zero SDKs</li>
+            <li>It doesn&rsquo;t touch your keys</li>
+            <li>It doesn&rsquo;t run your merges — it verifies you did</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FEATURES (condensed) ────────────────────────────────────── -->
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">What an install earns you</span>
+        <h2>The discipline loop, plus what it unlocks.</h2>
       </header>
       <div class="feat-grid">
-        <a class="deep-card deep-card--accent" href="/features/discipline">
-          <span class="deep-glyph">⌗</span>
-          <h3>Session discipline</h3>
-          <p>Hooks auto-register every session, close it cleanly, and checkpoint governance before every context compaction. Never build unrecorded.</p>
-          <span class="deep-cta">/features/discipline →</span>
-        </a>
-        <a class="deep-card deep-card--accent-2" href="/features/worktrees">
-          <span class="deep-glyph">⑂</span>
-          <h3>Worktree lanes</h3>
-          <p>Each lane can claim its own isolated git worktree — parallel agents never share a checkout, every event lands on one spine. New in 1.93.</p>
-          <span class="deep-cta">/features/worktrees →</span>
-        </a>
-        <a class="deep-card deep-card--warn" href="/features/autonomy">
-          <span class="deep-glyph">⟁</span>
-          <h3>Earned autonomy</h3>
-          <p>A deterministic trust ladder over verified slice outcomes recommends — never applies — relaxing a lane's governance. Trust is earned on the record.</p>
-          <span class="deep-cta">/features/autonomy →</span>
-        </a>
-        <a class="deep-card deep-card--accent" href="/features/learn">
-          <span class="deep-glyph">∴</span>
-          <h3>Failure learning</h3>
-          <p>Mines past sessions for failed→succeeded tool calls and distils corrections. A fix learned once propagates across your repos.</p>
-          <span class="deep-cta">/features/learn →</span>
-        </a>
-        <a class="deep-card deep-card--accent-2" href="/features/fleet">
-          <span class="deep-glyph">⛁</span>
-          <h3>Fleet view</h3>
-          <p>Every install on your machine at a glance — stale, live, or abandoned — with staged upgrades that stop on the first red. Offline.</p>
-          <span class="deep-cta">/features/fleet →</span>
-        </a>
-        <a class="deep-card deep-card--ok" href="/features/ci">
-          <span class="deep-glyph">✓</span>
-          <h3>Governance in CI</h3>
-          <p>The headless, LLM-free gate rail. Red only on gates <em>you</em> pinned — framework churn never breaks your pipeline.</p>
-          <span class="deep-cta">/features/ci →</span>
-        </a>
-        <a class="deep-card deep-card--brand" href="/features/focus">
-          <span class="deep-glyph">⊙</span>
-          <h3>Focus Director</h3>
-          <p>Tags every turn toward, lateral, or away from the declared goal and flags sustained drift. Asks — never blocks.</p>
-          <span class="deep-cta">/features/focus →</span>
-        </a>
-        <a class="deep-card deep-card--danger" href="/features/cost">
-          <span class="deep-glyph">¤</span>
-          <h3>Cost accounting</h3>
-          <p>Token rollups per session, day, runtime, and model — with an opt-in budget gate that catches a runaway session before it's a surprise.</p>
-          <span class="deep-cta">/features/cost →</span>
-        </a>
+        {features.map((f) => (
+          <a class={`deep-card deep-card--${f.tone}`} href={f.href}>
+            <span class="deep-glyph">{f.glyph}</span>
+            <h3>{f.title}</h3>
+            <p>{f.body}</p>
+            <span class="deep-cta">{f.href.replace('/docs', '')} →</span>
+          </a>
+        ))}
       </div>
       <p class="see-all">
         <a class="btn" href="/features">All features <span aria-hidden="true">→</span></a>
+        <a class="btn btn-ghost" href="/docs/features">Docs reference <span aria-hidden="true">→</span></a>
       </p>
     </div>
   </section>
 
-  <!-- ── DIAGRAM — quick mental model ────────────────────────────── -->
+  <!-- ── WHAT'S NEW ──────────────────────────────────────────────── -->
   <section class="section">
     <div class="container">
       <header class="section-head">
-        <span class="eyebrow">§ 04 · The spine</span>
-        <h2>The one canonical flow.</h2>
-        <p>
-          Máddu has one mental model and one default execution path. They're the same loop at two altitudes — the slash and autopilot surfaces are friendly wrappers over the spine, never competing flows. Every transition lands as one readable line on an append-only record: governance you can trust because you can read it.
-        </p>
+        <span class="eyebrow">What&rsquo;s new</span>
+        <h2>Shipped small, shipped often. <span class="dim">One charter held.</span></h2>
+        <p>{RELEASE_COUNT} releases and counting &mdash; every one recorded, none broke a posted invariant.</p>
       </header>
-
-      <Workflow
-        eyebrow="Substrate loop"
-        title="Six transitions. Each one = one event on the spine."
-        subtitle="The mental model every layer of Máddu reduces to."
-        index="01 / 02"
-        meta="files-only · append-only"
-        tone="accent"
-      >
-        <Stages
-          stages={[
-            { label: 'register', sub: 'session',  tone: 'session' },
-            { label: 'claim',    sub: 'lane',     tone: 'lane' },
-            { label: 'slice',    sub: 'work',     tone: 'framework' },
-            { label: 'stop',     sub: 'slice',    tone: 'approval' },
-            { label: 'release',  sub: 'lane',     tone: 'lane' },
-            { label: 'close',    sub: 'session',  tone: 'session' },
-          ]}
-          numbered
-        />
-        <Mermaid
-          caption="Spine view — every transition appends, hindsight feeds memory"
-          aside="6 transitions · 1 spine"
-          code={`
-flowchart LR
-    A([session register]):::session --> B([claim lane]):::lane
-    B --> C([slice of work]):::framework
-    C --> D{slice-stop}:::approval
-    D -->|release| E([lane release]):::lane
-    E --> F([session close]):::session
-    D -.hindsight.-> G[[skills + memory]]:::accent
-    A -.events.-> S[("append-only<br/>spine")]:::spine
-    B -.events.-> S
-    C -.events.-> S
-    D -.events.-> S
-    E -.events.-> S
-`}
-        />
-        <Fragment slot="outcome">
-          Replay is deterministic. Every projection rebuilds from the spine alone.
-        </Fragment>
-      </Workflow>
-      <Legend
-        label="Color key"
-        items={[
-          { tone: 'session',   label: 'session lifecycle' },
-          { tone: 'lane',      label: 'lane operations' },
-          { tone: 'framework', label: 'slice · framework lifecycle' },
-          { tone: 'approval',  label: 'slice-stop · approval gate' },
-          { tone: 'accent',    label: 'hindsight · skills + memory' },
-          { tone: 'spine',     label: 'the spine' },
-        ]}
-      />
-
-      <Workflow
-        eyebrow="Default execution path"
-        title="ship-a-feature — the pipeline an agent reaches for first."
-        subtitle="Each stage is a literal maddu verb. Walking the pipeline populates every cockpit surface by construction."
-        index="02 / 02"
-        meta="8 stages · 1 charter"
-        tone="accent-2"
-      >
-        <Stages
-          stages={[
-            { label: 'orient',     tone: 'framework' },
-            { label: 'plan',       tone: 'accent' },
-            { label: 'coordinate', tone: 'accent' },
-            { label: 'slice',      tone: 'lane' },
-            { label: 'test',       tone: 'ok' },
-            { label: 'review',     tone: 'ok' },
-            { label: 'land',       tone: 'accent-2' },
-            { label: 'account',    tone: 'session' },
-          ]}
-          numbered
-        />
-        <Annotated
-          columns={['Verb', 'What it does', 'Spine event']}
-          rows={[
-            { action: 'maddu brief',         effect: 'turn-start orientation digest',    provenance: 'BRIEF_RENDERED',     provTone: 'framework' },
-            { action: 'maddu plan',          effect: 'decompose goal into phases',       provenance: 'PLAN_PERSISTED',     provTone: 'accent' },
-            { action: 'maddu coordinator',   effect: 'fan work across the team',         provenance: 'COORDINATOR_STARTED', provTone: 'accent' },
-            { action: 'maddu lane claim',    effect: 'bound concurrency to one area',    provenance: 'LANE_CLAIMED',       provTone: 'lane' },
-            { action: 'maddu review',        effect: 'gate the slice through quality',   provenance: 'REVIEW_RAN',         provTone: 'ok' },
-            { action: 'maddu slice-stop',    effect: 'structured close + hindsight',     provenance: 'SLICE_STOPPED',      provTone: 'approval' },
-          ]}
-        />
-        <Fragment slot="outcome">
-          Three default pipelines ship — <span class="verb">ship-a-feature</span>, <span class="verb">fix-a-bug</span>, <span class="verb">plan-and-delegate</span>.
-        </Fragment>
-      </Workflow>
-    </div>
-  </section>
-
-  <!-- ── HARD RULES PREVIEW ──────────────────────────────────────── -->
-  <section class="section">
-    <div class="container">
-      <header class="section-head">
-        <span class="eyebrow">§ 05 · The identity</span>
-        <h2>The 8+1 hard rules.</h2>
-        <p>
-          Not policy on top of features. The things every feature has to be compatible with to exist at all. <span class="verb">maddu doctor</span> proves them on every install and every upgrade.
-        </p>
-      </header>
-      <div class="grid-2">
-        <Rule num="1" title="Files-only state" enforcedBy="doctor · files-only-state">
-          <p>Every state write is append-only NDJSON, a rebuildable JSON projection, or a typed Markdown/JSON definition. No SQLite, no embedded DB, no hosted DB.</p>
-        </Rule>
-        <Rule num="2" title="Append-only event spine" enforcedBy="maddu spine verify">
-          <p>The spine is the single source of truth. Projections rebuild from it and are never authoritative. Verifiable, never auto-repaired.</p>
-        </Rule>
-        <Rule num="3" title="No hosted backends" enforcedBy="architectural">
-          <p>Provider APIs are called from local subprocess workers only. No SaaS, no telemetry, no relay, no "Máddu Cloud."</p>
-        </Rule>
-        <Rule num="9" title="Auto-trigger gauntlet" enforcedBy="strict-mode-approval-active">
-          <p>No state-mutating command auto-fires without an allowlist entry, a respected cooldown, and a <code>TRIGGER_FIRED</code> event carrying provenance.</p>
-        </Rule>
-      </div>
-      <p class="see-all">
-        <a class="btn" href="/hard-rules">See all nine rules <span aria-hidden="true">→</span></a>
-      </p>
-    </div>
-  </section>
-
-  <!-- ── DEEP DIVES ───────────────────────────────────────────────── -->
-  <section class="section">
-    <div class="container">
-      <header class="section-head">
-        <span class="eyebrow">§ 06 · Go deeper</span>
-        <h2>The full ontology, one layer at a time.</h2>
-      </header>
-      <div class="deep-grid">
-        <a class="deep-card deep-card--accent" href="/architecture">
-          <span class="deep-glyph">◆</span>
-          <h3>Architecture</h3>
-          <p>The fourteen layers. Invariants, operator, runtime, execution topology, substrate, lanes, gauntlet, workers, spine, projections, security, quality, memory, cockpit.</p>
-          <span class="deep-cta">Open the ontology →</span>
-        </a>
-        <a class="deep-card deep-card--accent-2" href="/how-it-works">
-          <span class="deep-glyph">↳</span>
-          <h3>How it works</h3>
-          <p>Walk the canonical flow stage by stage. Pipelines, the coordinator primitive, slice-stops, hindsight, replay determinism.</p>
-          <span class="deep-cta">Walk the flow →</span>
-        </a>
-        <a class="deep-card deep-card--danger" href="/security">
-          <span class="deep-glyph">⛨</span>
-          <h3>Security</h3>
-          <p>Worker isolation, env allowlist, secret scan, dependency pinning, MCP provenance, OAuth device-bound tokens, threat model.</p>
-          <span class="deep-cta">Threat model →</span>
-        </a>
-        <a class="deep-card deep-card--warn" href="/governance">
-          <span class="deep-glyph">⚖</span>
-          <h3>Governance</h3>
-          <p>The three tiers — strict, standard, relaxed. Gauntlet, approval flow, slice-stop discipline.</p>
-          <span class="deep-cta">Open the gauntlet →</span>
-        </a>
-        <a class="deep-card deep-card--accent" href="/capabilities">
-          <span class="deep-glyph">∷</span>
-          <h3>Capabilities</h3>
-          <p>Every top-level verb traces to a stated purpose. {PURPOSE_AREAS} purpose areas. {VERBS_TOTAL} verbs. One charter that flags drift.</p>
-          <span class="deep-cta">Open the verb map →</span>
-        </a>
-        <a class="deep-card deep-card--brand" href="/hard-rules">
-          <span class="deep-glyph">※</span>
-          <h3>Hard rules</h3>
-          <p>The 8+1 invariants in full — what they mean, what enforces them, what's deliberately absent because of them.</p>
-          <span class="deep-cta">Read the charter →</span>
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <PageNext
-    eyebrow="§ 07 · Continue"
-
-    title="How it works — walk the canonical flow stage by stage."
-    hint="Substrate loop, pipelines, the coordinator primitive, slice-stops, hindsight, replay determinism."
-    href="/how-it-works"
-    tone="accent"
-  />
-
-  <!-- ── DELIBERATELY ABSENT ─────────────────────────────────────── -->
-  <section class="section absent-section">
-    <div class="container">
-      <header class="section-head">
-        <span class="eyebrow eyebrow-danger">§ 08 · The posture</span>
-        <h2>Deliberately absent. <span class="dim">Not missing features.</span></h2>
-        <p>Every "no" is what makes the "yes"es trustworthy.</p>
-      </header>
-      <ul class="absent-grid">
-        <li><span class="absent-no">no</span> SaaS · no Máddu Cloud</li>
-        <li><span class="absent-no">no</span> telemetry · no relay</li>
-        <li><span class="absent-no">no</span> hosted DB · no SQLite</li>
-        <li><span class="absent-no">no</span> provider SDKs in app code</li>
-        <li><span class="absent-no">no</span> auto-repair, ever</li>
-        <li><span class="absent-no">no</span> cross-machine token sync</li>
-        <li><span class="absent-no">no</span> Hermes pattern <span class="absent-detail">(hosted webhook holding many users' tokens)</span></li>
-        <li><span class="absent-no">no</span> scheduler thread · no worker queue · no WAL · no mutex · no websocket</li>
+      <ul class="whatsnew">
+        {RELEASES.slice(0, 4).map((r) => (
+          <li>
+            <a class="whatsnew-row" href={`/changelog#${r.id}`}>
+              <span class={`whatsnew-type whatsnew-type--${r.type}`}>{r.type}</span>
+              <span class="whatsnew-v mono">{r.v}</span>
+              <span class="whatsnew-headline">{r.headline}</span>
+              <span class="whatsnew-date mono">{r.date}</span>
+            </a>
+          </li>
+        ))}
       </ul>
+      <p class="see-all">
+        <a class="btn" href="/changelog">Full changelog <span aria-hidden="true">→</span></a>
+      </p>
     </div>
   </section>
 
-  <CtaBlock />
+  <!-- ── TRUST STRIP ─────────────────────────────────────────────── -->
+  <section class="section trust-section">
+    <div class="container">
+      <dl class="hero-stats">
+        <div><dt>Hard rules</dt><dd>{HARD_RULES}</dd></div>
+        <div><dt>Doctor gates</dt><dd>{DOCTOR_GATES}</dd></div>
+        <div><dt>Verbs</dt><dd>{VERBS_TOTAL}</dd></div>
+        <div><dt>Auto-repair</dt><dd>0</dd></div>
+      </dl>
+      <p class="trust-line">
+        Every "no" is what makes the "yes"es trustworthy — no SaaS, no telemetry, no relay, no hosted DB, no provider SDKs in your code, no auto-repair, ever. <a href="/docs/hard-rules">The nine hard rules →</a>
+      </p>
+    </div>
+  </section>
+
+  <CtaBlock hint="Creates .maddu/, the runtime, and the slash-command surface — touches nothing else. maddu doctor proves the install. Then open the docs at /docs." />
+
+  <!-- ── Diagram lightbox ────────────────────────────────────────── -->
+  <div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Enlarged diagram">
+    <button class="lightbox-close" id="lightboxClose" aria-label="Close">✕</button>
+    <figure class="lightbox-fig">
+      <img id="lightboxImg" src="" alt="" />
+      <figcaption id="lightboxCap"></figcaption>
+    </figure>
+  </div>
+
+  <script>
+    const lb = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lightboxImg') as HTMLImageElement;
+    const lbCap = document.getElementById('lightboxCap');
+    if (lb && lbImg && lbCap) {
+      const open = (src: string, title: string) => {
+        lbImg.src = src; lbImg.alt = title;
+        lbCap.textContent = title;
+        lb.classList.add('is-open');
+        lb.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+      };
+      const close = () => {
+        lb.classList.remove('is-open');
+        lb.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        lbImg.src = '';
+      };
+      document.querySelectorAll<HTMLElement>('[data-lightbox]').forEach((el) => {
+        el.addEventListener('click', () =>
+          open(el.getAttribute('data-lightbox') || '', el.getAttribute('data-title') || ''));
+      });
+      document.getElementById('lightboxClose')?.addEventListener('click', close);
+      lb.addEventListener('click', (e) => { if (e.target === lb) close(); });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && lb.classList.contains('is-open')) close();
+      });
+    }
+  </script>
 </Layout>
 
 <style>
   .hero {
-    padding: var(--m-space-20) 0 var(--m-space-16);
+    padding: var(--m-space-20) 0 var(--m-space-12);
     position: relative;
     overflow: hidden;
   }
@@ -463,15 +483,8 @@ flowchart LR
   .hero-actions {
     display: flex;
     gap: var(--m-space-3);
-    margin: var(--m-space-8) 0 var(--m-space-12);
+    margin: var(--m-space-8) 0 var(--m-space-8);
     flex-wrap: wrap;
-  }
-  .hero-compare-more {
-    margin: calc(-1 * var(--m-space-3)) 0 var(--m-space-8);
-    font-family: var(--m-font-mono);
-    font-size: 11.5px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
   }
   .btn-cmd {
     font-family: var(--m-font-mono);
@@ -479,12 +492,11 @@ flowchart LR
     text-transform: none;
   }
   .cmd-prompt { opacity: 0.6; margin-right: 2px; }
+
   .hero-stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: var(--m-space-5);
-    border-top: 1px solid var(--m-line-soft);
-    padding-top: var(--m-space-6);
     max-width: 720px;
     margin: 0;
   }
@@ -505,15 +517,55 @@ flowchart LR
     line-height: 1;
   }
 
+  /* Loop strip — the six transitions as compact numbered chips */
+  .loop-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--m-space-3);
+    margin: var(--m-space-6) 0;
+  }
+  .loop-step {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent);
+    border-radius: var(--m-radius);
+  }
+  .loop-num {
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    color: var(--m-fg-3);
+  }
+  .loop-verb {
+    font-family: var(--m-font-mono);
+    font-size: 15px;
+    color: var(--m-fg-0);
+    letter-spacing: 0.02em;
+  }
+  .loop-more { display: flex; gap: var(--m-space-3); flex-wrap: wrap; margin-top: var(--m-space-4); }
+
   .see-all { margin-top: var(--m-space-6); }
 
-  .eyebrow-danger { color: var(--m-danger); }
+  .trust-section .hero-stats {
+    border-top: 1px solid var(--m-line-soft);
+    padding-top: var(--m-space-6);
+    margin-bottom: var(--m-space-5);
+  }
+  .trust-line {
+    font-size: 13.5px;
+    color: var(--m-fg-2);
+    max-width: 70ch;
+    line-height: 1.6;
+  }
+  .trust-line a { color: var(--m-accent); }
 
-  /* Deep-dive grid — tone-coded per card */
-  .deep-grid,
+  /* Card grid — tone-coded per card (shared by use-cases + features) */
   .feat-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: var(--m-space-4);
   }
   .deep-card {
@@ -523,32 +575,28 @@ flowchart LR
     padding: var(--m-space-5);
     background: var(--m-bg-2);
     border: 1px solid var(--m-line);
-    border-top: 1px solid var(--m-line);
     border-radius: var(--m-radius);
     color: var(--m-fg-1);
     transition: border-color 120ms, transform 120ms, box-shadow 120ms, background 120ms;
   }
-  .deep-card--accent     { border-top-color: var(--m-accent); }
-  .deep-card--accent-2   { border-top-color: var(--m-accent-2); }
-  .deep-card--warn       { border-top-color: var(--m-warn); }
-  .deep-card--danger     { border-top-color: var(--m-danger); }
-  .deep-card--brand      { border-top-color: var(--m-brand); }
-  .deep-card--ok         { border-top-color: var(--m-ok); }
-  .deep-card:hover {
+  a.deep-card:hover {
     background: var(--m-bg-3);
     transform: translateY(-2px);
     box-shadow: var(--m-shadow-md);
     color: var(--m-fg-1);
     border-bottom-color: transparent;
   }
-  .deep-card--ok:hover       { border-color: var(--m-ok); }
-  .deep-card--ok .deep-glyph { color: var(--m-ok); }
-  .deep-card--ok .deep-cta   { color: var(--m-ok); }
-  .deep-card--accent:hover   { border-color: var(--m-accent); box-shadow: var(--m-glow-accent); }
-  .deep-card--accent-2:hover { border-color: var(--m-accent-2); box-shadow: var(--m-glow-accent-2); }
-  .deep-card--warn:hover     { border-color: var(--m-warn); box-shadow: var(--m-glow-warn); }
-  .deep-card--danger:hover   { border-color: var(--m-danger); box-shadow: var(--m-glow-danger); }
-  .deep-card--brand:hover    { border-color: var(--m-brand); box-shadow: var(--m-glow-brand); }
+  .deep-card--accent     { border-top: 1px solid var(--m-accent); }
+  .deep-card--accent-2   { border-top: 1px solid var(--m-accent-2); }
+  .deep-card--warn       { border-top: 1px solid var(--m-warn); }
+  .deep-card--danger     { border-top: 1px solid var(--m-danger); }
+  .deep-card--brand      { border-top: 1px solid var(--m-brand); }
+  .deep-card--ok         { border-top: 1px solid var(--m-ok); }
+  a.deep-card--accent:hover   { border-color: var(--m-accent); box-shadow: var(--m-glow-accent); }
+  a.deep-card--accent-2:hover { border-color: var(--m-accent-2); box-shadow: var(--m-glow-accent-2); }
+  a.deep-card--warn:hover     { border-color: var(--m-warn); box-shadow: var(--m-glow-warn); }
+  a.deep-card--danger:hover   { border-color: var(--m-danger); box-shadow: var(--m-glow-danger); }
+  a.deep-card--brand:hover    { border-color: var(--m-brand); box-shadow: var(--m-glow-brand); }
   .deep-glyph {
     font-family: var(--m-font-mono);
     color: var(--m-accent);
@@ -559,6 +607,7 @@ flowchart LR
   .deep-card--warn .deep-glyph     { color: var(--m-warn); }
   .deep-card--danger .deep-glyph   { color: var(--m-danger); }
   .deep-card--brand .deep-glyph    { color: var(--m-brand); }
+  .deep-card--ok .deep-glyph       { color: var(--m-ok); }
   .deep-card h3 {
     margin: 0;
     text-transform: none;
@@ -580,41 +629,146 @@ flowchart LR
   .deep-card--danger .deep-cta { color: var(--m-danger); }
   .deep-card--brand .deep-cta { color: var(--m-brand); }
 
-  /* Deliberately absent section */
-  .absent-section {
-    background: linear-gradient(180deg, transparent, rgba(255, 94, 122, 0.04));
+  /* m-card — navy-noir signature: electric-blue top hairline + soft glow */
+  .m-card {
+    position: relative;
+    background:
+      radial-gradient(120% 80% at 50% -10%, var(--m-accent-2-glow-bg), transparent 60%),
+      var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-top: 1px solid var(--m-accent-2);
+    border-radius: var(--m-radius-lg);
   }
-  .absent-section .dim { color: var(--m-fg-3); font-weight: 400; font-style: italic; }
-  .absent-grid {
-    list-style: none;
-    padding: 0;
-    margin: var(--m-space-4) 0 0;
+
+  /* The record is a contract — three legs + schema artifact */
+  .contract-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: var(--m-space-3);
+    grid-template-columns: repeat(auto-fit, minmax(258px, 1fr));
+    gap: var(--m-space-4);
   }
-  .absent-grid li {
-    padding: var(--m-space-3) var(--m-space-4);
+  .contract-card { padding: var(--m-space-6); display: flex; flex-direction: column; gap: 5px; }
+  .contract-card--accent { border-top-color: var(--m-accent); background: radial-gradient(120% 80% at 50% -10%, var(--m-accent-glow-bg), transparent 60%), var(--m-bg-2); }
+  .contract-card--brand  { border-top-color: var(--m-brand);  background: radial-gradient(120% 80% at 50% -10%, rgba(240, 78, 35, 0.06), transparent 60%), var(--m-bg-2); }
+  .contract-n { font-family: var(--m-font-mono); font-size: 11px; color: var(--m-fg-4); letter-spacing: 0.1em; }
+  .contract-lead { font-family: var(--m-font-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--m-accent-2); }
+  .contract-card--accent .contract-lead { color: var(--m-accent); }
+  .contract-card--brand .contract-lead { color: var(--m-brand); }
+  .contract-title { margin: 3px 0 3px; font-family: var(--m-font-cond); font-weight: 600; font-size: 18px; color: var(--m-fg-0); }
+  .contract-card p { margin: 0; color: var(--m-fg-2); font-size: 13.5px; line-height: 1.55; }
+  .contract-artifact { margin-top: var(--m-space-6); }
+  .schema-chip {
+    display: inline-block; font-family: var(--m-font-mono); font-size: 12px;
+    color: var(--m-accent-2); background: var(--m-bg-true-black);
+    border: 1px solid rgba(86, 184, 255, 0.3); border-radius: var(--m-radius);
+    padding: 8px 14px; margin-bottom: var(--m-space-3); max-width: 100%; overflow-x: auto;
+  }
+  .contract-artifact p { max-width: min(74ch, 100%); color: var(--m-fg-1); font-size: 14px; line-height: 1.6; }
+
+  /* Seven use cases — 2 columns, richer copy, click-to-enlarge diagram */
+  .usecases { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--m-space-4); }
+  .usecase { padding: var(--m-space-5); display: flex; flex-direction: column; gap: var(--m-space-3); }
+  .usecase-head { display: flex; align-items: baseline; gap: 10px; }
+  .usecase-n { font-family: var(--m-font-mono); font-size: 12px; color: var(--m-fg-4); flex-shrink: 0; }
+  .usecase-title { margin: 0; font-family: var(--m-font-cond); font-weight: 600; font-size: 18px; color: var(--m-fg-0); line-height: 1.2; }
+  .usecase-emoji { font-size: 16px; }
+  .usecase-intro { margin: 0; color: var(--m-fg-1); font-size: 13.5px; line-height: 1.55; }
+  .usecase-code {
+    margin: 0; padding: 12px 14px; background: var(--m-bg-true-black);
+    border: 1px solid var(--m-line); border-radius: var(--m-radius); overflow-x: auto;
+  }
+  .usecase-code code {
+    font-family: var(--m-font-mono); font-size: 11.5px; line-height: 1.65;
+    color: var(--m-fg-1); background: none; border: 0; padding: 0; white-space: pre;
+  }
+  .usecase-code .ucode-line { display: block; }
+  .usecase-code .ucode-line.is-comment { color: var(--m-fg-3); }
+  .usecase-figure {
+    display: block; position: relative; width: 100%; padding: 0; margin: 0;
+    background: none; border: 0; cursor: zoom-in; border-radius: var(--m-radius);
+    overflow: hidden; line-height: 0;
+  }
+  .usecase-svg { display: block; width: 100%; height: auto; border-radius: var(--m-radius); border: 1px solid var(--m-line-soft); }
+  .usecase-zoom {
+    position: absolute; bottom: 8px; right: 8px; font-family: var(--m-font-mono);
+    font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--m-fg-1);
+    background: rgba(5, 11, 23, 0.82); border: 1px solid var(--m-line);
+    border-radius: var(--m-radius-sm); padding: 3px 8px; opacity: 0; transition: opacity 120ms;
+    line-height: 1.4;
+  }
+  .usecase-figure:hover .usecase-zoom,
+  .usecase-figure:focus-visible .usecase-zoom { opacity: 1; }
+  .usecase-caption { margin: 0; color: var(--m-fg-2); font-size: 12.5px; line-height: 1.55; }
+  @media (max-width: 860px) { .usecases { grid-template-columns: 1fr; } }
+  .parts-grid { margin-bottom: var(--m-space-6); }
+
+  /* Diagram lightbox */
+  .lightbox {
+    position: fixed; inset: 0; z-index: 200; display: none;
+    align-items: center; justify-content: center; padding: clamp(16px, 4vw, 56px);
+    background: rgba(2, 6, 14, 0.9);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .lightbox.is-open { display: flex; }
+  .lightbox-fig { margin: 0; max-width: 1480px; width: 100%; }
+  .lightbox-fig img {
+    display: block; width: 100%; height: auto;
+    border: 1px solid var(--m-line); border-radius: var(--m-radius-lg); box-shadow: var(--m-shadow-lg);
+  }
+  .lightbox-fig figcaption {
+    margin-top: 12px; text-align: center; font-family: var(--m-font-mono);
+    font-size: 12px; letter-spacing: 0.04em; color: var(--m-fg-2);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px; width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--m-bg-2); border: 1px solid var(--m-line);
+    border-radius: var(--m-radius); color: var(--m-fg-0); font-size: 16px; cursor: pointer;
+  }
+  .lightbox-close:hover { border-color: var(--m-accent); color: var(--m-accent); }
+
+  /* What's new — compact changelog teaser, echoes the changelog's type colors */
+  .whatsnew { list-style: none; margin: var(--m-space-4) 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+  .whatsnew-row {
+    display: grid;
+    grid-template-columns: 92px 82px 1fr auto;
+    align-items: center;
+    gap: var(--m-space-4);
+    padding: 11px 14px;
     background: var(--m-bg-2);
     border: 1px solid var(--m-line);
-    border-left: 2px solid var(--m-danger);
+    border-bottom: 1px solid var(--m-line);
     border-radius: var(--m-radius);
+    color: var(--m-fg-1);
+    transition: border-color 120ms, background 120ms, color 120ms;
+  }
+  .whatsnew-row:hover { border-color: var(--m-accent-dim); background: var(--m-bg-3); color: var(--m-fg-0); }
+  .whatsnew-type {
     font-family: var(--m-font-mono);
-    font-size: 13px;
-    color: var(--m-fg-0);
-  }
-  .absent-no {
-    color: var(--m-danger);
-    font-weight: 600;
-    text-transform: uppercase;
+    font-size: 10px;
     letter-spacing: 0.08em;
-    margin-right: 8px;
-    font-size: 11px;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 2px 8px;
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius-sm);
+    color: var(--m-fg-2);
   }
-  .absent-detail { color: var(--m-fg-3); font-size: 12px; }
+  .whatsnew-type--feature   { color: var(--m-accent);   border-color: var(--m-accent-dim); }
+  .whatsnew-type--patch     { color: var(--m-warn);     border-color: var(--m-warn-border); }
+  .whatsnew-type--hardening { color: var(--m-danger);   border-color: var(--m-danger-border); }
+  .whatsnew-type--polish    { color: var(--m-accent-2); border-color: rgba(86, 184, 255, 0.4); }
+  .whatsnew-type--milestone { color: var(--m-brand);    border-color: rgba(240, 78, 35, 0.5); }
+  .whatsnew-v { color: var(--m-fg-0); font-size: 12px; }
+  .whatsnew-headline { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .whatsnew-date { color: var(--m-fg-3); font-size: 11px; }
+  @media (max-width: 640px) {
+    .whatsnew-row { grid-template-columns: auto auto; row-gap: 6px; }
+    .whatsnew-headline { grid-column: 1 / -1; white-space: normal; }
+    .whatsnew-date { display: none; }
+  }
 
   @media (max-width: 720px) {
-    .hero { padding: var(--m-space-10) 0 var(--m-space-12); }
+    .hero { padding: var(--m-space-10) 0 var(--m-space-10); }
     .hero-title { font-size: 32px; }
   }
 </style>

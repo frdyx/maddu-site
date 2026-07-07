@@ -1,0 +1,70 @@
+---
+import DocsLayout from '../../../layouts/DocsLayout.astro';
+import EventStream from '../../../components/EventStream.astro';
+---
+<DocsLayout title="Session discipline" pathname="/docs/features/discipline" section="Features">
+  <h1>Session discipline</h1>
+  <p class="dx-lede">
+    Hooks register a session the moment it starts and checkpoint governance before every context compaction — so you never open a session the spine didn't witness.
+  </p>
+
+  <p>
+    Discipline you have to remember isn't discipline. A session that forgets to register leaves no record of what it touched, and a context compaction can drop the last un-recorded work silently — you only notice when the trail is already gone. Máddu wires that discipline into Claude Code hooks so it happens without you.
+  </p>
+
+  <div class="dx-code">
+    <div class="dx-code-head"><span class="dx-code-dot"></span> terminal</div>
+    <pre><code>$ <span class="tok-k">maddu hooks install</span>
+<span class="tok-c">wired SessionStart · SessionEnd · PreCompact into .claude/settings.json</span></code></pre>
+  </div>
+
+  <h2>What it does</h2>
+  <div class="dx-cards">
+    <div class="dx-card">
+      <span class="dx-card-title"><span>Start records itself</span></span>
+      <p><code>SessionStart</code> auto-registers a session and writes it to the spine; <code>SessionEnd</code> closes it. No manual <code>--session</code> flag to forget — the record exists before you type the first prompt.</p>
+    </div>
+    <div class="dx-card">
+      <span class="dx-card-title"><span>Compaction leaves a mark</span></span>
+      <p><code>PreCompact</code> writes a <code>COMPACTION_CHECKPOINT</code> before every compaction — manual <code>/compact</code> and automatic alike — capturing the last <code>slice-stop</code> as the durable anchor: anything after it that wasn't recorded did not survive.</p>
+    </div>
+    <div class="dx-card">
+      <span class="dx-card-title"><span>It never breaks you</span></span>
+      <p>The hooks always exit 0. A governance instrument must never break the session it observes, so a failing checkpoint degrades to a note — never a blocked session.</p>
+    </div>
+  </div>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>The checkpoint knows what's at risk.</strong> Each checkpoint records the trigger, the last recorded <code>slice-stop</code>, handoff currency, open approvals, and active claims. <code>maddu orient</code> auto-announces the latest one on session start, and doctor validates that the hook stanza is still current.</p>
+  </div>
+
+  <h2>On the record</h2>
+  <p>A disciplined session is a clean arc on the spine — start, a stopped slice, a checkpoint, close:</p>
+
+  <EventStream
+    eyebrow="Session start to close, checkpoint in between"
+    source=".maddu/events/2026-07-05.ndjson"
+    entries={[
+      { time: '08:31:04.212', type: 'SESSION_REGISTERED',      tone: 'session',  payload: 'role=implementer · trigger=SessionStart',              actor: 'claude-code' },
+      { time: '09:02:47.883', type: 'SLICE_STOPPED',           tone: 'approval', payload: 'targets=discipline.astro · gates=7 pass',              actor: 'claude-code' },
+      { time: '09:18:22.109', type: 'COMPACTION_CHECKPOINT',   tone: 'accent',   payload: 'trigger=auto · anchor=SLICE_STOPPED@09:02 · approvals=0', actor: 'claude-code' },
+      { time: '09:44:51.640', type: 'SESSION_CLOSED',          tone: 'session',  payload: 'trigger=SessionEnd · duration=73m',                    actor: 'claude-code' },
+    ]}
+  />
+
+  <p>
+    Related verbs: <a href="/capabilities/hooks"><code>maddu hooks</code></a>, <a href="/capabilities/agents"><code>maddu agents</code></a>, <a href="/capabilities/orient"><code>maddu orient</code></a>, and <a href="/capabilities/session"><code>maddu session</code></a>. The companion verb <code>maddu agents</code> registers a self-contained "install maddu" stanza into your global agent instruction files — Claude, Codex, Gemini, or a custom path — so the framework is reachable by natural language from any future repo.
+  </p>
+
+  <div class="dx-pager">
+    <a class="dx-pager-link" href="/docs/features">
+      <span class="dx-pager-dir">&larr; Prev</span>
+      <span class="dx-pager-title">Features</span>
+    </a>
+    <a class="dx-pager-link is-next" href="/docs/features/autonomy">
+      <span class="dx-pager-dir">Next &rarr;</span>
+      <span class="dx-pager-title">Earned autonomy</span>
+    </a>
+  </div>
+</DocsLayout>

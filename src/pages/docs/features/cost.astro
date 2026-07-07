@@ -1,0 +1,85 @@
+---
+import DocsLayout from '../../../layouts/DocsLayout.astro';
+import EventStream from '../../../components/EventStream.astro';
+---
+
+<DocsLayout title="Cost &amp; budget" pathname="/docs/features/cost" section="Features">
+  <h1>Cost &amp; budget</h1>
+  <p class="dx-lede">
+    Roll up token and call spend per session, day, runtime, and model &mdash; then set an opt-in
+    budget gate that catches a runaway session before it becomes a surprise on the invoice.
+  </p>
+
+  <div class="dx-code">
+    <div class="dx-code-head"><span class="dx-code-dot"></span> terminal</div>
+    <pre><code><span class="tok-c"># token + call spend, grouped by day</span>
+maddu cost <span class="tok-s">--by day</span>
+2026-07-05   in 214.8K &middot; out 41.2K &middot; calls 96
+2026-07-06   in  88.1K &middot; out 12.9K &middot; calls 37</code></pre>
+  </div>
+
+  <p>
+    A single agent session can burn tokens for an hour before anyone notices. By the time the
+    provider's bill arrives, the runaway run is a month old and unattributable. You need the number
+    while it still means something.
+  </p>
+
+  <h2>What it does</h2>
+  <div class="dx-cards">
+    <div class="dx-card">
+      <span class="dx-card-title"><span>Roll up any axis</span></span>
+      <p><code>maddu cost</code> aggregates token and call totals per session, day, runtime, and model &mdash; read straight from the receipt log and token ledger the spine already keeps. No provider call: it only sums numbers you already have.</p>
+    </div>
+    <div class="dx-card">
+      <span class="dx-card-title"><span>Set a ceiling</span></span>
+      <p>Drop a <code>.maddu/config/cost-budget.json</code> with <code>windowDays</code>, <code>maxTokens</code>, and <code>metric</code>. Doctor and audit then WARN &mdash; never FAIL &mdash; when recent spend crosses it, so a runaway is visible before it becomes a bill.</p>
+    </div>
+    <div class="dx-card">
+      <span class="dx-card-title"><span>Backfill history</span></span>
+      <p><code>maddu import</code> retroactively backfills the ledger from prior runs, so the rollup covers the work you did before you started tracking &mdash; not just the sessions since. Old spend becomes accountable too.</p>
+    </div>
+  </div>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>A budget warns, it never blocks.</strong> The v1.86.0 cost-budget gate is deliberately WARN-tier. Crossing the ceiling surfaces in doctor and audit as a visible flag, not a failed build &mdash; you see the runaway and decide, and the gate never stands between you and a legitimate long session.</p>
+  </div>
+
+  <h2>On the record</h2>
+  <p>
+    A budget crossing writes its own trail to the spine: usage reported, the rollup computed, the
+    budget evaluated, and &mdash; only when the ceiling is passed &mdash; a WARN-tier event that
+    notes the build was <em>not</em> blocked.
+  </p>
+
+  <EventStream
+    eyebrow="Cost rollup, ledger to warning"
+    source=".maddu/events/2026-07-06.ndjson"
+    entries={[
+      { time: '15:20:11.003', type: 'TOKEN_USAGE_REPORTED', tone: 'session',   payload: 'in=48120 · out=9204 · model=claude-fable-5',  actor: 'worker-1' },
+      { time: '15:20:11.061', type: 'COST_ROLLED_UP',       tone: 'framework', payload: 'by=day · window=7d · total_in=303K',           actor: 'operator' },
+      { time: '15:20:11.088', type: 'BUDGET_EVALUATED',     tone: 'accent',    payload: 'metric=tokens · limit=280K · used=303K',       actor: 'doctor' },
+      { time: '15:20:11.104', type: 'BUDGET_EXCEEDED',      tone: 'warn',      payload: 'over=23K · tier=warn · build=not-blocked',     actor: 'doctor' },
+      { time: '15:21:44.902', type: 'LEDGER_BACKFILLED',    tone: 'ok',        payload: 'source=import · sessions=18 · added=1.2M',     actor: 'operator' },
+    ]}
+  />
+
+  <h3>Related verbs</h3>
+  <div class="dx-cards">
+    <a class="dx-card" href="/capabilities/cost"><span class="dx-card-title"><span>maddu cost</span><span>&rarr;</span></span><p>Roll up token and call spend across any axis.</p></a>
+    <a class="dx-card" href="/capabilities/usage"><span class="dx-card-title"><span>maddu usage</span><span>&rarr;</span></span><p>Inspect the token ledger the rollup reads from.</p></a>
+    <a class="dx-card" href="/capabilities/log"><span class="dx-card-title"><span>maddu log</span><span>&rarr;</span></span><p>The audited receipt log behind every total.</p></a>
+    <a class="dx-card" href="/capabilities/import"><span class="dx-card-title"><span>maddu import</span><span>&rarr;</span></span><p>Backfill the ledger from prior runs.</p></a>
+  </div>
+
+  <div class="dx-pager">
+    <a class="dx-pager-link" href="/docs/features/fleet">
+      <span class="dx-pager-dir">&larr; Prev</span>
+      <span class="dx-pager-title">Fleet view</span>
+    </a>
+    <a class="dx-pager-link is-next" href="/docs/capabilities">
+      <span class="dx-pager-dir">Next &rarr;</span>
+      <span class="dx-pager-title">Verbs</span>
+    </a>
+  </div>
+</DocsLayout>

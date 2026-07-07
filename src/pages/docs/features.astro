@@ -1,0 +1,64 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+<DocsLayout title="Features" pathname="/docs/features" section="Features">
+  <h1>Features</h1>
+  <p class="dx-lede">
+    The disciplined loop is the product; everything below is what it earns you on top of a spine that already records every session, lane, and slice.
+  </p>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>Each feature reads from the same record.</strong> None of them adds a second source of truth — they are projections and instruments over the one append-only spine on disk.</p>
+  </div>
+
+  <h2>The core loop earns the rest</h2>
+  <p>
+    Register, claim, slice, stop, gate — that always-on loop is what an install gives you first. The features here build on it: they score it, watch it, roll it up, and federate it. Because every one of them derives from the same witnessed record, they agree with each other by construction.
+  </p>
+
+  <h2>Feature pages</h2>
+  <div class="dx-cards">
+    <a class="dx-card" href="/docs/features/discipline">
+      <span class="dx-card-title"><span>Session discipline</span><span>&rarr;</span></span>
+      <p>Hooks auto-register every session, close it cleanly, and checkpoint governance before each context compaction. Never start building unrecorded.</p>
+    </a>
+    <a class="dx-card" href="/docs/features/autonomy">
+      <span class="dx-card-title"><span>Earned autonomy</span><span>&rarr;</span></span>
+      <p>A deterministic trust ladder over verified slice outcomes that recommends — never applies — relaxing a lane's governance tier.</p>
+    </a>
+    <a class="dx-card" href="/docs/features/fleet">
+      <span class="dx-card-title"><span>Fleet view</span><span>&rarr;</span></span>
+      <p>Every Máddu install on your machine at a glance — version, liveness, drift from fleet-latest — with staged, doctor-gated upgrades.</p>
+    </a>
+    <a class="dx-card" href="/docs/features/cost">
+      <span class="dx-card-title"><span>Cost &amp; budget</span><span>&rarr;</span></span>
+      <p>Token and call rollups per session, day, runtime, and model, with an opt-in budget gate that WARNs when spend crosses your ceiling.</p>
+    </a>
+  </div>
+
+  <h2>More on the marketing pages</h2>
+  <p>
+    A few features have marketing walkthroughs with the real CLI and spine events but no docs page yet:
+  </p>
+  <ul>
+    <li><a href="/features/worktrees">Worktree lanes</a> — a lane claim can provision its own git worktree, so parallel agents stop sharing a checkout.</li>
+    <li><a href="/features/learn">Failure learning</a> — mine past sessions for failed&rarr;succeeded tool calls, then federate the portable corrections across your repos.</li>
+    <li><a href="/features/ci">Governance in CI</a> — run every deterministic gate headlessly and fail only on the gates the repo pinned as required.</li>
+    <li><a href="/features/focus">Focus Director</a> — an opt-in, domain-blind instrument that flags sustained drift from the declared goal as a choice, never a gate.</li>
+  </ul>
+  <p>
+    The full grid, including every feature above, lives on <a href="/features">the features overview</a>.
+  </p>
+
+  <div class="dx-pager">
+    <a class="dx-pager-link" href="/docs/security">
+      <span class="dx-pager-dir">&larr; Prev</span>
+      <span class="dx-pager-title">Security</span>
+    </a>
+    <a class="dx-pager-link is-next" href="/docs/features/discipline">
+      <span class="dx-pager-dir">Next &rarr;</span>
+      <span class="dx-pager-title">Session discipline</span>
+    </a>
+  </div>
+</DocsLayout>

@@ -23,6 +23,30 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v1.96.0',
+    id: 'v1-96-0',
+    date: '2026-07-07',
+    type: 'hardening',
+    headline: 'Central write-boundary payload redaction — the record you share can’t leak a pasted secret',
+    summary: 'Every event’s `data` is routed through the canonical redactor inside `spine.append` before the line is built and hashed — one choke point covers every emit site, present and future. Clean data (the normal case) passes through **by reference**: 0 clones, 0 byte changes across 2,964 real events. A new key-aware rule redacts a long token under a sensitive key name (`password`, `apiKey`, …) that a value-only or line-wise scan structurally misses. Redaction is write-time only; the export and team-sync refuse-gates remain the defense for history. Event contract untouched at 1.1.0.',
+  },
+  {
+    version: 'v1.95.0',
+    id: 'v1-95-0',
+    date: '2026-07-06',
+    type: 'feature',
+    headline: 'SLM-factory governance — `maddu model`, phases 0–6',
+    summary: 'Máddu as the governance substrate around a domain-specific small-model factory: it records hash-pinned manifests, derives the promotion ladder from the spine, and gates every hand-off — but **never trains, serves, or evaluates** (zero new dependencies across the whole arc). `maddu model` covers dataset snapshot, train, checkpoint register, eval, promote/`--confirm`, release, and rollback, with a 12-gate ML-lifecycle starter pack you install and pin. Stage is derived from the spine: approvals raise it, rollbacks lower it, and the CLI cannot write a record `spine verify` would flag. Event contract 1.0.0 → 1.1.0 (11 `MODEL_*` types).',
+  },
+  {
+    version: 'v1.94.0',
+    id: 'v1-94-0',
+    date: '2026-07-06',
+    type: 'feature',
+    headline: 'Experience protocol & evolution planner — `maddu experience` / `maddu evolve`',
+    summary: 'The spine re-read as normalized experience, plus a recommend-only evolution planner — every path a pure read-time derivation with **zero new event types** and zero spine writes. `maddu experience` turns each event into a step whose id IS the source event id, grouped into trajectories by explicit session linkage only (the unlinkable lands in an honest `env` trajectory, never guessed). `maddu evolve` runs four deterministic detectors and **recommends — never applies**. `maddu experience export --format atdp` is the governed sharing boundary: a refuse-on-hit secret gate with no skip flag and deterministic, clock-free bytes.',
+  },
+  {
     version: 'v1.93.0',
     id: 'v1-93-0',
     date: '2026-07-05',
@@ -1205,6 +1229,21 @@ const RELEASES: Release[] = [
   },
 ];
 
+// Release → the docs page that documents what it shipped. Keyed by release id;
+// entries without a clear docs home simply carry no link. Add more as docs grow.
+const DOCS_LINKS: Record<string, { href: string; label: string }> = {
+  'v1-96-0': { href: '/docs/security',            label: 'Security' },
+  'v1-95-0': { href: '/docs/capabilities',        label: 'Verbs · maddu model' },
+  'v1-94-0': { href: '/docs/capabilities',        label: 'Verbs · experience / evolve' },
+  'v1-93-0': { href: '/docs/architecture',        label: 'Architecture · lanes' },
+  'v1-92-0': { href: '/docs/features/autonomy',   label: 'Earned autonomy' },
+  'v1-91-0': { href: '/docs/governance',          label: 'Governance · phase tiers' },
+  'v1-89-0': { href: '/docs/features/discipline', label: 'Session discipline' },
+  'v1-87-0': { href: '/docs/features',            label: 'Features · governance in CI' },
+  'v1-86-0': { href: '/docs/features/cost',       label: 'Cost & budget' },
+  'v1-85-0': { href: '/docs/features',            label: 'Features · failure learning' },
+};
+
 const indexItems = RELEASES.map((r) => ({
   n: r.version,
   id: r.id,
@@ -1234,7 +1273,7 @@ function typeMeta(t: ReleaseType) {
       <div class="eyebrow-chain">
         <span class="eyebrow">Changelog</span>
         <span class="eyebrow-sep">·</span>
-        <span class="eyebrow-dim">v0.17.1 → v1.92.2</span>
+        <span class="eyebrow-dim">v0.17.1 → v1.96.0</span>
         <span class="eyebrow-sep">·</span>
         <span class="eyebrow-dim">{RELEASES.length} releases · ~6 weeks</span>
       </div>
@@ -1285,6 +1324,12 @@ function typeMeta(t: ReleaseType) {
                 ) : null}
                 {r.note && (
                   <p class="cl-note">{r.note}</p>
+                )}
+                {DOCS_LINKS[r.id] && (
+                  <p class="cl-docs">
+                    <span class="cl-docs-label">In the docs</span>
+                    <a href={DOCS_LINKS[r.id].href}>{DOCS_LINKS[r.id].label} <span aria-hidden="true">&rarr;</span></a>
+                  </p>
                 )}
               </article>
             );
@@ -1383,7 +1428,7 @@ function typeMeta(t: ReleaseType) {
   /* Two-col layout with sticky TOC */
   .cl-layout {
     display: grid;
-    grid-template-columns: 1fr 260px;
+    grid-template-columns: 1fr 300px;
     gap: var(--m-space-6);
     align-items: start;
   }
@@ -1512,4 +1557,25 @@ function typeMeta(t: ReleaseType) {
   .cl-release--danger   .cl-note { border-left-color: var(--m-danger); }
   .cl-release--accent-2 .cl-note { border-left-color: var(--m-accent-2); }
   .cl-release--warn     .cl-note { border-left-color: var(--m-warn); }
+
+  /* Link from a release to the docs page that documents it. */
+  .cl-docs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: var(--m-space-3) 0 0;
+    font-size: 12.5px;
+  }
+  .cl-docs-label {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--m-fg-4);
+  }
+  .cl-docs a {
+    color: var(--m-accent-2);
+    border-bottom: 1px solid transparent;
+  }
+  .cl-docs a:hover { color: var(--m-accent); border-bottom-color: var(--m-accent-dim); }
 </style>

@@ -1,0 +1,149 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+import Mermaid from '../../components/Mermaid.astro';
+import EventStream from '../../components/EventStream.astro';
+---
+
+<DocsLayout title="How it works" pathname="/docs/how-it-works" section="Getting started">
+  <h1>How it works</h1>
+  <p class="dx-lede">
+    Everything Máddu does reduces to one substrate loop. Every surface above it &mdash; slash
+    commands, autopilot, pipelines &mdash; is a friendly wrapper over that same loop, never a
+    competing flow.
+  </p>
+
+  <h2>The substrate loop</h2>
+  <p>
+    Six transitions bound every unit of work. Each one writes exactly one event to the
+    <strong>spine</strong> &mdash; the append-only event log on disk &mdash; so any run
+    replays deterministically from the spine alone.
+  </p>
+  <ul>
+    <li><strong>register</strong> &mdash; a session binds an agent identity to this turn.</li>
+    <li><strong>claim</strong> &mdash; a lane locks one file area so two agents never touch the same files.</li>
+    <li><strong>slice</strong> &mdash; one unit of work runs under that lane, observable end to end.</li>
+    <li><strong>stop</strong> &mdash; the slice closes with a structured receipt and hindsight extraction.</li>
+    <li><strong>release</strong> &mdash; the lane frees for the next agent.</li>
+    <li><strong>close</strong> &mdash; the session leaves the record cleanly.</li>
+  </ul>
+
+  <Mermaid
+    caption="Spine view — every transition appends, hindsight feeds memory"
+    aside="6 transitions · 1 spine"
+    code={`
+flowchart LR
+    A([session register]):::session --> B([claim lane]):::lane
+    B --> C([slice of work]):::framework
+    C --> D{slice-stop}:::approval
+    D -->|release| E([lane release]):::lane
+    E --> F([session close]):::session
+    D -.hindsight.-> G[[skills + memory]]:::accent
+    A -.events.-> S[("append-only<br/>spine")]:::spine
+    B -.events.-> S
+    C -.events.-> S
+    D -.events.-> S
+    E -.events.-> S
+`}
+  />
+
+  <p>Each transition maps to one spine event:</p>
+
+  <div class="dx-code">
+    <div class="dx-code-head"><span class="dx-code-dot"></span> spine event</div>
+    <pre><code>SESSION_REGISTERED
+LANE_CLAIMED
+SLICE_STARTED
+SLICE_STOPPED
+LANE_RELEASED
+SESSION_CLOSED</code></pre>
+  </div>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">&#9670;</span>
+    <p><strong>Replay is deterministic.</strong> Because state lives only in the append-only spine, past state reconstructs from the log alone &mdash; no live process to trust.</p>
+  </div>
+
+  <EventStream
+    eyebrow="What lands on disk · sample slice trace"
+    title="spine · turn 12"
+  />
+
+  <h2>Wrappers over the same loop</h2>
+  <p>
+    Slash commands and autopilot don&rsquo;t add a second execution model &mdash; they drive
+    the substrate for you. <code>/maddu-autopilot ship X</code>, or plain natural language
+    like &ldquo;fix the bug in Y,&rdquo; goes in; the agent classifies intent, dispatches the
+    right flow, and tells you which one it picked. The verbose CLI stays available underneath
+    for scripts and power users.
+  </p>
+
+  <h2>Pipelines</h2>
+  <p>
+    For non-trivial work the agent reaches for a <strong>pipeline</strong> first. A pipeline
+    walks the substrate for you &mdash; each stage is a literal <code>maddu</code> verb, and
+    pipeline state is itself an event, so re-runs against the same goal are deterministic.
+    Three ship by default:
+  </p>
+  <ul>
+    <li><strong>ship-a-feature</strong> (default) &mdash; end-to-end feature work: orient, plan, coordinate, slice, test, review, land, account.</li>
+    <li><strong>fix-a-bug</strong> &mdash; recovery: reproduce, isolate, fix, verify, land.</li>
+    <li><strong>plan-and-delegate</strong> &mdash; fan out across disjoint lanes via the coordinator.</li>
+  </ul>
+  <p>Ad-hoc autopilot is reserved for genuine one-offs; anything substantial defaults to a pipeline.</p>
+
+  <h2>The coordinator primitive</h2>
+  <p>
+    Fan-out is a <strong>Máddu primitive</strong>, not a Claude Code or Codex feature.
+    <code>maddu coordinator &lt;plan-id&gt;</code> reads a plan, walks its phases, spawns one
+    worker per phase, monitors heartbeats, and halts and reports at iteration caps. Every
+    transition stamps the spine, so pause-resume is free &mdash; the spine carries the state,
+    not the coordinator process.
+  </p>
+  <p>
+    That&rsquo;s what makes Máddu&rsquo;s autonomy <em>portable</em> across runtimes: the loop
+    lives on disk, so it doesn&rsquo;t depend on any one agent CLI.
+  </p>
+
+  <Mermaid
+    caption="Coordinator sequence — the operator never owns the loop, the spine does"
+    aside="runtime-agnostic"
+    code={`
+sequenceDiagram
+    participant Op as Operator
+    participant Co as Coordinator
+    participant Sp as Spine
+    participant W1 as Worker · Phase 1
+    participant W2 as Worker · Phase 2
+    Op->>Co: maddu coordinator <plan>
+    Co->>Sp: COORDINATOR_STARTED
+    rect rgba(208, 255, 0, 0.06)
+    Note over W1,Sp: Phase 1 · lane A
+    Co->>W1: spawn(runtime, phase 1)
+    W1->>Sp: SESSION_REGISTERED · LANE_CLAIMED · SLICE_STARTED
+    W1-->>Co: heartbeat
+    W1->>Sp: SLICE_STOPPED + LANE_RELEASED
+    Co->>Sp: COORDINATOR_PHASE_COMPLETED
+    end
+    rect rgba(86, 184, 255, 0.06)
+    Note over W2,Sp: Phase 2 · lane B
+    Co->>W2: spawn(runtime, phase 2)
+    W2->>Sp: SESSION_REGISTERED · LANE_CLAIMED · SLICE_STARTED
+    W2->>Sp: SLICE_STOPPED + LANE_RELEASED
+    Co->>Sp: COORDINATOR_PHASE_COMPLETED
+    end
+    Co->>Sp: COORDINATOR_COMPLETED
+    Co-->>Op: halt-and-report
+`}
+  />
+
+  <div class="dx-pager">
+    <a class="dx-pager-link" href="/docs/install">
+      <span class="dx-pager-dir">&larr; Prev</span>
+      <span class="dx-pager-title">Install</span>
+    </a>
+    <a class="dx-pager-link is-next" href="/docs/architecture">
+      <span class="dx-pager-dir">Next &rarr;</span>
+      <span class="dx-pager-title">Architecture</span>
+    </a>
+  </div>
+</DocsLayout>
