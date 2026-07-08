@@ -137,7 +137,7 @@ const features = [
 ];
 ---
 
-<Layout title="The governance & coordination layer for AI coding agents" pathname="/">
+<Layout title="The verifiable record for AI coding agents" description="The external, verifiable record of what your AI coding agents did, so no agent is ever the sole witness to its own work. Local-first and files-only: agents work as an auditable team through lanes, approvals, and gates. Máddu never sits in the request path or touches your keys." pathname="/">
   <!-- ── HERO ─────────────────────────────────────────────────────── -->
   <section class="hero">
     <div class="container">
@@ -153,7 +153,10 @@ const features = [
         The system that <em>governs</em> them shouldn&rsquo;t be.
       </h1>
       <p class="hero-lede">
-        Máddu is a local-first orchestration spine for AI agents — the external, cooperative layer any coding agent plugs into to work as an auditable team. The agent calls Máddu; Máddu never sits in the request path and never touches your keys.
+        Máddu is the external record that verifies what your AI agents did, so no agent is ever the sole witness to its own work. It&rsquo;s a local-first, files-only spine that any AI coding agent (Claude Code, Codex, or any CLI) plugs into to work as an auditable team: one agent per lane, risky changes held behind approvals, every slice checked by a gate. Cooperative means exactly that. The agent calls Máddu; Máddu never sits in the request path and never touches your keys. It runs as a small Node process with local-first, append-only files as the system of record: each approval, session, and slice is one line on disk. The durable, verifiable record is how the governance earns your trust, not what it sells.
+      </p>
+      <p class="hero-note">
+        New to AI agents? They&rsquo;re terminal tools that write and change code for you. Máddu is the layer underneath them that keeps them honest: one agent per lane, sensitive changes waiting on your approval, every step on a record you can replay and check, instead of a black box that vanishes when the session closes.
       </p>
       <div class="hero-actions">
         <a class="btn btn-primary btn-cmd" href="/install"><span class="cmd-prompt" aria-hidden="true">$</span> npx github:frdyx/maddu init</a>
@@ -364,7 +367,7 @@ const features = [
       <header class="section-head">
         <span class="eyebrow">What&rsquo;s new</span>
         <h2>Shipped small, shipped often. <span class="dim">One charter held.</span></h2>
-        <p>{RELEASE_COUNT} releases and counting &mdash; every one recorded, none broke a posted invariant.</p>
+        <p>{RELEASE_COUNT} versions and counting &mdash; every one recorded, none broke a posted invariant.</p>
       </header>
       <ul class="whatsnew">
         {RELEASES.slice(0, 4).map((r) => (
@@ -476,8 +479,17 @@ const features = [
   .hero-lede {
     font-size: 17px;
     color: var(--m-fg-1);
-    max-width: 64ch;
+    max-width: min(66ch, 100%);
     line-height: 1.55;
+    margin-bottom: var(--m-space-4);
+  }
+  .hero-note {
+    font-size: 15px;
+    color: var(--m-fg-2);
+    max-width: min(66ch, 100%);
+    line-height: 1.55;
+    padding-left: var(--m-space-4);
+    border-left: 1px solid var(--m-border);
     margin-bottom: var(--m-space-4);
   }
   .hero-actions {
