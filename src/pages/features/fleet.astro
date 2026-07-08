@@ -1,0 +1,133 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import EventStream from '../../components/EventStream.astro';
+import PageNext from '../../components/PageNext.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+---
+
+<Layout title="Fleet — every install on your machine, at a glance" pathname="/features/fleet">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Feature</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">maddu fleet</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">offline · read-only</span>
+      </div>
+      <h1>Every install on your machine. <span class="dim-h1">One table.</span></h1>
+      <p class="lede">
+        Know which of your installs are stale, then push framework updates to them safely — offline, snapshot-protected, halting on the first red doctor.
+      </p>
+      <pre class="feat-cli"><code>$ maddu fleet
+repo             version    liveness    behind
+maddu-site       v1.93.0    active      —
+frdyx            v1.91.2    dormant     2 releases
+snyggare         v1.86.0    abandoned   7 releases</code></pre>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · The problem</span>
+        <h2>You have more installs than you can remember.</h2>
+        <p>
+          Every repo you touched has its own Máddu, each frozen at whatever version you installed that day. Some are live, most are dormant, a few are abandoned — and you have no single place that tells you which is which, or how far each has drifted from latest.
+        </p>
+      </header>
+
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Read, never run</span>
+            <span class="panel-aside">offline</span>
+          </div>
+          <p><code>maddu fleet</code> reports version, liveness, and how far behind fleet-latest for every install — computed from each repo's on-disk projection <strong>without</strong> executing it. No network, no side effects, just the machine as it stands.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Plan before you touch</span>
+            <span class="panel-aside">dry</span>
+          </div>
+          <p><code>fleet upgrade --plan</code> previews a staged delivery: which repos are eligible because they're quiescent, which are blocked by an active lane, a dirty tree, or recent activity — plus the managed-byte delta each one would receive.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Deliver, then verify</span>
+            <span class="panel-aside">halt-on-red</span>
+          </div>
+          <p><code>fleet upgrade --apply --only|--all</code> snapshots managed bytes — never the spine — upgrades, then runs per-repo doctor. First red doctor stops the run cold, so a bad delivery can't cascade across the fleet.</p>
+        </div>
+      </div>
+
+      <Callout tone="warn" title="Doctor watches your global binary" tag="npm-global-shadow">
+        <p>
+          Since v1.91.2 doctor also checks the global npm binary. A stale <code>npm i -g</code> maddu shadowing a newer checkout earns a direction-aware WARN — it names which one is ahead, so you fix the shadow instead of debugging a phantom version.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · On the record</span>
+        <h2>What a staged fleet upgrade looks like on the spine.</h2>
+      </header>
+      <EventStream
+        eyebrow="Fleet upgrade, plan to verify"
+        source=".maddu/events/2026-07-06.ndjson"
+        entries={[
+          { time: '08:31:04.210', type: 'FLEET_SCANNED',       tone: 'framework', payload: 'installs=9 · stale=4 · abandoned=1',              actor: 'operator' },
+          { time: '08:31:59.077', type: 'FLEET_PLAN_RENDERED', tone: 'accent',    payload: 'eligible=3 · blocked=2 · delta=+184KB',           actor: 'operator' },
+          { time: '08:32:40.512', type: 'FLEET_SNAPSHOT_TAKEN', tone: 'session',  payload: 'repo=frdyx · managed_bytes · spine=excluded',     actor: 'operator' },
+          { time: '08:32:41.883', type: 'FLEET_REPO_UPGRADED', tone: 'ok',        payload: 'repo=frdyx · v1.91.2→v1.93.0',                    actor: 'operator' },
+          { time: '08:32:44.601', type: 'DOCTOR_RAN',          tone: 'ok',        payload: 'repo=frdyx · gates=70 pass · 0 fail',             actor: 'doctor' },
+          { time: '08:33:12.940', type: 'FLEET_HALTED',        tone: 'danger',    payload: 'repo=snyggare · doctor=red · run stopped',        actor: 'doctor' },
+        ]}
+      />
+      <p class="feat-note">
+        Related verbs: <a href="/capabilities/fleet"><code>maddu fleet</code></a> · <a href="/capabilities/doctor"><code>maddu doctor</code></a> · <a href="/capabilities/upgrade"><code>maddu upgrade</code></a> · <a href="/capabilities/workspace"><code>maddu workspace</code></a>
+      </p>
+    </div>
+  </section>
+
+  <section class="section-narrow">
+    <div class="container">
+      <a class="btn" href="/docs/features/fleet">Read the full reference in the docs <span aria-hidden="true">→</span></a>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="Next feature"
+    title="Governance in CI — red only on gates you pinned."
+    hint="Every deterministic gate runs headlessly; the pipeline goes red only on gates you committed as required."
+    href="/features/ci"
+    tone="accent"
+  />
+  <CtaBlock />
+</Layout>
+
+<style>
+  .feat-cli {
+    margin: var(--m-space-5) 0 0;
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent);
+    border-radius: var(--m-radius);
+    font-family: var(--m-font-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--m-fg-1);
+    overflow-x: auto;
+  }
+  .feat-note {
+    margin-top: var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+  }
+  .feat-note code { font-size: 12px; }
+</style>

@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 545" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="The SLM factory — external tools train and evaluate; Máddu records hash-pinned manifests and gates every promotion">
+  <title>The SLM factory</title>
+  <desc>Your tools do the work: curation, training, and benchmarks become hash-pinned manifests; maddu model validates and records them as spine events; the 12-gate pack and the approvals ride govern the promotion ladder, whose stages are derived from the record; rollback only ever moves down.</desc>
+  <defs>
+    <style>
+      .canvas    { fill: #050B17; }
+      .node      { fill: #0D1A2E; stroke: #507195; stroke-width: 1.2; }
+      .node.blue { fill: #0C2138; stroke: #56B8FF; }
+      .node.lime { fill: #1C2400; stroke: #D0FF00; }
+      .node.warn { fill: #241C0A; stroke: #F2BD5C; }
+      .edge      { fill: none; stroke: #6E86A3; stroke-width: 1.5; }
+      .edge.dash { stroke-dasharray: 4 5; }
+      .edge.live { stroke: #D0FF00; stroke-width: 2; }
+      .edge.bad  { stroke: #FF5E7A; stroke-width: 1.5; stroke-dasharray: 5 6; }
+      .cond-b    { font-family: 'IBM Plex Sans Condensed','Inter','Helvetica Neue',sans-serif; font-weight: 600; letter-spacing: 0.06em; }
+      .mono      { font-family: 'IBM Plex Mono','JetBrains Mono','Consolas',monospace; }
+    </style>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6E86A3"/>
+    </marker>
+    <marker id="arr-lime" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#D0FF00"/>
+    </marker>
+    <marker id="arr-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#FF5E7A"/>
+    </marker>
+  </defs>
+
+  <rect class="canvas" width="1480" height="545"/>
+
+  <g transform="translate(40,34)">
+    <text x="0" y="0" class="cond-b" fill="#D0FF00" font-size="11" letter-spacing="0.14em">◈ USE CASE 07 · SLM FACTORY</text>
+    <text x="0" y="22" class="cond-b" fill="#E8E6E3" font-size="20">The factory trains — the record decides what advances</text>
+    <text x="0" y="42" class="mono" fill="#8A93A0" font-size="11">Máddu never trains, serves, or evaluates · stages are DERIVED from the spine, never declared</text>
+  </g>
+
+  <!-- band A: your tools do the work -->
+  <text x="40" y="96" class="cond-b" fill="#6E86A3" font-size="10" letter-spacing="0.14em">YOUR TOOLS DO THE WORK</text>
+  <rect class="node" x="40" y="104" width="250" height="44" rx="6"/>
+  <text x="54" y="122" class="cond-b" fill="#E8E6E3" font-size="12">SWE-smith / your curation</text>
+  <text x="54" y="138" class="mono" fill="#8A93A0" font-size="10">task corpus · dedup · validity</text>
+  <rect class="node" x="320" y="104" width="220" height="44" rx="6"/>
+  <text x="334" y="122" class="cond-b" fill="#E8E6E3" font-size="12">TRL · PEFT · Axolotl</text>
+  <text x="334" y="138" class="mono" fill="#8A93A0" font-size="10">fine-tune (SFT · DPO · LoRA)</text>
+  <rect class="node" x="570" y="104" width="240" height="44" rx="6"/>
+  <text x="584" y="122" class="cond-b" fill="#E8E6E3" font-size="12">SWE-bench · BFCL · safety</text>
+  <text x="584" y="138" class="mono" fill="#8A93A0" font-size="10">benchmarks + regressions</text>
+  <rect class="node" x="1180" y="104" width="260" height="44" rx="6"/>
+  <text x="1194" y="122" class="cond-b" fill="#E8E6E3" font-size="12">vLLM · llama.cpp</text>
+  <text x="1194" y="138" class="mono" fill="#8A93A0" font-size="10">serves the canary + release</text>
+
+  <!-- tools' outputs become manifests -->
+  <path d="M 165 148 C 165 176, 150 180, 148 192" class="edge dash" marker-end="url(#arr)"/>
+  <path d="M 430 148 C 430 176, 260 180, 220 192" class="edge dash" marker-end="url(#arr)"/>
+  <path d="M 690 148 C 690 180, 300 182, 250 196" class="edge dash" marker-end="url(#arr)"/>
+  <text x="300" y="176" class="mono" fill="#8A93A0" font-size="10">results become manifests</text>
+  <!-- vLLM serves the ladder's canary -->
+  <path d="M 1430 148 C 1462 260, 1380 380, 1120 428" class="edge dash" marker-end="url(#arr)"/>
+
+  <!-- band B: the record -->
+  <rect class="node" x="40" y="196" width="240" height="64" rx="6"/>
+  <text x="56" y="222" class="cond-b" fill="#E8E6E3" font-size="13">manifests · models/*.json</text>
+  <text x="56" y="242" class="mono" fill="#8A93A0" font-size="10">dataset · run · eval · promotion</text>
+
+  <path d="M 280 228 L 336 228" class="edge" marker-end="url(#arr)"/>
+
+  <rect class="node blue" x="342" y="196" width="300" height="64" rx="6"/>
+  <text x="358" y="222" class="cond-b" fill="#56B8FF" font-size="13">maddu model</text>
+  <text x="358" y="242" class="mono" fill="#8A93A0" font-size="10">validate · sha256-pin · refuse-on-hit secret gate</text>
+
+  <path d="M 642 228 L 698 228" class="edge" marker-end="url(#arr)"/>
+
+  <rect class="node blue" x="704" y="196" width="300" height="64" rx="6"/>
+  <text x="720" y="222" class="cond-b" fill="#56B8FF" font-size="13">spine · 11 MODEL_* events</text>
+  <text x="720" y="242" class="mono" fill="#8A93A0" font-size="10">tamper-evident on replay (spine verify)</text>
+
+  <rect class="node warn" x="1060" y="196" width="380" height="64" rx="6"/>
+  <text x="1076" y="220" class="cond-b" fill="#F2BD5C" font-size="13">🔒 12-gate pack · .maddu/gates/</text>
+  <text x="1076" y="238" class="mono" fill="#8A93A0" font-size="10">license · secrets · split-frozen · contamination ·</text>
+  <text x="1076" y="252" class="mono" fill="#8A93A0" font-size="10">regression · provenance · rollback-plan — ci-pinnable, YOURS</text>
+
+  <!-- derived stage + gate enforcement into the ladder -->
+  <path d="M 854 260 C 854 330, 680 360, 560 424" class="edge live" marker-end="url(#arr-lime)"/>
+  <text x="620" y="282" class="mono" fill="#D0FF00" font-size="10">stage derived from the record</text>
+  <path d="M 1250 260 C 1250 330, 1120 370, 1010 426" class="edge" marker-end="url(#arr)"/>
+  <text x="1256" y="282" class="mono" fill="#F2BD5C" font-size="10">blocks incomplete hand-offs</text>
+
+  <!-- band C: the promotion ladder -->
+  <rect class="node" x="130" y="430" width="150" height="48" rx="6"/>
+  <text x="146" y="450" class="cond-b" fill="#E8E6E3" font-size="12">experiment</text>
+  <text x="146" y="467" class="mono" fill="#8A93A0" font-size="10">any checkpoint</text>
+  <path d="M 280 454 L 348 454" class="edge" marker-end="url(#arr)"/>
+  <text x="286" y="446" class="mono" fill="#8A93A0" font-size="9">approval</text>
+
+  <rect class="node" x="354" y="430" width="150" height="48" rx="6"/>
+  <text x="370" y="450" class="cond-b" fill="#E8E6E3" font-size="12">candidate</text>
+  <text x="370" y="467" class="mono" fill="#8A93A0" font-size="10">provenance complete</text>
+  <path d="M 504 454 L 594 454" class="edge" marker-end="url(#arr)"/>
+  <text x="508" y="446" class="mono" fill="#FF5E7A" font-size="9">explicit decision only</text>
+
+  <rect class="node" x="600" y="430" width="150" height="48" rx="6"/>
+  <text x="616" y="450" class="cond-b" fill="#E8E6E3" font-size="12">canary</text>
+  <text x="616" y="467" class="mono" fill="#8A93A0" font-size="10">rollback plan required</text>
+  <path d="M 750 454 L 840 454" class="edge" marker-end="url(#arr)"/>
+  <text x="754" y="446" class="mono" fill="#FF5E7A" font-size="9">explicit decision only</text>
+
+  <rect class="node lime" x="846" y="430" width="170" height="48" rx="6"/>
+  <text x="862" y="450" class="cond-b" fill="#D0FF00" font-size="12">released</text>
+  <text x="862" y="467" class="mono" fill="#E8E6E3" font-size="10">approved end-to-end</text>
+
+  <!-- rollback: strictly downward — its own clear lane BELOW the ladder -->
+  <path d="M 931 478 C 931 522, 620 522, 472 482" class="edge bad" marker-end="url(#arr-bad)"/>
+  <text x="560" y="536" class="mono" fill="#FF5E7A" font-size="10">rollback — strictly downward, re-promotion rides again</text>
+</svg>

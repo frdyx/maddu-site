@@ -2,13 +2,18 @@
 import Layout from '../layouts/Layout.astro';
 import Callout from '../components/Callout.astro';
 import PageNext from '../components/PageNext.astro';
+import { AREA_ONE_LINERS } from '../data/area-purposes';
+import { SLASH_COMMANDS, AUDIT_CHECKS, DOCTOR_GATES } from '../data/stats';
 
 interface Area {
   id: string;
   title: string;
   glyph: string;
   tone: 'accent' | 'accent-2' | 'warn' | 'danger' | 'ok' | 'framework' | 'session' | 'lane';
+  /** The site's 12-second version — one sentence, shown on the card. */
   purpose: string;
+  /** The framework's full charter purpose — preserved verbatim behind a disclosure. */
+  charter: string;
   verbs: string[];
 }
 
@@ -18,7 +23,9 @@ const areas: Area[] = [
     title: 'Orchestration core',
     glyph: '◈',
     tone: 'framework',
-    purpose: 'Drive the one canonical substrate loop — register a session, claim a lane, run a slice, release. Each transition is one event on the spine.',
+    purpose: AREA_ONE_LINERS.orchestration,
+    charter:
+      'Drive the one canonical substrate loop — register a session, claim a lane, run a slice, release. Each transition is one event on the spine. Since v1.93, a lane claim can carry --worktree: an isolated git checkout per lane, so parallel agents never touch each other\'s files while every event still lands on one spine.',
     verbs: ['session', 'register', 'lane', 'slice', 'slice-stop', 'stop', 'worker', 'mailbox'],
   },
   {
@@ -26,7 +33,9 @@ const areas: Area[] = [
     title: 'Planning & autonomy',
     glyph: '↳',
     tone: 'accent',
-    purpose: 'First-class auto-revising planning. Pipelines and goals decompose work (goal carries measurable success conditions); phase and loop are the iteration primitives; the coordinator fans work across a team; advise and suggest route intent; handoff curates the cross-session "▶ RESUME HERE" briefing.',
+    purpose: AREA_ONE_LINERS.planning,
+    charter:
+      'First-class auto-revising planning. Pipelines and goals decompose work — a goal carries measurable success conditions. phase and loop are the iteration primitives — a phase may carry a governance tier (sterile phases escalate discipline for exactly that window, escalation-only; phase clear lifts it). the coordinator fans work across a team. advise and suggest route intent. handoff curates the cross-session "▶ RESUME HERE" briefing.',
     verbs: ['pipeline', 'plan', 'goal', 'phase', 'loop', 'coordinator', 'team', 'advise', 'suggest', 'handoff'],
   },
   {
@@ -34,15 +43,19 @@ const areas: Area[] = [
     title: 'Quality & review',
     glyph: '⚑',
     tone: 'ok',
-    purpose: 'Keep the surface honest. Review and test gate slices through host-project test (legacy runner or adaptive profiles); self-test is the framework-source runner; lint and format enforce code hygiene; doctor enforces the 8+1 hard rules on every install and upgrade; architecture gates structural drift between the declared module graph and the real import graph.',
-    verbs: ['review', 'test', 'self-test', 'lint', 'format', 'doctor', 'architecture'],
+    purpose: AREA_ONE_LINERS.quality,
+    charter:
+      'Keep the surface honest. review and test gate slices through host-project test (legacy runner or adaptive profiles). self-test is the framework-source runner. lint and format enforce code hygiene. doctor enforces the 8+1 hard rules on every install and upgrade. architecture gates structural drift between the declared module graph and the real import graph. ci is the headless, LLM-free gate rail — it exits nonzero only on gates the repo pinned as required (ci pin), so framework gate-set churn never changes a consumer\'s CI verdict until they opt in; the same exit code drives a fully-offline git pre-push hook.',
+    verbs: ['review', 'test', 'self-test', 'lint', 'format', 'doctor', 'architecture', 'ci'],
   },
   {
     id: 'tools',
     title: 'Default tools',
     glyph: '⌖',
     tone: 'session',
-    purpose: 'The explicit-invocation tool surface an agent reaches for mid-work: version control via git, dependency install, reusable skills, and ad-hoc task tracking.',
+    purpose: AREA_ONE_LINERS.tools,
+    charter:
+      'The explicit-invocation tool surface an agent reaches for mid-work: version control via git, dependency install, reusable skills, and ad-hoc task tracking.',
     verbs: ['git', 'install', 'skill', 'task'],
   },
   {
@@ -50,32 +63,40 @@ const areas: Area[] = [
     title: 'Supply-chain & trust',
     glyph: '⛨',
     tone: 'danger',
-    purpose: 'The audit / portability / supply-chain posture made operable. trust pins and verifies; sources and approval gate provenance at ingest; governance sets the per-workspace tier; mcp brings tools in through allowlisted templates; plugin loads capabilities that live outside the core (bundled-trusted; user-added gated by --trust).',
-    verbs: ['trust', 'sources', 'approval', 'governance', 'mcp', 'plugin'],
+    purpose: AREA_ONE_LINERS.trust,
+    charter:
+      'The audit / portability / supply-chain posture made operable. trust pins and verifies. sources and approval gate provenance at ingest. governance sets the per-workspace tier. autonomy grades each lane\'s earned trust from the verified record — a Wilson lower bound over witnessed-clean vs dirty slice outcomes — and recommends, never applies, tier changes: the operator decides. mcp brings tools in through allowlisted templates. plugin loads capabilities that live outside the core — bundled-trusted, or user-added and gated by --trust. model governs a domain-specific SLM factory — recording hash-pinned manifests and deriving the promotion ladder from the spine, gating every hand-off but never training, serving, or evaluating.',
+    verbs: ['trust', 'sources', 'approval', 'governance', 'autonomy', 'mcp', 'plugin', 'model'],
   },
   {
     id: 'memory',
     title: 'Memory & accounting',
     glyph: '∞',
     tone: 'lane',
-    purpose: 'Make work outlive the agent. memory and hindsight skills persist learning; learn mines past sessions for failed→succeeded tool-call pairs and distils durable project corrections; blueprint exports a portable variable-driven handoff of how a whole project was built; debt ledgers the deliberate shortcuts and flags the ones with no upgrade trigger; cost and usage and the receipt log account for spend; import retroactively populates the ledger.',
-    verbs: ['memory', 'learn', 'blueprint', 'debt', 'cost', 'usage', 'log', 'import'],
+    purpose: AREA_ONE_LINERS.memory,
+    charter:
+      'Make work outlive the agent. memory and hindsight skills persist learning. learn mines past sessions for failed→succeeded tool-call pairs, distilling durable project corrections — and learn sync federates the portable ones across your repos (a lesson recurring in ≥2 repos, or tagged @portable), adopted approval-only and redacted, so a fix learned once propagates across the fleet — plus learn sync --from-claude-memory imports Claude Code\'s own auto-memory as provenance-carrying vendor facts, import-only and content-hash-deduped. blueprint exports a portable, variable-driven handoff of how a whole project was built. debt ledgers the deliberate shortcuts and flags the ones with no upgrade trigger. cost, usage, and the receipt log account for spend — an opt-in cost-budget gate WARNs when recent token spend crosses a ceiling, so a runaway session is visible before it surprises you. import retroactively populates the ledger. evolve is a recommend-only evolution planner — four deterministic detectors over the spine that surface durable corrections and never apply them.',
+    verbs: ['memory', 'learn', 'blueprint', 'debt', 'cost', 'usage', 'log', 'import', 'evolve'],
   },
   {
     id: 'discovery',
     title: 'Discovery & observability',
     glyph: '⌕',
     tone: 'accent-2',
-    purpose: 'Watch and replay the event log. status and events surface live state; spine verifies the append-only truth (never auto-repairs); search and brief query it; orient is the goal-anchored session-start briefing; help is the on-ramp; audit runs the charter-drift check; insights reports empirically what is actually used across registered workspaces vs merely defined.',
-    verbs: ['status', 'events', 'spine', 'search', 'brief', 'orient', 'help', 'audit', 'insights'],
+    purpose: AREA_ONE_LINERS.discovery,
+    charter:
+      'Watch and replay the event log. status and events surface live state. spine verifies the append-only truth (never auto-repairs). search and brief query it. orient is the goal-anchored session-start briefing. help is the on-ramp. audit runs the charter-drift check. insights reports, empirically, what is actually used across registered workspaces vs merely defined. fleet is the offline, single-machine view of every Máddu install — version, liveness, and how far behind fleet-latest, computed from each repo on disk without running it (fleet upgrade --plan/--apply stages a snapshot-protected, halt-on-red delivery of updates). focus is the opt-in Focus Director — a domain-blind instrument that tags each turn toward / lateral / away of the declared goal and flags sustained drift (a swap / revert / continue choice, never a gate). export maps the spine to OpenTelemetry logs, read-only — stdout or a collector you name. experience re-reads the spine as normalized trajectories (a pure read-time derivation, zero new events), and experience export is its governed, refuse-on-hit sharing boundary.',
+    verbs: ['status', 'events', 'spine', 'search', 'brief', 'orient', 'help', 'audit', 'insights', 'fleet', 'focus', 'export', 'experience'],
   },
   {
     id: 'lifecycle',
     title: 'Lifecycle & plumbing',
     glyph: '⌬',
     tone: 'warn',
-    purpose: 'Operator and script plumbing only (verbose CLI, no slash on-ramp). init/start/upgrade install and run the spine; workspace/global/runtime configure it; schedule fires allowlisted triggers; checkpoint snapshots; auth keeps device-bound tokens; bridges manages live connections.',
-    verbs: ['init', 'start', 'upgrade', 'workspace', 'global', 'runtime', 'schedule', 'checkpoint', 'auth', 'bridges'],
+    purpose: AREA_ONE_LINERS.lifecycle,
+    charter:
+      'Operator and script plumbing only (verbose CLI, no slash on-ramp). init, start, and upgrade install and run the spine. agents registers a self-contained "install maddu" stanza into your global agent instruction files, so the framework is reachable by natural language from any future repo. hooks wires Claude Code session hooks into a repo (SessionStart auto-registers + records, SessionEnd closes, PreCompact writes a governance checkpoint before every context compaction) so fresh repos never start building unrecorded. workspace, global, and runtime configure it. schedule fires allowlisted triggers. checkpoint snapshots. auth keeps device-bound tokens. bridges manages live connections.',
+    verbs: ['init', 'start', 'upgrade', 'agents', 'hooks', 'workspace', 'global', 'runtime', 'schedule', 'checkpoint', 'auth', 'bridges'],
   },
 ];
 
@@ -94,13 +115,13 @@ const totalVerbs = areas.reduce((sum, a) => sum + a.verbs.length, 0);
       </div>
       <h1>Every verb earns its place. <span class="dim-h1">Or it goes.</span></h1>
       <p class="lede">
-        Máddu has {totalVerbs} top-level verbs across {areas.length} purpose areas. Each one traces to a stated purpose against the mission and the 9 invariants. The <span class="verb">maddu audit charter</span> command exists specifically to flag drift. Click any verb for its reference page.
+        {totalVerbs} verbs, {areas.length} purpose areas, one charter that flags drift. Click any verb for its reference page — or expand an area's charter text for the full stated purpose.
       </p>
       <dl class="cap-stats">
         <div><dt>Verbs</dt><dd>{totalVerbs}</dd></div>
         <div><dt>Purpose areas</dt><dd>{areas.length}</dd></div>
         <div><dt>Invariants</dt><dd>9</dd></div>
-        <div><dt>Slash on-ramps</dt><dd>23</dd></div>
+        <div><dt>Slash on-ramps</dt><dd>{SLASH_COMMANDS}</dd></div>
       </dl>
     </div>
   </section>
@@ -128,7 +149,7 @@ const totalVerbs = areas.reduce((sum, a) => sum + a.verbs.length, 0);
             class:list={['cap-card', `cap-card--${a.tone}`]}
             id={a.id}
             data-area={a.title.toLowerCase()}
-            data-purpose={a.purpose.toLowerCase()}
+            data-purpose={`${a.purpose} ${a.charter}`.toLowerCase()}
             data-verbs={a.verbs.join(' ').toLowerCase()}
           >
             <header class="cap-card-head">
@@ -139,6 +160,10 @@ const totalVerbs = areas.reduce((sum, a) => sum + a.verbs.length, 0);
               </div>
             </header>
             <p class="cap-purpose">{a.purpose}</p>
+            <details class="cap-charter">
+              <summary>Full charter purpose</summary>
+              <p>{a.charter}</p>
+            </details>
             <ul class="cap-verbs">
               {a.verbs.map((v) => (
                 <li data-verb={v.toLowerCase()}><a class="cap-verb-link" href={`/capabilities/${v}`}><code>maddu {v}</code></a></li>
@@ -253,12 +278,12 @@ const totalVerbs = areas.reduce((sum, a) => sum + a.verbs.length, 0);
         <li><strong>Traces to a stated purpose</strong> in the charter (the eight areas above).</li>
       </ol>
 
-      <Callout tone="accent" title="maddu audit · 12 checks on every install" tag="charter-enforced">
+      <Callout tone="accent" title="maddu audit · 16 coherence self-checks, every release" tag="charter-enforced">
         <p>
-          <code>event-types-reachable</code> · <code>command-surface-coherent</code> · <code>cockpit-routes-reachable</code> · <code>docs-indexed</code> · <code>slash-on-ramp</code> · <code>charter-drift</code> · <code>defaults-single-sourced</code> · <code>brief-coherence</code> · <code>rule-gate-traceability</code> · <code>docs-in-sync</code> · <code>rule-invariant-drift</code> · <code>architecture-drift</code>.
+          <code>event-types-reachable</code> · <code>command-surface-coherent</code> · <code>cockpit-routes-reachable</code> · <code>docs-indexed</code> · <code>defaults-single-sourced</code> · <code>brief-coherence</code> · <code>architecture-drift</code> · <code>architecture-mass</code> · <code>generated-artifacts-current</code> · <code>slash-on-ramp</code> · <code>charter-drift</code> · <code>rule-gate-traceability</code> · <code>rule-invariant-drift</code> · <code>capability-docs</code> · <code>governance-budget</code> · <code>capability-positioning</code>.
         </p>
         <p>
-          Anything that fails is either real drift to fix, or evidence that the charter needs to evolve. The audit's job is to make sure the answer is intentional.
+          Anything that fails is either real drift to fix, or evidence that the charter needs to evolve. The audit's job is to make sure the answer is intentional. Máddu runs this against its own coherence on every release — {AUDIT_CHECKS} self-checks, {DOCTOR_GATES} gates, all green.
         </p>
       </Callout>
     </div>
@@ -441,6 +466,26 @@ const totalVerbs = areas.reduce((sum, a) => sum + a.verbs.length, 0);
     font-size: 13.5px;
     line-height: 1.55;
     margin: 0;
+  }
+  .cap-charter { margin: 0; }
+  .cap-charter summary {
+    cursor: pointer;
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+    user-select: none;
+  }
+  .cap-charter summary:hover { color: var(--m-accent-2); }
+  .cap-charter[open] summary { color: var(--m-accent-2); margin-bottom: var(--m-space-2); }
+  .cap-charter p {
+    margin: 0;
+    color: var(--m-fg-2);
+    font-size: 12.5px;
+    line-height: 1.6;
+    border-left: 2px solid var(--m-line);
+    padding-left: var(--m-space-3);
   }
   .cap-verbs {
     list-style: none;

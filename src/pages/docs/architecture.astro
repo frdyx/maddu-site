@@ -1,0 +1,271 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+import Mermaid from '../../components/Mermaid.astro';
+import Legend from '../../components/Legend.astro';
+import { EVENT_TYPES, DOCTOR_GATES, AUDIT_CHECKS } from '../../data/stats';
+---
+<DocsLayout title="Architecture" pathname="/docs/architecture" section="Core concepts">
+  <h1>Architecture</h1>
+  <p class="dx-lede">
+    Máddu's architecture is an ontology, not a flow chart: every feature is namespaced under a purpose, every purpose answers to an invariant, and every invariant is doctor-enforced on every install and upgrade.
+  </p>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>Fourteen layers, one charter.</strong> Read them top-down for the causal stack. The cross-cutting layers &mdash; invariants, security, quality, memory &mdash; bind across every other layer rather than sitting in the flow.</p>
+  </div>
+
+  <h2>The layered model</h2>
+  <p>
+    The stack runs from the identity that constrains everything, down through the operator surface, into execution, and out to the record and its projections. Vertical is causal flow; the side-channels &mdash; security, quality, memory &mdash; bind across layers. Each layer below carries the numbers straight from the framework.
+  </p>
+
+  <Mermaid
+    caption="The full Máddu ontology · color-coded by purpose"
+    aside="invariants → operator → spine → cockpit"
+    minHeight="600px"
+    code={`
+flowchart TB
+    subgraph INV["LAYER 0 · INVARIANTS — 8+1 hard rules, doctor-enforced"]
+        direction LR
+        R1["#1 Files-only state"]:::invariant
+        R2["#2 Append-only spine"]:::invariant
+        R3["#3 No hosted backends"]:::invariant
+        R4["#4 No broad new deps"]:::invariant
+        R5["#5 No provider SDKs"]:::invariant
+        R6["#6 No token export"]:::invariant
+        R7["#7 Brand boundary"]:::invariant
+        R8["#8 Lane ownership"]:::invariant
+        R9["#9 Auto-trigger gauntlet"]:::invariant
+    end
+
+    subgraph OP["LAYER 1 · OPERATOR — zero learning curve"]
+        SL["/slash + NL"]:::accent
+        CLI["verbose CLI"]:::accent
+    end
+
+    subgraph RT["LAYER 2 · RUNTIME — agnostic"]
+        AGENT["any agent CLI"]:::session
+        ROUTE["intent routing"]:::session
+    end
+
+    subgraph EXEC["LAYER 3 · EXECUTION"]
+        PIPES["pipelines × 3"]:::accent
+        COORDP["coordinator"]:::accent
+    end
+
+    subgraph LOOP["LAYER 4 · SUBSTRATE LOOP"]
+        L["register · claim · slice · stop · release · close"]:::framework
+    end
+
+    subgraph LANES["LAYER 5 · LANES (Rule #8)"]
+        L1["Lane A"]:::lane
+        L2["Lane B"]:::lane
+        MBOX["mailbox"]:::lane
+        L1 <--> MBOX
+        L2 <--> MBOX
+    end
+
+    subgraph GAUNT["LAYER 6 · GAUNTLET (Rule #9)"]
+        G1{tier?}:::gate
+        G2{allowlist?}:::gate
+        G3{cooldown?}:::gate
+        G4{governance tier}:::gate
+        GFIRE["TRIGGER_FIRED + triggered_by"]:::approval
+        G1 -->|mutating| G2 --> G3 --> G4 --> GFIRE
+    end
+
+    subgraph WORK["LAYER 7 · WORKER ISOLATION"]
+        W["subprocess worker"]:::worker
+        WENV["env allowlist · default-deny"]:::danger
+        WSCAN["secret-scan argv"]:::danger
+    end
+
+    subgraph SPINE["LAYER 8 · THE SPINE"]
+        EV[("NDJSON · ${EVENT_TYPES} event types")]:::spine
+        VFY["spine verify · prev_hash chain · no auto-repair"]:::accent2
+    end
+
+    subgraph PROJ["LAYER 9 · PROJECTIONS"]
+        P["plans · kanban · receipts · cost · skills · trust · governance"]:::lane
+    end
+
+    subgraph SEC["LAYER 10 · SECURITY"]
+        T1["maddu trust · SHA256"]:::danger
+        T2["MCP gallery"]:::danger
+        T3["governance tiers"]:::warn
+    end
+
+    subgraph QA["LAYER 11 · QUALITY"]
+        DOC["doctor · ${DOCTOR_GATES} gates"]:::ok
+        AUDIT["audit · charter-drift · ${AUDIT_CHECKS} checks"]:::ok
+        ADRIFT["architecture · drift ratchet"]:::ok
+    end
+
+    subgraph MEM["LAYER 12 · MEMORY"]
+        H1["hindsight skills · learn"]:::framework
+        H2["receipt log · cost"]:::framework
+        H3["blueprint · debt"]:::framework
+    end
+
+    subgraph COCK["LAYER 13 · COCKPIT"]
+        UI["static page · observe + replay"]:::accent2
+    end
+
+    OP --> RT
+    RT --> EXEC
+    EXEC --> LOOP
+    LOOP --> LANES
+    LANES --> GAUNT
+    GAUNT --> WORK
+    WORK --> SPINE
+    SPINE --> PROJ
+    PROJ --> COCK
+    SEC -. governs .-> GAUNT
+    SEC -. pins .-> WORK
+    SPINE --> MEM
+    MEM -. informs .-> RT
+    INV -. enforced by .-> QA
+    QA -. audits .-> SPINE
+    QA -. audits .-> GAUNT
+
+    style INV   fill:#F04E230D,stroke:#F04E2366,color:#F04E23
+    style OP    fill:#D0FF000A,stroke:#D0FF0066,color:#D0FF00
+    style RT    fill:#9FCBD80F,stroke:#9FCBD866,color:#9FCBD8
+    style EXEC  fill:#D0FF000A,stroke:#D0FF0066,color:#D0FF00
+    style LOOP  fill:#C8A8D40F,stroke:#C8A8D466,color:#C8A8D4
+    style LANES fill:#A8D4B80F,stroke:#A8D4B866,color:#A8D4B8
+    style GAUNT fill:#F2BD5C0F,stroke:#F2BD5C66,color:#F2BD5C
+    style WORK  fill:#FF5E7A0F,stroke:#FF5E7A66,color:#FF5E7A
+    style SPINE fill:#56B8FF14,stroke:#56B8FF80,color:#56B8FF
+    style PROJ  fill:#A8D4B80F,stroke:#A8D4B866,color:#A8D4B8
+    style SEC   fill:#FF5E7A0F,stroke:#FF5E7A66,color:#FF5E7A
+    style QA    fill:#61D3940F,stroke:#61D39466,color:#61D394
+    style MEM   fill:#C8A8D40F,stroke:#C8A8D466,color:#C8A8D4
+    style COCK  fill:#56B8FF14,stroke:#56B8FF80,color:#56B8FF
+`}
+  />
+  <Legend
+    label="Color key"
+    items={[
+      { tone: 'invariant', label: 'invariants · the 8+1' },
+      { tone: 'accent',    label: 'operator + execution' },
+      { tone: 'session',   label: 'runtime + agents' },
+      { tone: 'framework', label: 'substrate + memory' },
+      { tone: 'lane',      label: 'lanes + projections' },
+      { tone: 'gate',      label: 'gauntlet · gates' },
+      { tone: 'worker',    label: 'workers + security' },
+      { tone: 'spine',     label: 'the spine' },
+      { tone: 'ok',        label: 'quality · doctor + audit' },
+      { tone: 'accent2',   label: 'cockpit · observe + replay' },
+    ]}
+  />
+
+  <h3>Layer 0 &mdash; Invariants</h3>
+  <p>
+    The 8+1 hard rules: files-only state, append-only spine, no hosted backend, no broad new deps, no provider SDKs in app code, no token export, brand boundary, lane ownership, and the auto-trigger gauntlet. These are not policy layered on top of features &mdash; they are the things every feature has to be compatible with in order to exist. Doctor-enforced on every install and upgrade.
+  </p>
+
+  <h3>Layer 1 &mdash; Operator surface</h3>
+  <p>
+    The operator types a slash command or a plain sentence; the verbose CLI stays for scripting. No one memorizes <code>maddu cmd subcmd --flag value</code>. There are 40 slash on-ramps installed per repo. The bar is that a brand-new user ships a slice without opening the docs.
+  </p>
+
+  <h3>Layer 2 &mdash; Agent runtime</h3>
+  <p>
+    Any agent CLI plugs in &mdash; claude-code, codex, gemini, and future runtimes. The coordinator that fans work across phases is a Máddu primitive, not a Claude Code or Codex feature. That is what lets orchestration survive vendor pivots.
+  </p>
+
+  <h3>Layer 3 &mdash; Execution topology</h3>
+  <p>
+    Three default pipelines, the coordinator primitive, the team verb, and ad-hoc <code>/maddu-autopilot</code> for one-offs. Rule of thumb: prefer a pipeline; ad-hoc is reserved for genuinely one-off changes.
+  </p>
+
+  <h3>Layer 4 &mdash; Substrate loop</h3>
+  <p>
+    The one mental model: register, claim, slice, stop, release, close. Every transition is exactly one event. Pipelines, coordinator, and autopilot all reduce to this loop at higher altitudes, which is what makes replay deterministic.
+  </p>
+
+  <h3>Layer 5 &mdash; Lanes</h3>
+  <p>
+    Concurrency without locks. Claim a lane before editing its file area; no two agents hold the same lane. Cross-lane work goes through a mailbox NDJSON, never shared mutation. Force-claims leave a contested-claim audit. This is Rule #8 made operable.
+  </p>
+
+  <h3>Layer 6 &mdash; The gauntlet</h3>
+  <p>
+    Rule #9 made operable. Read-only actions pass through and are still logged. State-mutating actions must be allowlisted, must respect cooldowns, must satisfy the governance tier, and must emit a <code>TRIGGER_FIRED</code> event with provenance. It is the brake on confidently-wrong propagation.
+  </p>
+
+  <h3>Layer 7 &mdash; Worker isolation</h3>
+  <p>
+    Provider calls live here and nowhere else. Subprocess workers spawn per slice with a default-deny env allowlist. Credentials are injected at spawn and never written to the spine. Tool argv passes a secret scanner before logging, and token usage is emitted as events. The framework itself never imports a provider SDK.
+  </p>
+
+  <h3>Layer 8 &mdash; The spine</h3>
+  <p>
+    The single source of truth: append-only NDJSON under <code>.maddu/events/</code>, with {EVENT_TYPES} event types covering session lifecycle, lane operations, slices, approvals, triggers, token usage, trust audits, MCP provenance, secret-scan blocks, governance changes, and audit reports. A forward <code>prev_hash</code> hash-chain makes interior tampering evident. The spine is verified, never auto-repaired.
+  </p>
+
+  <h3>Layer 9 &mdash; Projections</h3>
+  <p>
+    Plans, kanban, receipts, cost, skills, trust ledger, governance state &mdash; all JSON projections under <code>.maddu/state/</code>. All are rebuildable from the spine, none are authoritative, and gates enforce their determinism.
+  </p>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>Projections rebuild from the spine and are never authoritative.</strong> If a projection and the spine ever disagree, the spine wins &mdash; the projection is discarded and rebuilt from events. State is never repaired in place.</p>
+  </div>
+
+  <h3>Layer 10 &mdash; Security &amp; supply chain</h3>
+  <p>
+    Structural, not advisory. <code>maddu trust</code> pins dependencies with SHA256, MCP servers come from an allowlisted gallery, skill imports require the <code>--trust</code> flag, and sources and approvals gate provenance. The threat-model doc is the operator's security manual.
+  </p>
+
+  <h3>Layer 11 &mdash; Quality &amp; invariant enforcement</h3>
+  <p>
+    Enforcement, not aspiration:
+  </p>
+  <ul>
+    <li>{DOCTOR_GATES} doctor gates on every install and upgrade</li>
+    <li>16-check charter-drift audit, now including architecture-drift</li>
+    <li>15-scenario stress harness and a four-version upgrade matrix</li>
+    <li>Framework-source self-test versus host-project test</li>
+    <li>Layout-refusal at every release boundary; review, test, lint, and format at slice level</li>
+  </ul>
+
+  <h3>Layer 12 &mdash; Memory &amp; accounting</h3>
+  <p>
+    Work outlives the agent. Hindsight skills auto-curate from slice-stops, threshold-gated and with cooldowns. <code>maddu learn</code> mines failed&rarr;succeeded tool-call pairs into durable corrections; <code>maddu blueprint</code> exports a portable, variable-driven project handoff; <code>maddu debt</code> ledgers the deliberate shortcuts. The receipt log accounts for spend, operator memory persists decisions and their rationale, and replay determinism means past state is reconstructible.
+  </p>
+
+  <h3>Layer 13 &mdash; Cockpit</h3>
+  <p>
+    Observe and replay, never command. A static local page that runs in any browser over long-poll &mdash; no websocket, no cloud. Its 38+ routes are grouped by intent (Decide, Operate, Verify, Connect, Reference), with an entity-drawer primitive for click-through detail.
+  </p>
+
+  <h2>How state flows</h2>
+  <p>
+    State moves in one direction. A transition in the substrate loop &mdash; or any gate in the gauntlet &mdash; appends exactly one event to the spine. Nothing mutates an earlier record; the log only grows.
+  </p>
+  <ul>
+    <li>Vertical is causal flow: operator &rarr; runtime &rarr; execution &rarr; substrate &rarr; lanes &rarr; gauntlet &rarr; worker &rarr; spine.</li>
+    <li>The side channels &mdash; security, quality, memory &mdash; bind across layers rather than sitting in the vertical stack.</li>
+    <li>Every write lands on the append-only spine, so any run replays end to end.</li>
+  </ul>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>The posture is deliberate, not missing.</strong> No scheduler thread (the spine is the write-ahead log), no worker queue (lane claims are the lock), no mutex layer, no websocket, no SaaS or telemetry, no provider SDKs in app code, no auto-repair, and no cross-machine token sync.</p>
+  </div>
+
+  <div class="dx-pager">
+    <a class="dx-pager-link" href="/docs/how-it-works">
+      <span class="dx-pager-dir">&larr; Prev</span>
+      <span class="dx-pager-title">How it works</span>
+    </a>
+    <a class="dx-pager-link is-next" href="/docs/governance">
+      <span class="dx-pager-dir">Next &rarr;</span>
+      <span class="dx-pager-title">Governance</span>
+    </a>
+  </div>
+</DocsLayout>

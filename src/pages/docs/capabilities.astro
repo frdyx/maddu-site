@@ -1,0 +1,87 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+<DocsLayout title="Verbs" pathname="/docs/capabilities" section="Reference">
+  <h1>The verb ontology</h1>
+  <p class="dx-lede">
+    Máddu is 72 verbs across 8 purpose areas. Every top-level verb traces to a stated
+    purpose in the charter, and one coherence check flags any that drifts.
+  </p>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>Every verb earns its place, or it goes.</strong> The command surface is not a grab-bag — it is a governed ontology where each verb answers to a purpose area, and the audit fails when one stops fitting.</p>
+  </div>
+
+  <h2>How a verb earns its place</h2>
+  <p>A verb stays in the surface only while all four hold. Fail any one and the charter-drift check flags it — as real drift to fix, or as a sign the charter itself needs to evolve.</p>
+  <ol>
+    <li><strong>Serves the mission</strong> — local-first, auditable orchestration.</li>
+    <li><strong>Respects all 9 invariants</strong> — the 8+1 hard rules, no exceptions.</li>
+    <li><strong>Reachable from the canonical flow</strong> or an explicit operator/agent surface.</li>
+    <li><strong>Traces to a stated purpose</strong> — one of the eight areas below.</li>
+  </ol>
+
+  <h2>The eight purpose areas</h2>
+  <p>Each area owns a slice of the surface and states its purpose in one line. The full charter text for every area lives behind a disclosure on the interactive matrix.</p>
+
+  <h3>Orchestration core &middot; 8 verbs</h3>
+  <p>The one canonical loop — register a session, claim a lane, run a slice, release. Each transition is one event on the spine.</p>
+  <p><code>session</code> &middot; <code>register</code> &middot; <code>lane</code> &middot; <code>slice</code> &middot; <code>slice-stop</code> &middot; <code>stop</code> &middot; <code>worker</code> &middot; <code>mailbox</code></p>
+
+  <h3>Planning &amp; autonomy &middot; 10 verbs</h3>
+  <p>Decompose work into goals, phases, and plans that revise themselves — and hand off cleanly between sessions.</p>
+  <p><code>pipeline</code> &middot; <code>plan</code> &middot; <code>goal</code> &middot; <code>phase</code> &middot; <code>loop</code> &middot; <code>coordinator</code> &middot; <code>team</code> &middot; <code>advise</code> &middot; <code>suggest</code> &middot; <code>handoff</code></p>
+
+  <h3>Quality &amp; review &middot; 8 verbs</h3>
+  <p>Gate every slice through tests, review, lint, and the doctor. Honesty enforced, not asserted.</p>
+  <p><code>review</code> &middot; <code>test</code> &middot; <code>self-test</code> &middot; <code>lint</code> &middot; <code>format</code> &middot; <code>doctor</code> &middot; <code>architecture</code> &middot; <code>ci</code></p>
+
+  <h3>Default tools &middot; 4 verbs</h3>
+  <p>The tool surface an agent reaches for mid-work: git, dependency installs, reusable skills, ad-hoc tasks.</p>
+  <p><code>git</code> &middot; <code>install</code> &middot; <code>skill</code> &middot; <code>task</code></p>
+
+  <h3>Supply-chain &amp; trust &middot; 8 verbs</h3>
+  <p>Pin, verify, and approve everything that enters the workspace — govern a model factory&rsquo;s hand-offs — and let lanes earn autonomy on the verified record.</p>
+  <p><code>trust</code> &middot; <code>sources</code> &middot; <code>approval</code> &middot; <code>governance</code> &middot; <code>autonomy</code> &middot; <code>mcp</code> &middot; <code>plugin</code> &middot; <code>model</code></p>
+
+  <h3>Memory &amp; accounting &middot; 9 verbs</h3>
+  <p>Make work outlive the agent: mined corrections, portable blueprints, a debt ledger, honest cost accounting, and a recommend-only evolution planner.</p>
+  <p><code>memory</code> &middot; <code>learn</code> &middot; <code>blueprint</code> &middot; <code>debt</code> &middot; <code>cost</code> &middot; <code>usage</code> &middot; <code>log</code> &middot; <code>import</code> &middot; <code>evolve</code></p>
+
+  <h3>Discovery &amp; observability &middot; 13 verbs</h3>
+  <p>Watch, search, and replay everything on the spine — re-read as normalized experience — across one repo or your whole fleet.</p>
+  <p><code>status</code> &middot; <code>events</code> &middot; <code>spine</code> &middot; <code>search</code> &middot; <code>brief</code> &middot; <code>orient</code> &middot; <code>help</code> &middot; <code>audit</code> &middot; <code>insights</code> &middot; <code>fleet</code> &middot; <code>focus</code> &middot; <code>export</code> &middot; <code>experience</code></p>
+
+  <h3>Lifecycle &amp; plumbing &middot; 12 verbs</h3>
+  <p>Install, upgrade, and wire the spine into your repos and agents. Plumbing, not workflow — verbose CLI, no slash on-ramp.</p>
+  <p><code>init</code> &middot; <code>start</code> &middot; <code>upgrade</code> &middot; <code>agents</code> &middot; <code>hooks</code> &middot; <code>workspace</code> &middot; <code>global</code> &middot; <code>runtime</code> &middot; <code>schedule</code> &middot; <code>checkpoint</code> &middot; <code>auth</code> &middot; <code>bridges</code></p>
+
+  <h2>The full reference</h2>
+  <p>
+    This page summarizes by area. For the complete surface — every verb linked to its own
+    reference page, plus a live filter across verbs, areas, and purpose text — use the
+    interactive matrix.
+  </p>
+  <div class="dx-cards">
+    <a class="dx-card" href="/capabilities">
+      <span class="dx-card-title"><span>Interactive verb matrix</span><span>&rarr;</span></span>
+      <p>All 72 verbs, filterable, each linking to its own reference page and full charter purpose.</p>
+    </a>
+    <a class="dx-card" href="/docs/hard-rules">
+      <span class="dx-card-title"><span>The 9 invariants</span><span>&rarr;</span></span>
+      <p>The hard rules every verb must respect — enforced by doctor on every run.</p>
+    </a>
+  </div>
+
+  <div class="dx-pager">
+    <a class="dx-pager-link" href="/docs/features/cost">
+      <span class="dx-pager-dir">&larr; Prev</span>
+      <span class="dx-pager-title">Cost &amp; budget</span>
+    </a>
+    <a class="dx-pager-link is-next" href="/docs/compare">
+      <span class="dx-pager-dir">Next &rarr;</span>
+      <span class="dx-pager-title">Compare</span>
+    </a>
+  </div>
+</DocsLayout>

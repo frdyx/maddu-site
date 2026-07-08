@@ -1,0 +1,171 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import PageNext from '../../components/PageNext.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+import CapabilityMatrix from '../../components/CapabilityMatrix.astro';
+import { DOCTOR_GATES } from '../../data/stats';
+---
+
+<Layout title="Máddu vs the worktree orchestrators" pathname="/compare/orchestrators">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Compare</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">session managers</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">head-on</span>
+      </div>
+      <h1>Máddu vs the worktree orchestrators. <span class="dim-h1">Managing sessions is not the same as governing them.</span></h1>
+      <p class="lede">
+        Vibe Kanban, Claude Squad, oh-my-claudecode, Ruflo, kodo — they spawn worktrees, drive tmux panes, and lay agents across boards. Máddu governs and records the work in the repo. v1.93 closed the ergonomics gap without giving up the spine.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · What the orchestrators are</span>
+        <h2>Excellent session managers.</h2>
+        <p>
+          These tools make parallel agent work bearable. Vibe Kanban (~27k stars as of July 2026) puts agents on a kanban board over SQLite state; Claude Squad wires tmux panes to git worktrees; oh-my-claudecode (~37k stars) is a broad workflow layer; Ruflo (~63k stars) pushes federation and swarms, claiming "100+ agents" of its own; kodo runs overnight autonomous loops. They spawn sessions, place them in worktrees, and give you a live view of many agents at once — session ergonomics Máddu doesn't try to beat.
+        </p>
+      </header>
+
+      <div class="vs-honest">
+        <h4>Where the orchestrators are stronger — plainly</h4>
+        <ul>
+          <li>Their session UX and boards are better — live panes, kanban columns, and visual multi-agent control are their whole craft.</li>
+          <li>Their communities are far larger, with the contributor depth and template ecosystems that brings.</li>
+          <li>kodo-style overnight autonomous loops are a genuinely different product Máddu doesn't offer.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · Where Máddu differs</span>
+        <h2>They manage the panes. Máddu owns the record.</h2>
+      </header>
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Exclusive lane claims</span>
+            <span class="panel-aside">not just worktrees</span>
+          </div>
+          <p>A worktree isolates files; it doesn't stop two agents from claiming the same work. Máddu's lanes are exclusive claims recorded on the spine — and v1.93's <code>lane claim --worktree</code> spawns the worktree <em>and</em> the claim together, one spine underneath all of them.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">A tamper-evident history</span>
+            <span class="panel-aside">in the repo</span>
+          </div>
+          <p>Boards and tmux state are session scaffolding — a SQLite file or a pane layout, mutable and gone when the tool is. Máddu's history is a hash-chained, append-only spine in <code>.maddu/</code> that travels with <code>git clone</code> and verifies with <code>maddu spine verify</code>.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Approvals and gates</span>
+            <span class="panel-aside">{DOCTOR_GATES} + ci</span>
+          </div>
+          <p>Spawning agents is orchestration; proving what they did is governance. Máddu adds an approvals ledger, {DOCTOR_GATES} deterministic gates, and a headless <code>maddu ci</code> rail — a completion-claim check that demands observed proof, not a card dragged to "done".</p>
+        </div>
+      </div>
+
+      <Callout tone="warn" title="Different jobs, one repo" tag="the real split">
+        <p>
+          You can run an orchestrator's board and Máddu's spine at once — many people should. Where they overlap is worktrees, and v1.93's worktree lanes closed most of that ergonomics gap while keeping the one thing a session manager doesn't give you: a durable, auditable record that outlives every pane.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <CapabilityMatrix
+        players={['vibe-kanban', 'claude-squad', 'omc', 'ruflo', 'kodo']}
+        eyebrow="§ 03 · The matrix"
+        title="Axis by axis."
+        subtitle="The fifteen research axes, focused on this matchup. Conservative marks — shipped, documented surfaces only."
+      />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 04 · Choose honestly</span>
+        <h2>Two different needs.</h2>
+      </header>
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Choose an orchestrator when</span>
+          </div>
+          <ul class="vs-list">
+            <li>You want the best live session UX — boards, panes, visual multi-agent control</li>
+            <li>Overnight autonomous loops or swarm federation are the actual product you need</li>
+            <li>A large community and ready-made templates matter more than a portable record</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Choose Máddu when</span>
+          </div>
+          <ul class="vs-list">
+            <li>The governance record must live in the repo and survive every tool swap</li>
+            <li>You need exclusive claims and deterministic gates, not just isolated worktrees</li>
+            <li>You want worktree ergonomics and a durable spine from the same command</li>
+          </ul>
+        </div>
+      </div>
+      <p class="feat-note">
+        A note on Vibe Kanban: bloop, the company behind it, shut down in April 2026; the project continues community-maintained and its users are migration-eligible. If you're one of them looking for a durable home for the record, that's the seam Máddu fills.
+      </p>
+      <p class="feat-note">
+        Related: <a href="/features/worktrees">worktree lanes</a> · <a href="/features/discipline">session discipline</a> · <a href="/features/ci">governance in CI</a> · <a href="/hard-rules">the hard rules</a>
+      </p>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="Next comparison"
+    title="Máddu vs LangGraph."
+    hint="Not our market, and we say so — building agent graphs vs governing the agents that run."
+    href="/compare/langgraph"
+    tone="warn"
+  />
+  <CtaBlock />
+</Layout>
+
+<style>
+  .vs-honest {
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-warn);
+    border-radius: var(--m-radius);
+    max-width: 720px;
+  }
+  .vs-honest h4 {
+    margin: 0 0 var(--m-space-2);
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--m-warn);
+  }
+  .vs-honest ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+  .vs-honest li { font-size: 13.5px; color: var(--m-fg-1); }
+  .vs-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .vs-list li { font-size: 13.5px; color: var(--m-fg-1); line-height: 1.5; }
+  .feat-note {
+    margin-top: var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+  }
+  .feat-note code { font-size: 12px; }
+</style>

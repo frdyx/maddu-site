@@ -4,9 +4,9 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://maddu.dev/sitemap.xml
+Sitemap: https://maddu.frdyx.com/sitemap.xml
 
 # Feeds for discovery — also linked from every page's <head>.
-# Atom: https://maddu.dev/atom.xml
-# JSON: https://maddu.dev/feed.json
-# API:  https://maddu.dev/api/changelog.json
+# Atom: https://maddu.frdyx.com/atom.xml
+# JSON: https://maddu.frdyx.com/feed.json
+# API:  https://maddu.frdyx.com/api/changelog.json

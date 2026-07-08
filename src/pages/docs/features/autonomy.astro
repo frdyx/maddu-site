@@ -1,0 +1,72 @@
+---
+import DocsLayout from '../../../layouts/DocsLayout.astro';
+import EventStream from '../../../components/EventStream.astro';
+---
+<DocsLayout title="Earned autonomy" pathname="/docs/features/autonomy" section="Features">
+  <h1>Earned autonomy</h1>
+  <p class="dx-lede">
+    A lane loosens only when its verified history says it should. Máddu scores each lane over witnessed outcomes and recommends a rung — it never grants the trust itself.
+  </p>
+
+  <div class="dx-code">
+    <div class="dx-code-head"><span class="dx-code-dot"></span> terminal</div>
+    <pre><code>maddu autonomy
+<span class="tok-c"># cockpit-shell · wilson=0.81 · rung=established · recommendation=none</span></code></pre>
+  </div>
+
+  <p>
+    Deciding a lane has "earned" more room is usually a feeling, not a measurement. Feelings reward the agent that <em>claims</em> to be clean, not the one whose record proves it — and they're easy to farm with cheap deliverables. Máddu replaces the guess with a deterministic score over the spine.
+  </p>
+
+  <h2>What it does</h2>
+  <div class="dx-cards">
+    <div class="dx-card">
+      <span class="dx-card-title"><span>Scored, not sensed</span></span>
+      <p>A Wilson lower bound (<code>z=1.96</code>) over witnessed-clean versus witnessed-dirty slice outcomes. The same record produces the same score — a bound that stays conservative until the evidence is real.</p>
+    </div>
+    <div class="dx-card">
+      <span class="dx-card-title"><span>A three-rung ladder</span></span>
+      <p>Lanes sit at <em>observe</em>, <em>established</em>, or <em>relaxation-candidate</em>. A daily clean-credit cap blunts deliverable-farming, so a burst of trivial wins can't buy a rung.</p>
+    </div>
+    <div class="dx-card">
+      <span class="dx-card-title"><span>Recommend-only</span></span>
+      <p>Nothing here writes governance config. Applying a recommendation is the operator running <code>maddu governance set</code> — a deliberate act, on the record, that the feature will never take for you.</p>
+    </div>
+  </div>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>The phase floor is absolute.</strong> Recommendations are muted while any phase is active — a scored lane can't argue its way past an in-flight phase. <code>AUTONOMY_SCORED</code> lands on explicit runs; <code>AUTONOMY_RECOMMENDATION</code> only on a rung change, spine-deduped so it never repeats itself.</p>
+  </div>
+
+  <h2>On the record</h2>
+  <p>Earning a rung is three events — a score, a recommendation, and the operator's deliberate follow-through:</p>
+
+  <EventStream
+    eyebrow="Scored run, then a rung change"
+    source=".maddu/events/2026-07-05.ndjson"
+    entries={[
+      { time: '11:20:08.114', type: 'AUTONOMY_SCORED',          tone: 'accent',   payload: 'lane=cockpit-shell · wilson=0.79 · clean=41 · dirty=3',   actor: 'operator' },
+      { time: '11:20:08.142', type: 'AUTONOMY_RECOMMENDATION',  tone: 'approval', payload: 'lane=cockpit-shell · observe→established · thresholds=hash:9f2c', actor: 'operator' },
+      { time: '11:22:47.663', type: 'GOVERNANCE_SET',           tone: 'ok',       payload: 'tier=standard · by=operator · source=recommendation',    actor: 'operator' },
+    ]}
+  />
+
+  <p>
+    Scores are surfaced by <a href="/capabilities/orient"><code>maddu orient</code></a> and <code>maddu governance show</code>, next to the tier they inform. Thresholds override via <code>.maddu/config/autonomy.json</code> and are hashed onto every event, so a score is always reproducible from its inputs.
+  </p>
+  <p>
+    Related verbs: <a href="/capabilities/autonomy"><code>maddu autonomy</code></a>, <a href="/capabilities/governance"><code>maddu governance</code></a>, <a href="/capabilities/phase"><code>maddu phase</code></a>, and <a href="/capabilities/slice-stop"><code>maddu slice-stop</code></a>.
+  </p>
+
+  <div class="dx-pager">
+    <a class="dx-pager-link" href="/docs/features/discipline">
+      <span class="dx-pager-dir">&larr; Prev</span>
+      <span class="dx-pager-title">Session discipline</span>
+    </a>
+    <a class="dx-pager-link is-next" href="/docs/features/fleet">
+      <span class="dx-pager-dir">Next &rarr;</span>
+      <span class="dx-pager-title">Fleet view</span>
+    </a>
+  </div>
+</DocsLayout>

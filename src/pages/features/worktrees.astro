@@ -1,0 +1,123 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import EventStream from '../../components/EventStream.astro';
+import PageNext from '../../components/PageNext.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+---
+
+<Layout title="Worktree lanes — parallel agents, isolated checkouts, one spine" pathname="/features/worktrees">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Feature</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">maddu lane claim --worktree</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">since v1.93.0</span>
+      </div>
+      <h1>Parallel agents. Isolated checkouts. <span class="dim-h1">One spine.</span></h1>
+      <p class="lede">
+        A lane claim can now provision its own git worktree. Two agents on two lanes stop sharing a checkout — and every event they emit still lands on one record.
+      </p>
+      <pre class="feat-cli"><code>$ maddu lane claim cockpit-shell --worktree
+lane claimed · worktree .maddu/worktrees/cockpit-shell/ · branch maddu/lane/cockpit-shell</code></pre>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · The problem</span>
+        <h2>Two agents, one checkout, guaranteed collisions.</h2>
+        <p>
+          Lane ownership keeps agents from claiming the same <em>area</em>. But they still shared one working tree — agent A's half-finished refactor sat in agent B's diff. The moment you run agents in parallel, the filesystem is the contention point.
+        </p>
+      </header>
+
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Claim provisions</span>
+            <span class="panel-aside">race-safe</span>
+          </div>
+          <p><code>lane claim &lt;id&gt; --worktree</code> creates an isolated checkout at <code>.maddu/worktrees/&lt;lane&gt;/</code> on branch <code>maddu/lane/&lt;lane&gt;</code>, bound to the claim. Lose the claim race and nothing is provisioned.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">One spine, always</span>
+            <span class="panel-aside">split-proof</span>
+          </div>
+          <p>Commands run inside the worktree still append to the <strong>primary</strong> repo's spine — a work-root / state-root split makes a silently forked record impossible. A broken pointer fails loudly instead.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Release verifies</span>
+            <span class="panel-aside">cooperative</span>
+          </div>
+          <p><code>lane release --worktree merged|abandoned|keep</code>. <em>merged</em> checks the branch really is an ancestor of your integration ref and refuses to orphan un-integrated work. Máddu never runs your merge — it verifies you did.</p>
+        </div>
+      </div>
+
+      <Callout tone="ok" title="Doctor watches the edges" tag="worktree-lane-coherence">
+        <p>
+          A WARN-tier gate diagnoses drifted worktrees against real git — orphaned checkout, wrong branch, dirty tree, lane dropped from the catalog — by name, before they bite. Read-only: it reports, you disposition.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · On the record</span>
+        <h2>What a worktree lifecycle looks like on the spine.</h2>
+      </header>
+      <EventStream
+        eyebrow="Worktree lane, claim to release"
+        source=".maddu/events/2026-07-05.ndjson"
+        entries={[
+          { time: '09:14:02.101', type: 'LANE_CLAIMED',       tone: 'lane',     payload: 'lane=cockpit-shell · focus="drawer polish"',            actor: 'claude-code' },
+          { time: '09:14:02.688', type: 'WORKTREE_ATTACHED',  tone: 'accent',   payload: 'path=.maddu/worktrees/cockpit-shell · branch=maddu/lane/cockpit-shell', actor: 'claude-code' },
+          { time: '09:41:17.240', type: 'SLICE_STOPPED',      tone: 'approval', payload: 'diff scoped to work root · gates green',                actor: 'claude-code' },
+          { time: '09:44:03.512', type: 'WORKTREE_DETACHED',  tone: 'ok',       payload: 'disposition=merged · ancestor-check=pass',              actor: 'operator' },
+          { time: '09:44:03.530', type: 'LANE_RELEASED',      tone: 'lane',     payload: 'lane=cockpit-shell',                                    actor: 'operator' },
+        ]}
+      />
+      <p class="feat-note">
+        Related verbs: <a href="/capabilities/lane"><code>maddu lane</code></a> · <a href="/capabilities/doctor"><code>maddu doctor</code></a> · <a href="/capabilities/slice-stop"><code>maddu slice-stop</code></a>
+      </p>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="Next feature"
+    title="Session discipline — never start building unrecorded."
+    hint="Hooks auto-register every session and checkpoint governance before every compaction."
+    href="/features/discipline"
+    tone="accent"
+  />
+  <CtaBlock />
+</Layout>
+
+<style>
+  .feat-cli {
+    margin: var(--m-space-5) 0 0;
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent);
+    border-radius: var(--m-radius);
+    font-family: var(--m-font-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--m-fg-1);
+    overflow-x: auto;
+  }
+  .feat-note {
+    margin-top: var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+  }
+  .feat-note code { font-size: 12px; }
+</style>

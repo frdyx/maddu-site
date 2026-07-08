@@ -1,0 +1,171 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import PageNext from '../../components/PageNext.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+import CapabilityMatrix from '../../components/CapabilityMatrix.astro';
+import { DOCTOR_GATES } from '../../data/stats';
+---
+
+<Layout title="Máddu vs the enterprise control planes" pathname="/compare/enterprise">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Compare</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">enterprise planes</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">principled decline</span>
+      </div>
+      <h1>Máddu vs the enterprise control planes. <span class="dim-h1">Different unit of governance.</span></h1>
+      <p class="lede">
+        GitHub Agent HQ, Coder, and Microsoft's Agent Governance Toolkit govern which agents run across your org. Máddu governs how they work inside one repo. If you need fleet policy at org scale, this page tells you to buy theirs.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · What the enterprise planes are</span>
+        <h2>Org-scale control of the agent fleet.</h2>
+        <p>
+          These are platforms for governing agents across an organization. GitHub Agent HQ manages agents org-wide with Entra identity integration; Coder brings an AI Gateway with OIDC and SCIM for provisioning; Microsoft's Agent Governance Toolkit is framework-level governance middleware that sits inside the agent's call path. Their unit of governance is the org and its identity fabric — who may run which agent, under what policy, audited centrally. That is a real and hard problem, and they solve it well.
+        </p>
+      </header>
+
+      <div class="vs-honest">
+        <h4>Where the enterprise planes are stronger — plainly</h4>
+        <ul>
+          <li>SSO, RBAC, and fleet policy at org scale are genuinely theirs — Máddu has none of it, on purpose.</li>
+          <li>Centralized audit export and identity integration are what compliance regimes require; those buyers need these platforms.</li>
+          <li>They manage agents across many teams and repos at once — a scope Máddu deliberately never reaches for.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · Where Máddu differs</span>
+        <h2>They govern the org. Máddu governs the repo.</h2>
+      </header>
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">The repo is the unit</span>
+            <span class="panel-aside">not the org</span>
+          </div>
+          <p>Enterprise planes decide which agents run across the fleet. Máddu governs how work happens inside a single repository — lanes, approvals, gates, and a record that belongs to the code, not to an org-wide console you log into.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Identity is git, not accounts</span>
+            <span class="panel-aside">principled decline</span>
+          </div>
+          <p>SSO, RBAC, and provisioning are a deliberate decline in Máddu core. Authorship binds to git commit identity — the signature already in the history — instead of a directory of accounts. No SCIM, no Entra, no identity plane to run.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Zero infrastructure</span>
+            <span class="panel-aside">no hosted option, ever</span>
+          </div>
+          <p>Máddu is append-only files in <code>.maddu/</code>, verified by <code>maddu spine verify</code> and {DOCTOR_GATES} deterministic gates. There is no gateway to deploy, no console to operate, and no hosted tier — hard rule #3 forbids one. The record is vendor-portable by construction.</p>
+        </div>
+      </div>
+
+      <Callout tone="accent-2" title="No hosted plane, by rule" tag="hard rule #3">
+        <p>
+          Máddu will never ship a hosted or managed option — that isn't a roadmap gap, it's a hard rule. The governance record lives in your repo and travels with <code>git clone</code>; nothing about it depends on an account, a tenant, or a vendor staying in business.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <CapabilityMatrix
+        players={['github-agent-hq', 'coder', 'microsoft-agt']}
+        eyebrow="§ 03 · The matrix"
+        title="Axis by axis."
+        subtitle="The fifteen research axes, focused on this matchup. Conservative marks — shipped, documented surfaces only."
+      />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 04 · Choose honestly</span>
+        <h2>Know which buyer you are.</h2>
+      </header>
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Choose an enterprise plane when</span>
+          </div>
+          <ul class="vs-list">
+            <li>You need SSO, RBAC, and fleet policy across many teams and repos</li>
+            <li>Compliance requires centralized identity and audit export at org scale</li>
+            <li>The unit you have to govern is the organization, not a single repository</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Choose Máddu when</span>
+          </div>
+          <ul class="vs-list">
+            <li>The repo is the unit of governance, and the record must belong to it</li>
+            <li>The audit trail has to be vendor-portable and outlive any platform</li>
+            <li>Zero infrastructure is a requirement — no gateway, no console, no tenant</li>
+          </ul>
+        </div>
+      </div>
+      <p class="feat-note">
+        Máddu's audience is solo power developers and small high-trust agencies — not enterprise fleets. If you're buying for an org, the platforms above serve you better, and we'd rather say so than pretend otherwise.
+      </p>
+      <p class="feat-note">
+        Related: <a href="/features/autonomy">earned autonomy</a> · <a href="/features/ci">governance in CI</a> · <a href="/features/cost">cost budgets</a> · <a href="/hard-rules">the hard rules</a>
+      </p>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="Next"
+    title="Everything the discipline loop earns you."
+    hint="The full feature surface — worktree lanes, earned autonomy, CI gates, cost budgets, and the record underneath."
+    href="/features"
+    tone="brand"
+  />
+  <CtaBlock />
+</Layout>
+
+<style>
+  .vs-honest {
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-warn);
+    border-radius: var(--m-radius);
+    max-width: 720px;
+  }
+  .vs-honest h4 {
+    margin: 0 0 var(--m-space-2);
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--m-warn);
+  }
+  .vs-honest ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+  .vs-honest li { font-size: 13.5px; color: var(--m-fg-1); }
+  .vs-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .vs-list li { font-size: 13.5px; color: var(--m-fg-1); line-height: 1.5; }
+  .feat-note {
+    margin-top: var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+  }
+  .feat-note code { font-size: 12px; }
+</style>

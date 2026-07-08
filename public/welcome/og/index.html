@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Máddu — OG card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #d0ff00; --secondary: #56b8ff; --surface: #050b17; --on-primary: #06121f;
+    --ink: #eaf1fb; --muted: #8aa0bd; --faint: #5d7596;
+    --border: color-mix(in srgb, var(--secondary) 16%, transparent);
+    --sans: 'IBM Plex Sans', sans-serif; --mono: 'IBM Plex Mono', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  /* Exact OG canvas */
+  .card {
+    width: 1200px; height: 630px; position: relative; overflow: hidden;
+    background: var(--surface); color: var(--ink); font-family: var(--sans);
+    padding: 72px 76px; display: flex; flex-direction: column; justify-content: space-between;
+  }
+  /* atmosphere */
+  .card::before {
+    content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(760px 520px at 88% -12%, color-mix(in srgb, var(--secondary) 20%, transparent), transparent 60%),
+      radial-gradient(680px 460px at -6% 110%, color-mix(in srgb, var(--primary) 12%, transparent), transparent 58%);
+  }
+  .card::after {
+    content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: 0.5;
+    background-image:
+      linear-gradient(to right, color-mix(in srgb, var(--secondary) 8%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in srgb, var(--secondary) 8%, transparent) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 90% 80% at 70% 20%, #000 10%, transparent 72%);
+  }
+  /* giant watermark diamond, right side */
+  .watermark { position: absolute; right: -90px; top: 50%; transform: translateY(-50%); z-index: 0; opacity: 0.22; }
+  .watermark svg { width: 560px; height: 560px; filter: drop-shadow(0 0 70px color-mix(in srgb, var(--secondary) 60%, transparent)); }
+  .row { position: relative; z-index: 1; }
+
+  /* top: brand */
+  .brand { display: flex; align-items: center; gap: 16px; }
+  .brand svg { width: 48px; height: 48px; filter: drop-shadow(0 0 16px color-mix(in srgb, var(--primary) 45%, transparent)); }
+  .brand .name { font-size: 34px; font-weight: 600; letter-spacing: -0.01em; }
+
+  /* middle: message */
+  .eyebrow { font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.26em; font-size: 16px; color: var(--primary); font-weight: 500;
+    text-shadow: 0 0 18px color-mix(in srgb, var(--primary) 55%, transparent); }
+  h1 { font-size: 58px; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em; margin-top: 20px; max-width: 20ch;
+    text-shadow: 0 0 28px rgba(0,0,0,0.55); }
+  h1 .accent { color: var(--primary); text-shadow: 0 0 34px color-mix(in srgb, var(--primary) 50%, transparent); }
+  .sub { font-size: 27px; color: var(--muted); margin-top: 24px; max-width: none; white-space: nowrap; }
+  .sub b { color: var(--ink); font-weight: 600; text-shadow: 0 0 22px color-mix(in srgb, var(--secondary) 35%, transparent); }
+  .url b { text-shadow: 0 0 16px color-mix(in srgb, var(--primary) 55%, transparent); }
+
+  /* bottom: install + url */
+  .bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 40px; }
+  .install { display: inline-flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 22px;
+    background: #0c1828; border: 1px solid var(--border); padding: 16px 22px; border-radius: 10px; }
+  .install .p { color: var(--secondary); }
+  .url { font-family: var(--mono); font-size: 20px; color: var(--muted); letter-spacing: 0.04em; }
+  .url b { color: var(--primary); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="watermark">
+    <svg viewBox="0 0 64 64">
+      <defs>
+        <linearGradient id="wm" x1="0" y1="0" x2="0.35" y2="1">
+          <stop offset="0%" stop-color="#56b8ff" stop-opacity="1"/>
+          <stop offset="62%" stop-color="#56b8ff" stop-opacity="0.45"/>
+          <stop offset="100%" stop-color="#050b17" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path fill="url(#wm)" fill-rule="evenodd" d="M32 4L60 32L32 60L4 32Z M15 24H49L43 31H21Z M20 40H44L39 47H25Z"/>
+    </svg>
+  </div>
+
+  <div class="row brand">
+    <svg viewBox="0 0 64 64"><path fill="#d0ff00" fill-rule="evenodd" d="M32 4L60 32L32 60L4 32Z M15 24H49L43 31H21Z M20 40H44L39 47H25Z"/></svg>
+    <span class="name">Máddu</span>
+  </div>
+
+  <div class="row">
+    <div class="eyebrow">Local-first governance &amp; coordination layer</div>
+    <h1>Your AI agents are temporary.<br><span class="accent">The system that governs them shouldn't be.</span></h1>
+    <div class="sub">The <b>cooperative governance layer</b> for AI coding agents.</div>
+  </div>
+
+  <div class="row bottom">
+    <div class="install"><span class="p">$</span> npx github:frdyx/maddu init</div>
+    <div class="url"><b>maddu</b>.frdyx.com</div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,104 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+<DocsLayout title="Compare" pathname="/docs/compare" section="Reference">
+  <h1>Where Máddu sits</h1>
+  <p class="dx-lede">
+    Máddu is the repo-local governance layer for AI coding agents — not an agent, not a
+    framework, not a control plane. It competes in one lane and cooperates everywhere else.
+  </p>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>Tracing tools observe, memory layers remember, Máddu governs collaboration.</strong> Most tools called a competitor are really a complement — a comparison you can trust has to say which is which.</p>
+  </div>
+
+  <h2>The position</h2>
+  <p>Four properties define the lane, and no other tool holds all four. Every alternative gives up at least one.</p>
+  <ul>
+    <li><strong>External</strong> — sits beside the agent, not compiled into it. Nothing to rewrite when you swap Claude Code for Codex.</li>
+    <li><strong>Cooperative</strong> — the agent calls Máddu; Máddu never sits in the request path and never touches your keys. There is no proxy here to compromise.</li>
+    <li><strong>Zero-infrastructure</strong> — append-only files on disk. No Postgres, no Docker, no hosted account. The record travels with <code>git clone</code>.</li>
+    <li><strong>Agent-agnostic</strong> — one governance spine under Claude Code, Codex, Gemini, or any CLI agent. Your policies outlive whichever tool wins the quarter.</li>
+  </ul>
+
+  <h2>The landscape</h2>
+  <p>Seven categories, seven different answers. Máddu competes head-on in exactly one of them.</p>
+  <div class="dx-cards">
+    <a class="dx-card" href="/compare/claude-code">
+      <span class="dx-card-title"><span>CLI coding agents</span><span>&rarr;</span></span>
+      <p><strong>The layer under them, never against them.</strong> Claude Code, Codex CLI, Gemini CLI, Aider — Máddu is what their hooks attach to, and it survives the tool swap.</p>
+    </a>
+    <a class="dx-card" href="/compare/paperclip">
+      <span class="dx-card-title"><span>Agent control planes &amp; orchestrators</span><span>&rarr;</span></span>
+      <p><strong>Head-on — the record is the difference.</strong> Paperclip, Vibe Kanban, Claude Squad, and kin manage sessions and worktrees; Máddu governs and records, in your repo.</p>
+    </a>
+    <a class="dx-card" href="/compare/langgraph">
+      <span class="dx-card-title"><span>Agent frameworks / SDKs</span><span>&rarr;</span></span>
+      <p><strong>Not our market — theirs.</strong> Building programmable agent graphs? Use LangGraph, CrewAI, or the Agents SDK. Governing CLI agents in a repo is Máddu's job.</p>
+    </a>
+    <a class="dx-card" href="/compare/enterprise">
+      <span class="dx-card-title"><span>Enterprise control planes</span><span>&rarr;</span></span>
+      <p><strong>Principled decline.</strong> GitHub Agent HQ, Coder, and Microsoft's toolkit govern which agents run in your org; Máddu governs how they work in your repo.</p>
+    </a>
+    <a class="dx-card" href="/compare/langfuse">
+      <span class="dx-card-title"><span>Observability / tracing</span><span>&rarr;</span></span>
+      <p><strong>Partners, not competitors.</strong> <code>maddu export --otel</code> feeds Langfuse, LangSmith, Phoenix. Traces say what the model did; the spine says what was allowed.</p>
+    </a>
+    <a class="dx-card" href="/compare/temporal">
+      <span class="dx-card-title"><span>Durable execution</span><span>&rarr;</span></span>
+      <p><strong>Conceptual twin, different weight class.</strong> Same durability philosophy as Temporal or Inngest — with zero infrastructure instead of a database cluster.</p>
+    </a>
+    <a class="dx-card" href="/features/learn">
+      <span class="dx-card-title"><span>Memory layers</span><span>&rarr;</span></span>
+      <p><strong>Integration, not competition.</strong> Memory is a feature of the record, not the product. Vendor memory from Letta, Mem0, or Zep imports with provenance.</p>
+    </a>
+  </div>
+
+  <h2>The scorecard</h2>
+  <p>
+    Two independent competitive analyses in July 2026 scored the same fifteen axes and gave
+    Máddu the same row: the only tool holding all eleven governance axes, with four honest gaps.
+  </p>
+  <p><strong>Held — shipped and gate-checked:</strong> multi-agent coordination, approvals workflow, deterministic gates / CI, tamper-evident audit record, vendor / runtime-agnostic, local-first (no cloud), cockpit UI, multi-repo / workspace, learning / memory, cost tracking / budgets, autonomy / trust scoring.</p>
+  <p><strong>Not held — on purpose or not yet:</strong></p>
+  <ul>
+    <li><strong>Enterprise SSO / identity</strong> — principled decline; authorship binds to git commit identity, not accounts.</li>
+    <li><strong>Real-time team / multi-user</strong> — honest gap; the direction is git-native sync, never a cloud tenant.</li>
+    <li><strong>Hosted / managed option</strong> — never, by hard rule.</li>
+    <li><strong>Ecosystem size</strong> — young and solo-built against 25k&ndash;130k-star incumbents. The record is the moat, not the stars.</li>
+  </ul>
+
+  <h2>Claims we will never make</h2>
+  <p>A comparison you can trust names what the other side does better.</p>
+  <ul>
+    <li><strong>Never</strong> "best for programmable agent workflows" — LangGraph, CrewAI, and the Agents SDK own that.</li>
+    <li><strong>Never</strong> "an enterprise control plane" — GitHub, Coder, and Microsoft do identity and fleet policy better.</li>
+    <li><strong>Never</strong> "the best mission-control UX" — visual boards and PR dashboards are others' turf.</li>
+    <li><strong>Never</strong> "sandboxing" — Máddu is cooperative; OS isolation belongs to the runtime.</li>
+    <li><strong>Never</strong> "zero-trust" — Máddu's story is <em>earned</em> trust, deterministically verified.</li>
+  </ul>
+
+  <h2>The full matrix</h2>
+  <p>
+    The interactive compare page carries the complete fifteen-axis scorecard across every
+    system, plus a focused per-competitor cut for each matchup.
+  </p>
+  <div class="dx-cards">
+    <a class="dx-card" href="/compare">
+      <span class="dx-card-title"><span>Full competitive matrix</span><span>&rarr;</span></span>
+      <p>All fifteen axes, every scored system, with per-competitor matchup pages.</p>
+    </a>
+  </div>
+
+  <div class="dx-pager">
+    <a class="dx-pager-link" href="/docs/capabilities">
+      <span class="dx-pager-dir">&larr; Prev</span>
+      <span class="dx-pager-title">Verbs</span>
+    </a>
+    <a class="dx-pager-link is-next" href="/docs/changelog">
+      <span class="dx-pager-dir">Next &rarr;</span>
+      <span class="dx-pager-title">Changelog</span>
+    </a>
+  </div>
+</DocsLayout>

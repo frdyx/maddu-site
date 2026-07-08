@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Máddu — the verifiable record for AI coding agents</title>
+<link rel="canonical" href="https://maddu.frdyx.com">
+<meta name="description" content="The external, verifiable record of what your AI coding agents did, so no agent is ever the sole witness to its own work. Local-first and files-only: agents work as an auditable team through lanes, approvals, and gates. Máddu never sits in the request path or touches your keys.">
+<meta property="og:title" content="Máddu — the verifiable record for AI coding agents">
+<meta property="og:description" content="Your AI agents are temporary. The system that governs them shouldn't be. Máddu is the external, verifiable record of what they did, so no agent is ever the sole witness to its own work. Local-first, files-only, cooperative.">
+<meta property="og:url" content="https://maddu.frdyx.com">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://maddu.frdyx.com/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Máddu — your AI agents are temporary; the system that governs them shouldn't be. The cooperative governance & coordination layer for CLI coding agents.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Máddu — the cooperative governance layer for AI coding agents">
+<meta name="twitter:description" content="Your AI agents are temporary. The system that governs them shouldn't be. Lanes, approvals, gates, replayable record — local-first, no cloud, no key interception.">
+<meta name="twitter:image" content="https://maddu.frdyx.com/assets/og-image.png">
+<!-- Self-hosted IBM Plex (served from the site root /fonts/, same binaries the
+     marketing site uses) — no Google Fonts request, so this landing keeps the
+     site's "loads no third-party scripts / no third-party network" posture. -->
+<link rel="preload" href="/fonts/plex-sans-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+  /* Registered so the glow-reactive border tint can animate on hover (unregistered custom props snap). */
+  @property --edge-tr { syntax: "<color>"; inherits: false; initial-value: transparent; }
+  @property --edge-bl { syntax: "<color>"; inherits: false; initial-value: transparent; }
+
+  /* ── Self-hosted IBM Plex — mirrors src/styles/base.css. Weights stop at 600
+     (the heaviest binary shipped); display headings use 600, not faux-bold 700. */
+  @font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/plex-sans-400.woff2') format('woff2'); }
+  @font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/plex-sans-500.woff2') format('woff2'); }
+  @font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 600; font-display: swap; src: url('/fonts/plex-sans-600.woff2') format('woff2'); }
+  @font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/plex-mono-400.woff2') format('woff2'); }
+  @font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/plex-mono-500.woff2') format('woff2'); }
+  @font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 600; font-display: swap; src: url('/fonts/plex-mono-600.woff2') format('woff2'); }
+
+  /* ───────────────────────── Máddu navy-noir — Tier 2 brand tokens ───────────────────────── */
+  :root {
+    --brand-primary: #d0ff00;     /* lime */
+    --brand-secondary: #56b8ff;   /* electric blue */
+    --brand-surface: #050b17;     /* navy */
+    --brand-on-primary: #06121f;
+    --radius: 0.5rem;
+
+    /* Tier 3 — semantic (derived) */
+    --bg: var(--brand-surface);
+    --surface: #0a1424;
+    --card: #0c1828;
+    --card-2: #10203a;
+    --ink: #eaf1fb;
+    --muted: #8aa0bd;
+    --faint: #5d7596;
+    --border: color-mix(in srgb, var(--brand-secondary) 16%, transparent);
+    --border-soft: color-mix(in srgb, var(--brand-secondary) 9%, transparent);
+    --glow: color-mix(in srgb, var(--brand-secondary) 40%, transparent);
+    --glow-lime: color-mix(in srgb, var(--brand-primary) 30%, transparent);
+
+    /* Glow-reactive border edges — the border tints toward the glow's hue at the corner the glow sits in.
+       Rest = a hint of accent blended into the steel-blue border; hot = brighter on hover. */
+    --edge-blue: color-mix(in srgb, var(--brand-secondary) 50%, var(--border));
+    --edge-lime: color-mix(in srgb, var(--brand-primary) 42%, var(--border));
+    --edge-blue-hot: color-mix(in srgb, var(--brand-secondary) 80%, transparent);
+    --edge-lime-hot: color-mix(in srgb, var(--brand-primary) 66%, transparent);
+
+    --ok: #34d399; --warn: #fbbf24; --danger: #f87171;
+
+    --sans: 'IBM Plex Sans', system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+    --maxw: 1080px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ── Atmosphere: brand-tinted radial vignettes (lit-cabin depth) ── */
+  body::before {
+    content: "";
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(900px 600px at 78% -8%, color-mix(in srgb, var(--brand-secondary) 13%, transparent), transparent 60%),
+      radial-gradient(800px 520px at 8% 8%, color-mix(in srgb, var(--brand-primary) 7%, transparent), transparent 55%),
+      radial-gradient(1100px 800px at 50% 120%, color-mix(in srgb, var(--brand-secondary) 10%, transparent), transparent 60%);
+  }
+  /* subtle grid texture */
+  body::after {
+    content: "";
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.4;
+    background-image:
+      linear-gradient(to right, var(--border-soft) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--border-soft) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 75%);
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+  /* ── Eyebrow: mono uppercase lime kicker ── */
+  .eyebrow {
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--brand-primary);
+  }
+  .meta {
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  /* ───────────────────────── Nav ───────────────────────── */
+  header.nav {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(14px);
+    background: color-mix(in srgb, var(--brand-surface) 78%, transparent);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; max-width: var(--maxw); margin: 0 auto; }
+  .brand { display: inline-flex; align-items: center; gap: 11px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); text-decoration: none; transition: color .15s; }
+  .brand:hover { color: var(--brand-primary); }
+  .brand svg { width: 28px; height: 28px; }
+  .nav-links { display: flex; align-items: center; gap: 28px; }
+  .nav-links a { color: var(--muted); text-decoration: none; font-size: 0.9rem; transition: color .15s; }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-cta {
+    font-family: var(--mono); font-size: 0.8rem; font-weight: 600;
+    background: var(--brand-primary); color: var(--brand-on-primary) !important;
+    padding: 8px 16px; border-radius: var(--radius); letter-spacing: 0.02em;
+  }
+  .nav-cta:hover { box-shadow: 0 0 24px var(--glow-lime); }
+  @media (max-width: 720px) { .nav-links a:not(.nav-cta) { display: none; } }
+
+  /* ───────────────────────── Hero ───────────────────────── */
+  .hero { text-align: center; padding: 96px 0 72px; }
+  .hero .mark { width: 72px; height: 72px; margin: 0 auto 28px; display: block; filter: drop-shadow(0 0 28px var(--glow-lime)); }
+  .hero h1 {
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    line-height: 1.05; font-weight: 600; letter-spacing: -0.03em;
+    margin: 20px auto 0; max-width: 16ch;
+  }
+  .hero h1 .accent { color: var(--brand-primary); }
+  .hero .sub {
+    font-size: clamp(1.05rem, 2.2vw, 1.3rem);
+    color: var(--muted); max-width: 56ch; margin: 22px auto 0;
+  }
+  .hero .sub strong { color: var(--ink); font-weight: 600; }
+
+  /* install command */
+  .install {
+    display: inline-flex; align-items: center; gap: 14px;
+    margin: 36px auto 0;
+    font-family: var(--mono); font-size: 0.95rem;
+    background: var(--card); border: 1px solid var(--border);
+    padding: 13px 18px; border-radius: var(--radius);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand-secondary) 6%, transparent), 0 8px 30px rgba(0,0,0,.4);
+  }
+  .install .prompt { color: var(--brand-secondary); }
+  .install .cmd { color: var(--ink); }
+  .install button {
+    font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.08em;
+    text-transform: uppercase; cursor: pointer;
+    background: color-mix(in srgb, var(--brand-secondary) 14%, transparent);
+    color: var(--brand-secondary); border: 1px solid var(--border);
+    padding: 5px 10px; border-radius: 6px; transition: all .15s;
+  }
+  .install button:hover { background: var(--brand-secondary); color: var(--brand-on-primary); }
+
+  .promises { margin-top: 22px; }
+  .promises .meta { display: inline-block; }
+  .promises strong { color: var(--brand-primary); }
+
+  .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
+  .badge {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 100px; padding: 5px 13px;
+    background: color-mix(in srgb, var(--card) 60%, transparent);
+  }
+  .badge .dot { color: var(--brand-primary); }
+
+  /* ───────────────────────── Product shot (browser frame) ───────────────────────── */
+  .shot { position: relative; padding: 8px 0 4px; }
+  .shot-wrap { max-width: 1000px; margin: 0 auto; padding: 0 24px; position: relative; }
+  /* ambient glow pooled behind the frame */
+  .shot-wrap::before {
+    content: ""; position: absolute; inset: -6% 8% 12% 8%; z-index: 0; pointer-events: none;
+    background: radial-gradient(60% 60% at 70% 0%, var(--glow), transparent 70%),
+                radial-gradient(60% 60% at 20% 100%, var(--glow-lime), transparent 70%);
+    opacity: 0.28; filter: blur(20px);
+  }
+  .shot-frame {
+    position: relative; z-index: 1;
+    border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    background: var(--card);
+    box-shadow: 0 50px 130px rgba(0,0,0,.62), 0 0 0 1px var(--border-soft) inset;
+  }
+  .shot-frame::before { /* electric-blue top hairline — same signature as .m-card */
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; z-index: 2;
+    background: linear-gradient(to right, transparent, var(--brand-secondary), transparent); opacity: 0.7;
+  }
+  .shot-bar { display: flex; align-items: center; gap: 8px; padding: 11px 15px; background: var(--surface); border-bottom: 1px solid var(--border-soft); }
+  .shot-bar .dot { width: 11px; height: 11px; border-radius: 50%; background: color-mix(in srgb, var(--faint) 70%, transparent); }
+  .shot-bar .shot-url { margin-left: 14px; font-family: var(--mono); font-size: 0.74rem; color: var(--muted); letter-spacing: 0.04em; }
+  .shot-bar .shot-url .lime { color: var(--brand-primary); }
+  .shot-frame img { display: block; width: 100%; height: auto; }
+  .shot-cap { text-align: center; margin-top: 18px; }
+  .shot-cap .meta { color: var(--muted); }
+  .shot-cap .meta b { color: var(--brand-primary); font-weight: 500; }
+
+  /* ───────────────────────── Section scaffolding ───────────────────────── */
+  section { padding: 80px 0; position: relative; }
+  .section-head { max-width: 60ch; margin-bottom: 44px; }
+  .section-head.center { margin-left: auto; margin-right: auto; text-align: center; }
+  .section-head h2 {
+    font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 600; letter-spacing: -0.025em;
+    margin-top: 14px; line-height: 1.1;
+  }
+  .section-head p { color: var(--muted); font-size: 1.08rem; margin-top: 14px; }
+  .rule-line { height: 1px; background: linear-gradient(to right, var(--border), transparent); margin: 0; border: 0; }
+
+  /* ── m-card signature: electric-blue top hairline + dual-corner glow + hover-lift ── */
+  .m-card {
+    position: relative;
+    /* glow-reactive border: blue edge meets the top-right blue glow, lime edge meets the bottom-left lime glow */
+    --edge-tr: var(--edge-blue);
+    --edge-bl: var(--edge-lime);
+    background:
+      linear-gradient(180deg, var(--card-2), var(--card)) padding-box,
+      linear-gradient(to top right,
+        var(--edge-bl) 0%,
+        var(--border) 34%,
+        var(--border) 66%,
+        var(--edge-tr) 100%) border-box;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    padding: 26px;
+    overflow: hidden;
+    transition: transform .16s ease-out, box-shadow .16s ease-out, --edge-tr .16s, --edge-bl .16s;
+  }
+  .m-card::before { /* top hairline */
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(to right, transparent, var(--brand-secondary), transparent);
+    opacity: 0.7;
+  }
+  .m-card::after { /* dual-corner glow — large + soft, fades well into the card body */
+    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.26;
+    background:
+      radial-gradient(320px 220px at 100% 0%, var(--glow), transparent 78%),
+      radial-gradient(320px 220px at 0% 100%, var(--glow-lime), transparent 78%);
+  }
+  .m-card > * { position: relative; z-index: 1; }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    /* border brightens in step with the glow it shares a corner with */
+    --edge-tr: var(--edge-blue-hot);
+    --edge-bl: var(--edge-lime-hot);
+    box-shadow: 0 18px 50px rgba(0,0,0,.5);
+  }
+  .m-card.hover-lift::after { transition: opacity .16s ease-out; }
+  .hover-lift:hover::after { opacity: 0.42; }
+
+  /* ───────────────────────── Problem ───────────────────────── */
+  .problem-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .problem-grid .m-card h3 { font-size: 1.05rem; margin-bottom: 8px; }
+  .problem-grid .m-card h3 .q { color: var(--brand-secondary); font-family: var(--mono); margin-right: 6px; }
+  .problem-grid .m-card p { color: var(--muted); font-size: 0.95rem; }
+  @media (max-width: 820px) { .problem-grid { grid-template-columns: 1fr; } }
+
+  /* ───────────────────────── Idea / code ───────────────────────── */
+  .idea-grid { display: grid; grid-template-columns: 1fr 1.1fr; gap: 44px; align-items: center; }
+  @media (max-width: 880px) { .idea-grid { grid-template-columns: 1fr; gap: 28px; } }
+  .code {
+    font-family: var(--mono); font-size: 0.82rem; line-height: 1.7;
+    background: #060d1a; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px; overflow-x: auto;
+    box-shadow: 0 16px 50px rgba(0,0,0,.5);
+  }
+  .code .c-prompt { color: var(--brand-secondary); }
+  .code .c-cmd { color: var(--ink); }
+  .code .c-key { color: var(--brand-primary); }
+  .code .c-str { color: #9fe6ff; }
+  .code .c-dim { color: var(--faint); }
+  .idea-grid p { color: var(--muted); font-size: 1.05rem; }
+  .idea-grid p + p { margin-top: 16px; }
+  .idea-grid strong { color: var(--ink); }
+
+  /* ── live event terminal ── */
+  .term {
+    position: relative; overflow: hidden;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: #060d1a; box-shadow: 0 16px 50px rgba(0,0,0,.5);
+    font-family: var(--mono); font-size: 0.8rem;
+  }
+  .term-bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--border-soft); }
+  .term-bar .dot { width: 10px; height: 10px; border-radius: 50%; background: color-mix(in srgb, var(--faint) 70%, transparent); }
+  .term-title { margin-left: 10px; color: var(--muted); font-size: 0.72rem; letter-spacing: 0.03em; }
+  .term-live { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 0.62rem; letter-spacing: 0.14em; color: var(--brand-primary); }
+  .term-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand-primary); box-shadow: 0 0 8px var(--brand-primary); animation: term-pulse 1.6s ease-in-out infinite; }
+  @keyframes term-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+  /* signature slice-stop line — a lime trace sweeps L→R across the top */
+  .term-sweep { position: absolute; top: 41px; left: 0; height: 2px; width: 0; z-index: 3;
+    background: linear-gradient(to right, transparent, var(--brand-primary)); box-shadow: 0 0 10px var(--brand-primary); opacity: 0; }
+  .term-sweep.fire { animation: term-trace 900ms cubic-bezier(0.2,0.7,0.2,1); }
+  @keyframes term-trace { 0% { width: 0; opacity: 1; } 80% { width: 100%; opacity: 1; } 100% { width: 100%; opacity: 0; } }
+  .term-body { padding: 16px 18px; height: 286px; display: flex; flex-direction: column; }
+  .term-cmd { color: var(--ink); margin-bottom: 12px; flex: none; }
+  .term-cmd .c-prompt { color: var(--brand-secondary); }
+  .term-stream { display: flex; flex-direction: column; gap: 7px; justify-content: flex-end; flex: 1; min-height: 0; }
+  .term-row { display: flex; align-items: baseline; gap: 10px; line-height: 1.4; white-space: nowrap; }
+  .term-row.enter { animation: row-in 360ms cubic-bezier(0.2,0.7,0.2,1); }
+  @keyframes row-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .term-row .ts { color: var(--faint); flex: none; }
+  .term-row .ty { flex: none; font-size: 0.68rem; letter-spacing: 0.04em; padding: 1px 6px; border-radius: 3px; }
+  .term-row .d { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+  /* type tones */
+  .ty-framework { color: var(--brand-secondary); background: color-mix(in srgb, var(--brand-secondary) 12%, transparent); }
+  .ty-session   { color: #9fe6ff; background: color-mix(in srgb, #9fe6ff 11%, transparent); }
+  .ty-lane      { color: var(--brand-secondary); background: color-mix(in srgb, var(--brand-secondary) 12%, transparent); }
+  .ty-gate      { color: var(--ok); background: color-mix(in srgb, var(--ok) 13%, transparent); }
+  .ty-approval  { color: var(--warn); background: color-mix(in srgb, var(--warn) 13%, transparent); }
+  .ty-trigger   { color: var(--muted); background: color-mix(in srgb, var(--muted) 12%, transparent); }
+  .ty-slice     { color: var(--brand-on-primary); background: var(--brand-primary); font-weight: 600; }
+  @media (max-width: 880px) { .term-body { height: 250px; } }
+  @media (prefers-reduced-motion: reduce) {
+    .term-live-dot, .term-sweep.fire, .term-row.enter { animation: none !important; }
+    .term-sweep { display: none; }
+  }
+
+  /* ───────────────────────── Three parts ───────────────────────── */
+  .parts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  @media (max-width: 820px) { .parts { grid-template-columns: 1fr; } }
+  .part .icon { font-size: 1.6rem; margin-bottom: 14px; display: block; }
+  .part h3 { font-size: 1.2rem; margin-bottom: 4px; }
+  .part .tag { font-family: var(--mono); font-size: 0.72rem; color: var(--brand-secondary); letter-spacing: 0.04em; }
+  .part p { color: var(--muted); font-size: 0.94rem; margin-top: 12px; }
+
+  /* ───────────────────────── Why / features ───────────────────────── */
+  .features { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+  @media (max-width: 820px) { .features { grid-template-columns: 1fr; } }
+  .feature h3 { font-size: 1.12rem; display: flex; align-items: center; gap: 10px; }
+  .feature h3 .fi { font-size: 1.25rem; }
+  .feature p { color: var(--muted); font-size: 0.95rem; margin-top: 10px; }
+  .feature code { font-family: var(--mono); font-size: 0.84em; color: var(--brand-primary); background: color-mix(in srgb, var(--brand-primary) 8%, transparent); padding: 1px 6px; border-radius: 4px; }
+
+  /* ───────────────────────── Rules table ───────────────────────── */
+  .rules-wrap { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  table.rules { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  table.rules th, table.rules td { text-align: left; padding: 13px 18px; border-bottom: 1px solid var(--border-soft); }
+  table.rules thead th { font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.68rem; color: var(--muted); background: var(--surface); }
+  table.rules tbody tr:last-child td { border-bottom: 0; }
+  table.rules tbody tr:hover { background: color-mix(in srgb, var(--brand-secondary) 5%, transparent); }
+  table.rules td.num { font-family: var(--mono); color: var(--brand-primary); width: 44px; }
+  table.rules td.rule { font-weight: 600; color: var(--ink); }
+  table.rules td.prev { color: var(--muted); }
+  @media (max-width: 720px) { table.rules td.prev, table.rules th.prev { display: none; } }
+
+  .scope-note {
+    margin-top: 18px; font-size: 0.9rem; color: var(--muted);
+    border-left: 2px solid var(--brand-primary); padding-left: 14px;
+  }
+
+  /* ───────────────────────── CTA band ───────────────────────── */
+  .cta-band { text-align: center; padding: 90px 0; }
+  .cta-band h2 { font-size: clamp(1.9rem, 4vw, 2.8rem); font-weight: 600; letter-spacing: -0.025em; }
+  .cta-band p { color: var(--muted); margin-top: 14px; font-size: 1.1rem; }
+  .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 32px; }
+  .btn {
+    font-family: var(--mono); font-size: 0.86rem; font-weight: 600; letter-spacing: 0.02em;
+    text-decoration: none; padding: 13px 26px; border-radius: var(--radius); transition: all .15s;
+    display: inline-flex; align-items: center; gap: 9px;
+  }
+  .btn-primary { background: var(--brand-primary); color: var(--brand-on-primary); }
+  .btn-primary:hover { box-shadow: 0 0 30px var(--glow-lime); transform: translateY(-2px); }
+  .btn-ghost { border: 1px solid var(--border); color: var(--ink); }
+  .btn-ghost:hover { border-color: var(--brand-secondary); box-shadow: 0 0 24px var(--glow); }
+
+  /* ───────────────────────── Footer ───────────────────────── */
+  footer { border-top: 1px solid var(--border-soft); padding: 40px 0; text-align: center; }
+  .foot-nav { display: flex; flex-wrap: wrap; gap: 11px 22px; justify-content: center; margin-bottom: 26px; padding-bottom: 26px; border-bottom: 1px solid var(--border-soft); }
+  .foot-nav a { font-size: 0.9rem; }
+  .foot-nav a.foot-site { font-family: var(--mono); font-size: 0.82rem; letter-spacing: 0.04em; color: var(--brand-primary); }
+  .foot-nav a.foot-site:hover { color: var(--brand-primary); text-decoration: underline; }
+  footer .meta { display: block; }
+  footer .tag { color: var(--brand-primary); margin-top: 12px; display: block; font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.08em; }
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { color: var(--ink); }
+
+  .pron { font-family: var(--mono); color: var(--brand-secondary); }
+</style>
+</head>
+<body>
+
+<!-- ───────── Nav ───────── -->
+<header class="nav">
+  <div class="nav-inner">
+    <!-- Logo → the marketing home. ?site tells the first-visit gate in
+         Layout.astro to show the site instead of bouncing back to /welcome/. -->
+    <a class="brand" href="/?site" aria-label="Máddu — go to the full site">
+      <svg viewBox="0 0 64 64" aria-label="Máddu mark"><path fill="#d0ff00" fill-rule="evenodd" d="M32 4L60 32L32 60L4 32Z M15 24H49L43 31H21Z M20 40H44L39 47H25Z"/></svg>
+      Máddu
+    </a>
+    <!-- Inner marketing pages link directly — the gate only fires on "/". -->
+    <nav class="nav-links">
+      <a href="/how-it-works">How it works</a>
+      <a href="/architecture">Architecture</a>
+      <a href="/security">Security</a>
+      <a href="/?site">Full site</a>
+      <a class="nav-cta" href="https://github.com/frdyx/maddu">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ───────── Hero ───────── -->
+<section class="hero">
+  <div class="wrap">
+    <svg class="mark" viewBox="0 0 64 64" aria-label="Máddu mark"><path fill="#d0ff00" fill-rule="evenodd" d="M32 4L60 32L32 60L4 32Z M15 24H49L43 31H21Z M20 40H44L39 47H25Z"/></svg>
+    <p class="eyebrow">Local-first · files-only · cooperative</p>
+    <h1>Your AI agents are temporary.<br><span class="accent">The system that governs them shouldn't be.</span></h1>
+    <p class="sub">Máddu is the external record that verifies what <strong>Claude Code, Codex, and any CLI agent</strong> did, so no agent is ever the sole witness to its own work. They plug in to work as an auditable team: one agent per lane, risky changes held behind approvals, every slice checked by a gate.</p>
+    <p class="sub" style="margin-top:10px;">The agent calls Máddu; <strong>Máddu never sits in the request path</strong> and never touches your keys. Local-first, files-only, append-only: each approval, session, and slice is one line on disk you can replay and check.</p>
+
+    <div class="install">
+      <span><span class="prompt">$</span> <span class="cmd">npx github:frdyx/maddu init</span></span>
+      <button onclick="navigator.clipboard.writeText('npx github:frdyx/maddu init'); this.textContent='copied'; setTimeout(()=>this.textContent='copy',1400)">copy</button>
+    </div>
+
+    <div class="promises">
+      <span class="meta">No cloud&nbsp; · &nbsp;No database&nbsp; · &nbsp;No provider SDKs in your code</span>
+    </div>
+
+    <div class="badges">
+      <span class="badge"><span class="dot">●</span> v1.96.0</span>
+      <span class="badge"><span class="dot">●</span> Node 20+</span>
+      <span class="badge"><span class="dot">●</span> Apache 2.0</span>
+      <span class="badge"><span class="dot">●</span> 100% local-first</span>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── Product shot ───────── -->
+<section class="shot">
+  <div class="shot-wrap">
+    <div class="shot-frame">
+      <div class="shot-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="shot-url"><span class="lime">●</span>&nbsp; 127.0.0.1:4177 &nbsp;·&nbsp; #/roadmap</span>
+      </div>
+      <img src="assets/shot-roadmap-maddu.png" alt="The Máddu cockpit on the Roadmap route — KPI tiles (slice-stops total, last 7 days, since last slice), a 28-day slice-closure cadence chart, and the slice index, all read live from the append-only spine.">
+    </div>
+    <div class="shot-cap">
+      <span class="meta">The cockpit, <b>dogfooded on Máddu's own repo</b> — every tile read live from the append-only spine.</span>
+    </div>
+  </div>
+</section>
+
+<hr class="rule-line" style="margin-top:64px;">
+
+<!-- ───────── Problem ───────── -->
+<section id="problem">
+  <div class="wrap">
+    <div class="section-head center">
+      <p class="eyebrow">The problem</p>
+      <h2>The session ends. The <span style="color:var(--brand-primary)">why</span> goes with it.</h2>
+      <p>You've handed real work to AI agents — they claim lanes, request approvals, ship slices, hand off to each other. Then the context window closes, and the trail evaporates.</p>
+    </div>
+    <div class="problem-grid">
+      <div class="m-card hover-lift">
+        <h3><span class="q">?</span>Where was that decided</h3>
+        <p>Buried in a chat log you can't grep, on a machine you're not on.</p>
+      </div>
+      <div class="m-card hover-lift">
+        <h3><span class="q">?</span>What happened while I was away</h3>
+        <p>Scattered across SQLite files, vendor dashboards, and agent memory you can't inspect.</p>
+      </div>
+      <div class="m-card hover-lift">
+        <h3><span class="q">?</span>Was the history rewritten</h3>
+        <p>With most tools you can't prove it wasn't. You're trusting a black box.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── The idea ───────── -->
+<section id="idea" style="padding-top:40px;">
+  <div class="wrap">
+    <div class="idea-grid">
+      <div>
+        <p class="eyebrow">The idea</p>
+        <h2 style="font-size:clamp(1.8rem,4vw,2.6rem);font-weight:600;letter-spacing:-0.025em;margin:14px 0 18px;line-height:1.1;">One file. The single source of truth.</h2>
+        <p>Every approval, session boundary, lane claim, and slice of work is <strong>one line in one append-only log</strong> on your disk. Everything else is derived from it — and discarded on conflict.</p>
+        <p>Suddenly the hard questions get easy. Every state question reduces to <strong>tail</strong>, <strong>grep</strong>, or <strong>git log</strong> on a file you already own. No SQLite to crack open. No dashboard between you and the truth. The log replays deterministically on any machine — so the answer is the same everywhere, forever.</p>
+      </div>
+      <div class="term" id="eventTerm" aria-label="Live demo: events streaming onto the append-only spine, one line each">
+        <div class="term-bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="term-title">.maddu/events/000000000001.ndjson</span>
+          <span class="term-live"><span class="term-live-dot"></span> LIVE</span>
+        </div>
+        <div class="term-sweep" id="termSweep"></div>
+        <div class="term-body">
+          <div class="term-cmd"><span class="c-prompt">$</span> tail -f .maddu/events/000000000001.ndjson</div>
+          <div class="term-stream" id="termStream"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule-line">
+
+<!-- ───────── How it works ───────── -->
+<section id="how">
+  <div class="wrap">
+    <div class="section-head center">
+      <p class="eyebrow">How it works</p>
+      <h2>Three moving parts, and nothing else</h2>
+    </div>
+    <div class="parts">
+      <div class="m-card hover-lift part">
+        <span class="icon">🧬</span>
+        <h3>The spine</h3>
+        <span class="tag">.maddu/events/*.ndjson</span>
+        <p>An append-only event log — the single source of truth. Every approval, session, lane claim, and slice is one line. Replays deterministically on any machine.</p>
+      </div>
+      <div class="m-card hover-lift part">
+        <span class="icon">🌉</span>
+        <h3>The bridge</h3>
+        <span class="tag">127.0.0.1:4177</span>
+        <p>One Node process. Serves the cockpit over loopback, runs the gates, spawns agent workers with credentials handed in at spawn-time. Imports zero provider SDKs.</p>
+      </div>
+      <div class="m-card hover-lift part">
+        <span class="icon">🛰️</span>
+        <h3>The cockpit</h3>
+        <span class="tag">static HTML + JS</span>
+        <p>A read-only window onto the spine and its projections. Watch and replay what your agents did — in any browser, over loopback only.</p>
+      </div>
+    </div>
+    <p class="scope-note" style="margin-top:24px;">Everything under <code style="font-family:var(--mono);color:var(--brand-primary)">.maddu/state/</code> is a projection: rebuildable from the spine, discarded on conflict. <strong style="color:var(--ink)">The spine always wins.</strong> There's no <code style="font-family:var(--mono);color:var(--brand-primary)">spine repair</code> by design — corruption surfaces by name, file-and-line precise, and you decide remediation.</p>
+  </div>
+</section>
+
+<hr class="rule-line">
+
+<!-- ───────── Why ───────── -->
+<section id="why">
+  <div class="wrap">
+    <div class="section-head center">
+      <p class="eyebrow">Why Máddu</p>
+      <h2>Six design choices, six things you couldn't do before</h2>
+    </div>
+    <div class="features">
+      <div class="m-card hover-lift feature">
+        <h3><span class="fi">🔎</span> Audit with <code>cat</code></h3>
+        <p>Every approval, boundary, and slice-stop is one line in one file. Introspect with shell tools you already trust — no SQLite to crack, no log aggregator, no dashboard between you and the truth.</p>
+      </div>
+      <div class="m-card hover-lift feature">
+        <h3><span class="fi">♻️</span> Survive a rebuild</h3>
+        <p>Delete <code>.maddu/state/</code>, rebuild from the spine on any machine, get the <em>exact same</em> ledger. Decisions live as real events — audit immutability is provable, not declared.</p>
+      </div>
+      <div class="m-card hover-lift feature">
+        <h3><span class="fi">🛡️</span> Tamper-evident bedrock</h3>
+        <p><code>spine verify</code> walks every segment — parseability, id-uniqueness, continuity, monotonicity, referential integrity, and a forward <code>prev_hash</code> chain that pinpoints the first altered line.</p>
+      </div>
+      <div class="m-card hover-lift feature">
+        <h3><span class="fi">🗂️</span> One bridge, every repo</h3>
+        <p>Switch context across five repos without booting five bridges. <code>workspace add</code> mounts each; <code>/bridge/_all/*</code> fans out reads. Each repo's spine stays its own source of truth.</p>
+      </div>
+      <div class="m-card hover-lift feature">
+        <h3><span class="fi">🧠</span> Memory through events only</h3>
+        <p>Nothing enters long-term memory without a structured event saying so. <code>SLICE_STOP</code> feeds hindsight; <code>learn</code> distils corrections from past failed→succeeded calls. Both replay on rebuild.</p>
+      </div>
+      <div class="m-card hover-lift feature">
+        <h3><span class="fi">🔌</span> Zero SDKs, zero cloud relay</h3>
+        <p>SDK churn from Anthropic, OpenAI, or Google never reaches your orchestrator. Provider calls happen only inside workers; credentials stay device-bound and never traverse a remote service.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule-line">
+
+<!-- ───────── Hard rules ───────── -->
+<section id="rules">
+  <div class="wrap">
+    <div class="section-head center">
+      <p class="eyebrow">The 8+1 hard rules</p>
+      <h2>Nine invariants. Verified on every install.</h2>
+      <p><code style="font-family:var(--mono);color:var(--brand-primary)">maddu doctor</code> checks them on every install and upgrade; <code style="font-family:var(--mono);color:var(--brand-primary)">maddu audit</code> traces each one to the gate that enforces it. A repo that violates any of them is not a Máddu repo.</p>
+    </div>
+    <div class="rules-wrap">
+      <table class="rules">
+        <thead><tr><th>#</th><th>Rule</th><th class="prev">What it prevents</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td class="rule">Files-only state</td><td class="prev">SQLite corruption, opaque feature state, migration hazards</td></tr>
+          <tr><td class="num">2</td><td class="rule">Append-only event spine (tamper-evident)</td><td class="prev">Mutable history, replay-divergence, silent rewrites</td></tr>
+          <tr><td class="num">3</td><td class="rule">No hosted backends</td><td class="prev">Telemetry, vendor lock-in, "Máddu Cloud"</td></tr>
+          <tr><td class="num">4</td><td class="rule">No broad dependencies</td><td class="prev">Supply-chain risk, transitive vulnerabilities</td></tr>
+          <tr><td class="num">5</td><td class="rule">No provider SDKs in app code</td><td class="prev">Hidden API keys, SDK churn in the orchestrator</td></tr>
+          <tr><td class="num">6</td><td class="rule">No token export</td><td class="prev">Portable credentials, cross-machine leak</td></tr>
+          <tr><td class="num">7</td><td class="rule">Three-layer brand boundary</td><td class="prev">Framework / app / content brand bleed</td></tr>
+          <tr><td class="num">8</td><td class="rule">Lane ownership</td><td class="prev">Two agents writing the same files</td></tr>
+          <tr><td class="num">9</td><td class="rule">Every auto-trigger crosses the gauntlet</td><td class="prev">Off-the-record automation mutating state</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="scope-note">These rules govern <strong style="color:var(--ink)">how Máddu itself is built</strong> — its own orchestration code — never the product you build with it. The app you ship can use any database, SDK, or backend it needs.</p>
+  </div>
+</section>
+
+<hr class="rule-line">
+
+<!-- ───────── CTA ───────── -->
+<section class="cta-band">
+  <div class="wrap">
+    <p class="eyebrow">Get started</p>
+    <h2>Give your agents a spine.</h2>
+    <p>One command. No cloud account, no signup, no telemetry.</p>
+    <div class="install" style="margin-top:28px;">
+      <span><span class="prompt">$</span> <span class="cmd">npx github:frdyx/maddu init</span></span>
+      <button onclick="navigator.clipboard.writeText('npx github:frdyx/maddu init'); this.textContent='copied'; setTimeout(()=>this.textContent='copy',1400)">copy</button>
+    </div>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/frdyx/maddu">Star on GitHub ↗</a>
+      <a class="btn btn-ghost" href="https://github.com/frdyx/maddu/blob/main/docs/01-getting-started.md">Read the quickstart</a>
+      <a class="btn btn-ghost" href="/?site">Explore the full site →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── Footer ───────── -->
+<footer>
+  <div class="wrap">
+    <!-- Mirrors the marketing site footer. Inner pages link directly; the
+         home/full-site links carry ?site so the first-visit gate stands down. -->
+    <nav class="foot-nav" aria-label="Máddu site">
+      <a class="foot-site" href="/?site">Full site →</a>
+      <a href="/how-it-works">How it works</a>
+      <a href="/architecture">Architecture</a>
+      <a href="/security">Security</a>
+      <a href="/governance">Governance</a>
+      <a href="/hard-rules">Hard rules</a>
+      <a href="/capabilities">Verbs</a>
+      <a href="/install">Install</a>
+    </nav>
+    <p class="meta">Máddu <span class="pron">/ MOD-doo /</span> — North Sámi for <em>root, origin, ancestry</em></p>
+    <p class="meta" style="margin-top:8px;">Apache-2.0 · <a href="https://github.com/frdyx/maddu">github.com/frdyx/maddu</a></p>
+    <span class="tag">Máddu spawns no models, stores no secrets, calls no clouds.</span>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const stream = document.getElementById('termStream');
+  const sweep  = document.getElementById('termSweep');
+  const term   = document.getElementById('eventTerm');
+  if (!stream || !term) return;
+
+  // A small, believable slice of life on the spine — one full work loop, then repeat.
+  const SCRIPT = [
+    ['FRAMEWORK_BOOTED', 'framework', 'bridge on 127.0.0.1:4177'],
+    ['SESSION_REGISTERED', 'session', 'claude-code · implementer'],
+    ['LANE_CLAIMED', 'lane', 'lane: cockpit-ui · "command bar"'],
+    ['APPROVAL_REQUESTED', 'approval', 'bash: npm test'],
+    ['APPROVAL_DECIDED', 'approval', 'allow · operator'],
+    ['GATE_RAN', 'gate', 'doctor · 9/9 hard rules pass'],
+    ['TRIGGER_FIRED', 'trigger', 'checkpoint-before-coordinator'],
+    ['SLICE_STOP', 'slice', 'wired the bridge to my repo'],
+    ['SESSION_REGISTERED', 'session', 'codex · reviewer'],
+    ['LANE_CLAIMED', 'lane', 'lane: docs · "readme sweep"'],
+    ['MEMORY_FACT_WRITTEN', 'gate', 'correction · forward-slash paths'],
+    ['SLICE_STOP', 'slice', 'shipped the marketing readme'],
+  ];
+
+  const MAX = 8;
+  let idx = 0;
+  // Clock that ticks forward a few seconds per event (browser Date — fine here).
+  let clock = new Date();
+  clock.setHours(8, 42, 3, 0);
+  const pad = (n) => String(n).padStart(2, '0');
+  const stamp = () => `${pad(clock.getHours())}:${pad(clock.getMinutes())}:${pad(clock.getSeconds())}`;
+
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function addRow([ty, cls, d], animate) {
+    const row = document.createElement('div');
+    row.className = 'term-row' + (animate ? ' enter' : '');
+    row.innerHTML = `<span class="ts">${stamp()}</span><span class="ty ty-${cls}">${ty}</span><span class="d">${d}</span>`;
+    stream.appendChild(row);
+    while (stream.children.length > MAX) stream.removeChild(stream.firstChild);
+    if (cls === 'slice' && animate && !reduce && sweep) {
+      sweep.classList.remove('fire'); void sweep.offsetWidth; sweep.classList.add('fire');
+    }
+  }
+
+  function tick() {
+    const ev = SCRIPT[idx % SCRIPT.length];
+    clock = new Date(clock.getTime() + (4 + (idx % 5) * 3) * 1000);
+    addRow(ev, true);
+    idx++;
+  }
+
+  // Reduced motion: render a static final frame, no streaming.
+  if (reduce) { for (let i = 0; i < MAX; i++) { clock = new Date(clock.getTime() + 7000); addRow(SCRIPT[i % SCRIPT.length], false); } return; }
+
+  // Prefill a few so the panel never opens empty, then stream while visible.
+  for (let i = 0; i < 4; i++) tick();
+  let timer = null;
+  const start = () => { if (!timer) timer = setInterval(tick, 1150); };
+  const stop  = () => { if (timer) { clearInterval(timer); timer = null; } };
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting ? start() : stop()), { threshold: 0.25 }).observe(term);
+  } else { start(); }
+})();
+</script>
+</body>
+</html>

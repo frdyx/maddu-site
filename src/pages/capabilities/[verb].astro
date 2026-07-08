@@ -8,6 +8,7 @@
 import Layout from '../../layouts/Layout.astro';
 import PageNext from '../../components/PageNext.astro';
 import data from '../../data/capabilities-detail.json';
+import { AREA_ONE_LINERS } from '../../data/area-purposes';
 
 interface Detail {
   verb: string;
@@ -71,13 +72,17 @@ const desc = v.summary
         </div>
       )}
 
-      {v.domainPurpose && (
+      {v.domainId && (
         <div class="ent-block">
           <header class="ent-head"><span class="eyebrow">§ · In the {v.domain} domain</span></header>
-          <p class="ent-prose">{v.domainPurpose}</p>
-          {v.domainId && (
-            <a class="ent-back-link" href={`/capabilities#${v.domainId}`}>See the full {v.domain} card →</a>
+          <p class="ent-prose">{AREA_ONE_LINERS[v.domainId] ?? v.domainPurpose}</p>
+          {v.domainPurpose && AREA_ONE_LINERS[v.domainId] && (
+            <details class="ent-charter">
+              <summary>Full charter purpose</summary>
+              <p>{v.domainPurpose}</p>
+            </details>
           )}
+          <a class="ent-back-link" href={`/capabilities#${v.domainId}`}>See the full {v.domain} card →</a>
         </div>
       )}
 
@@ -114,7 +119,7 @@ const desc = v.summary
 
   <PageNext
     eyebrow="§ · Back"
-    title="Capabilities — the full 62-verb ontology."
+    title="Capabilities — the full 68-verb ontology."
     hint="Every verb across the eight purpose areas, with the charter that flags drift."
     href="/capabilities"
     tone="accent"
@@ -145,6 +150,26 @@ const desc = v.summary
   }
   .ent-head { margin-bottom: var(--m-space-4); }
   .ent-prose { font-size: 15px; line-height: 1.6; color: var(--m-fg-1); margin: 0 0 var(--m-space-3); }
+  .ent-charter { margin: 0 0 var(--m-space-3); }
+  .ent-charter summary {
+    cursor: pointer;
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+    user-select: none;
+  }
+  .ent-charter summary:hover { color: var(--m-accent-2); }
+  .ent-charter[open] summary { color: var(--m-accent-2); margin-bottom: var(--m-space-2); }
+  .ent-charter p {
+    margin: 0;
+    color: var(--m-fg-2);
+    font-size: 13px;
+    line-height: 1.6;
+    border-left: 2px solid var(--m-line);
+    padding-left: var(--m-space-3);
+  }
 
   .ent-cli {
     background: var(--m-bg-1);

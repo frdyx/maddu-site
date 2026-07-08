@@ -80,7 +80,7 @@
     <!-- URL pill, right-aligned -->
     <g transform="translate(880, 14)">
       <rect x="0" y="0" width="170" height="36" rx="4" fill="#56B8FF" fill-opacity="0.10" stroke="#56B8FF" stroke-opacity="0.4" stroke-width="1" />
-      <text x="85" y="24" fill="#56B8FF" font-size="14" font-family="'IBM Plex Mono', monospace" text-anchor="middle" letter-spacing="2">maddu.dev</text>
+      <text x="85" y="24" fill="#56B8FF" font-size="14" font-family="'IBM Plex Mono', monospace" text-anchor="middle" letter-spacing="2">maddu.frdyx.com</text>
     </g>
   </g>
 </svg>

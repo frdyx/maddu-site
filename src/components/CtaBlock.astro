@@ -1,0 +1,68 @@
+---
+// CtaBlock — the conversion block. Every marketing page ends here instead of
+// only routing sideways to more docs. One command, one docs path, no hedging.
+interface Props {
+  eyebrow?: string;
+  title?: string;
+  hint?: string;
+}
+const {
+  eyebrow = 'Try it',
+  title = 'One command. Audited from the first event.',
+  hint = 'Creates .maddu/, the runtime, and the slash-command surface — touches nothing else. maddu doctor proves the install.',
+} = Astro.props;
+---
+
+<section class="cta-block">
+  <div class="container">
+    <span class="eyebrow">{eyebrow}</span>
+    <h2 class="cta-title">{title}</h2>
+    <div class="cta-actions">
+      <a class="btn btn-primary cta-cmd" href="/install"><span class="cta-prompt" aria-hidden="true">$</span> npx github:frdyx/maddu init</a>
+      <a class="btn" href="https://github.com/frdyx/maddu" target="_blank" rel="noopener">GitHub <span aria-hidden="true">↗</span></a>
+    </div>
+    <p class="cta-hint">{hint}</p>
+  </div>
+</section>
+
+<style>
+  .cta-block {
+    padding: var(--m-space-12) 0;
+    text-align: center;
+    position: relative;
+  }
+  .cta-block::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: radial-gradient(ellipse at 50% 100%, rgba(208, 255, 0, 0.06), transparent 60%);
+    pointer-events: none;
+  }
+  .cta-title {
+    font-family: var(--m-font-cond);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: var(--m-space-3) 0 var(--m-space-6);
+    color: var(--m-fg-0);
+  }
+  .cta-actions {
+    display: flex;
+    gap: var(--m-space-3);
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .cta-cmd {
+    font-family: var(--m-font-mono);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .cta-prompt { opacity: 0.6; margin-right: 2px; }
+  .cta-hint {
+    margin: var(--m-space-4) auto 0;
+    max-width: 52ch;
+    font-size: 13px;
+    color: var(--m-fg-3);
+  }
+</style>

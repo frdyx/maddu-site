@@ -1,0 +1,242 @@
+---
+// CapabilityMatrix.astro — the tone-coded capability matrix from the Claude
+// Design "Capability Matrix" comp, translated to the site's --m-* tokens.
+// Sticky axis column, highlighted Máddu column, ✓/◐/✗ marks + an explicit
+// "not publicly scored" dot for cells the research could not verify.
+// Data comes from src/data/capability-matrix.ts — pass player keys.
+import { AXES, MADDU, PLAYERS, type Mark } from '../data/capability-matrix';
+
+interface Props {
+  /** Keys into PLAYERS, in column order. */
+  players: string[];
+  eyebrow?: string;
+  title?: string;
+  subtitle?: string;
+}
+const {
+  players,
+  eyebrow = 'Capability matrix',
+  title = 'Where each system holds the line.',
+  subtitle = 'Coverage across the agent-orchestration landscape. Tone-coded by strength of support.',
+} = Astro.props;
+
+const cols = players.map((k) => PLAYERS[k]).filter(Boolean);
+const systems = cols.length + 1;
+const hasUnknown = cols.some((c) => c.marks.includes('u'));
+const rows = AXES.map((axis, i) => ({
+  axis,
+  maddu: MADDU.marks[i] as Mark,
+  rest: cols.map((c) => c.marks[i] as Mark),
+}));
+const minWidth = 220 + systems * 96;
+---
+
+<figure class="cm">
+  <figcaption class="cm-head">
+    <span class="cm-eyebrow">{eyebrow}</span>
+    <span class="cm-meta">{systems} systems · {AXES.length} axes</span>
+  </figcaption>
+  <h3 class="cm-title">{title}</h3>
+  <p class="cm-sub">{subtitle}</p>
+
+  <div class="cm-frame">
+    <div class="cm-scroll">
+      <table style={`min-width:${minWidth}px`}>
+        <thead>
+          <tr>
+            <th class="cm-axis-h">Capability axis</th>
+            <th class="cm-maddu-h">Máddu</th>
+            {cols.map((c) => <th class="cm-col-h">{c.label}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr>
+              <td class="cm-axis">{r.axis}</td>
+              <td class="cm-maddu-cell">
+                <span class:list={['cm-mark', `cm-mark--${r.maddu}`]} aria-label={r.maddu === 'y' ? 'Full support' : r.maddu === 'p' ? 'Partial' : r.maddu === 'u' ? 'Not scored' : 'Not supported'}></span>
+              </td>
+              {r.rest.map((m) => (
+                <td class="cm-cell">
+                  <span class:list={['cm-mark', `cm-mark--${m}`]} aria-label={m === 'y' ? 'Full support' : m === 'p' ? 'Partial' : m === 'u' ? 'Not scored' : 'Not supported'}></span>
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <div class="cm-legend">
+      <span class="cm-legend-label">Legend</span>
+      <span class="cm-legend-item"><span class="cm-mark cm-mark--y"></span>Full support</span>
+      <span class="cm-legend-item"><span class="cm-mark cm-mark--p"></span>Partial / conditional</span>
+      <span class="cm-legend-item"><span class="cm-mark cm-mark--n"></span>Not supported</span>
+      {hasUnknown && <span class="cm-legend-item"><span class="cm-mark cm-mark--u"></span>Not publicly scored</span>}
+    </div>
+  </div>
+</figure>
+
+<style>
+  .cm { margin: var(--m-space-6) 0 0; }
+  .cm-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--m-space-4);
+    margin-bottom: 6px;
+  }
+  .cm-eyebrow {
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--m-accent);
+  }
+  .cm-meta {
+    font-family: var(--m-font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+  }
+  .cm-title {
+    margin: 0 0 6px;
+    font-family: var(--m-font-cond);
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-transform: none;
+    color: var(--m-fg-0);
+  }
+  .cm-sub {
+    margin: 0 0 var(--m-space-5);
+    font-size: 13.5px;
+    color: var(--m-fg-2);
+    max-width: 70ch;
+  }
+
+  .cm-frame {
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+    overflow: hidden;
+    background: var(--m-bg-2);
+    box-shadow: var(--m-shadow-md);
+  }
+  .cm-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+
+  th {
+    padding: 14px 8px;
+    text-align: center;
+    font-family: var(--m-font-mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--m-fg-2);
+    background: var(--m-bg-3);
+    border-bottom: 1px solid var(--m-line);
+    min-width: 84px;
+    line-height: 1.35;
+  }
+  .cm-axis-h {
+    text-align: left;
+    padding: 14px 18px;
+    letter-spacing: 0.12em;
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    min-width: 200px;
+  }
+  .cm-maddu-h {
+    border-bottom: 2px solid var(--m-accent);
+    background: color-mix(in srgb, var(--m-accent) 14%, var(--m-bg-3));
+    color: var(--m-accent);
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 88px;
+  }
+
+  td { padding: 12px 8px; text-align: center; border-bottom: 1px solid var(--m-line-soft); }
+  .cm-axis {
+    text-align: left;
+    padding: 12px 18px;
+    color: var(--m-fg-1);
+    font-weight: 600;
+    line-height: 1.35;
+    background: var(--m-bg-2);
+    position: sticky;
+    left: 0;
+    z-index: 1;
+  }
+  .cm-maddu-cell {
+    background: color-mix(in srgb, var(--m-accent) 8%, transparent);
+    border-left: 1px solid color-mix(in srgb, var(--m-accent) 22%, transparent);
+    border-right: 1px solid color-mix(in srgb, var(--m-accent) 22%, transparent);
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+
+  /* Marks — pure CSS, no inline SVG needed */
+  .cm-mark { display: inline-flex; width: 18px; height: 18px; position: relative; }
+  .cm-mark--y::before {
+    content: '';
+    position: absolute;
+    left: 3px; top: 8px;
+    width: 5px; height: 9px;
+    border: solid var(--m-ok);
+    border-width: 0 2px 2px 0;
+    transform: translateY(-2px) rotate(45deg);
+  }
+  .cm-mark--n::before, .cm-mark--n::after {
+    content: '';
+    position: absolute;
+    left: 2px; top: 8px;
+    width: 13px; height: 1.7px;
+    background: var(--m-fg-3);
+    opacity: 0.7;
+  }
+  .cm-mark--n::before { transform: rotate(45deg); }
+  .cm-mark--n::after { transform: rotate(-45deg); }
+  .cm-mark--p::before {
+    content: '';
+    position: absolute;
+    left: 1px; top: 1px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 1.7px solid var(--m-warn);
+    background: linear-gradient(90deg, transparent 50%, var(--m-warn) 50%);
+  }
+  .cm-mark--u::before {
+    content: '';
+    position: absolute;
+    left: 5px; top: 5px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    border: 1.5px solid var(--m-fg-3);
+    opacity: 0.45;
+  }
+
+  .cm-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--m-space-5);
+    align-items: center;
+    padding: 12px 18px;
+    border-top: 1px solid var(--m-line);
+    background: var(--m-bg-3);
+  }
+  .cm-legend-label {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+  }
+  .cm-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--m-fg-2);
+  }
+</style>

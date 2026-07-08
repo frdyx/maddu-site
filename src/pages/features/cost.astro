@@ -1,0 +1,130 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import EventStream from '../../components/EventStream.astro';
+import PageNext from '../../components/PageNext.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+---
+
+<Layout title="Cost accounting — no surprise invoices" pathname="/features/cost">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Feature</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">maddu cost</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">no provider call</span>
+      </div>
+      <h1>Cost accounting. <span class="dim-h1">No surprise invoices.</span></h1>
+      <p class="lede">
+        Catch a runaway session before it's a surprise. Token and call spend rolls up per session, day, runtime, and model — summed from numbers the spine already holds.
+      </p>
+      <pre class="feat-cli"><code>$ maddu cost --by day
+2026-07-05   in 214.8K · out 41.2K · calls 96
+2026-07-06   in  88.1K · out 12.9K · calls 37</code></pre>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · The problem</span>
+        <h2>The invoice is the first time you see the spend.</h2>
+        <p>
+          A single agent session can burn tokens for an hour before anyone notices. By the time the provider's bill arrives, the runaway run is a month old and unattributable. You need the number while it still means something.
+        </p>
+      </header>
+
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Roll up any axis</span>
+            <span class="panel-aside">local</span>
+          </div>
+          <p><code>maddu cost</code> aggregates token and call totals per session, day, runtime, and model — read straight from the receipt log and token ledger the spine already keeps. No provider call: it only sums numbers you already have.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Set a ceiling</span>
+            <span class="panel-aside">opt-in</span>
+          </div>
+          <p>Drop a <code>.maddu/config/cost-budget.json</code> with <code>windowDays</code>, <code>maxTokens</code>, and <code>metric</code>. Doctor and audit then WARN — never FAIL — when recent spend crosses it, so a runaway is visible before it becomes a bill.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Backfill history</span>
+            <span class="panel-aside">retroactive</span>
+          </div>
+          <p><code>maddu import</code> retroactively backfills the ledger from prior runs, so the rollup covers the work you did before you started tracking — not just the sessions since. Old spend becomes accountable too.</p>
+        </div>
+      </div>
+
+      <Callout tone="warn" title="A budget warns, it never blocks" tag="cost-budget">
+        <p>
+          The v1.86.0 cost-budget gate is deliberately WARN-tier. Crossing the ceiling surfaces in doctor and audit as a visible flag, not a failed build — you see the runaway and decide, and the gate never stands between you and a legitimate long session.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · On the record</span>
+        <h2>What a budget crossing looks like on the spine.</h2>
+      </header>
+      <EventStream
+        eyebrow="Cost rollup, ledger to warning"
+        source=".maddu/events/2026-07-06.ndjson"
+        entries={[
+          { time: '15:20:11.003', type: 'TOKEN_USAGE_REPORTED', tone: 'session',   payload: 'in=48120 · out=9204 · model=claude-fable-5',  actor: 'worker-1' },
+          { time: '15:20:11.061', type: 'COST_ROLLED_UP',       tone: 'framework', payload: 'by=day · window=7d · total_in=303K',           actor: 'operator' },
+          { time: '15:20:11.088', type: 'BUDGET_EVALUATED',     tone: 'accent',    payload: 'metric=tokens · limit=280K · used=303K',       actor: 'doctor' },
+          { time: '15:20:11.104', type: 'BUDGET_EXCEEDED',      tone: 'warn',      payload: 'over=23K · tier=warn · build=not-blocked',     actor: 'doctor' },
+          { time: '15:21:44.902', type: 'LEDGER_BACKFILLED',    tone: 'ok',        payload: 'source=import · sessions=18 · added=1.2M',     actor: 'operator' },
+        ]}
+      />
+      <p class="feat-note">
+        Related verbs: <a href="/capabilities/cost"><code>maddu cost</code></a> · <a href="/capabilities/usage"><code>maddu usage</code></a> · <a href="/capabilities/log"><code>maddu log</code></a> · <a href="/capabilities/import"><code>maddu import</code></a>
+      </p>
+    </div>
+  </section>
+
+  <section class="section-narrow">
+    <div class="container">
+      <a class="btn" href="/docs/features/cost">Read the full reference in the docs <span aria-hidden="true">→</span></a>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="Next feature"
+    title="Session discipline — never start building unrecorded."
+    hint="Hooks auto-register every session and checkpoint governance before every compaction."
+    href="/features/discipline"
+    tone="accent"
+  />
+  <CtaBlock />
+</Layout>
+
+<style>
+  .feat-cli {
+    margin: var(--m-space-5) 0 0;
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent);
+    border-radius: var(--m-radius);
+    font-family: var(--m-font-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--m-fg-1);
+    overflow-x: auto;
+  }
+  .feat-note {
+    margin-top: var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+  }
+  .feat-note code { font-size: 12px; }
+</style>

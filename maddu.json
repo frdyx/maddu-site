@@ -1,0 +1,1624 @@
+{
+  "framework": "maddu",
+  "framework_version": "1.93.0",
+  "installed_at": "2026-07-06T01:18:36.461Z",
+  "upgraded_at": null,
+  "managed": {
+    "maddu/agent-files/AGENTS.section.md": {
+      "sha256": "838d5bcb03fbad9b3d166641c34baea72ab07f28b2e60b6e31e7bcf6691ea945",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/CLAUDE.section.md": {
+      "sha256": "838d5bcb03fbad9b3d166641c34baea72ab07f28b2e60b6e31e7bcf6691ea945",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-advise.md": {
+      "sha256": "35e15f8a33d0053355c13cc63b0000d428d1445c77331830e366a9792076d377",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-architecture.md": {
+      "sha256": "4941bebe810c0a0cde66d4d0e7a8e34df10920655f5a249d311596129ff43fb9",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-audit.md": {
+      "sha256": "e5b5800a7f9c1bbaf9a68b17084c5f4e538b42e7d3a7fd4ef188e921d3d73596",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-autopilot.md": {
+      "sha256": "09774485a13ff09c71c051183aaa6cd00a73cb759ec0283057d1cc70f1f060e0",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-blast.md": {
+      "sha256": "8fda902e660bdc5a6c3e6b5457ccba932dcf7b4c219250e5e1e09b4d75bcd34f",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-blueprint.md": {
+      "sha256": "dca2787786636b46b881a9b9a2d8b3b54720c38dc119ce9a38a3989d79dd2e05",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-cancel.md": {
+      "sha256": "06859b149b36a8cfdbcc4cb5c14a9eaf8e13e55b408fd0947ae7e7de1ec27d94",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-coordinate.md": {
+      "sha256": "b24a173bed8ca8e2651792b67e3bb44fca270984b9f14bb86e2616403a0ad531",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-cost.md": {
+      "sha256": "dcf2c36178464121798ff6cc45e930dd360d68110b032a4d0113edd3977c97f4",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-debt.md": {
+      "sha256": "ec23df6ba1e8b5e461205df1d84d7460146ae65821b679fd5e8c21a1a2915dd4",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-doctor.md": {
+      "sha256": "fff3e499366dca8eae0028984735978081ea334aae2ed72ad986c4fe1f306bce",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-format.md": {
+      "sha256": "44a7765c0fea27ac2436c15604e602d7505d4357e11d74d4cb401c4bbcc6a94f",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-git.md": {
+      "sha256": "e8f7e8a5312abb0334321a27d67a30b7d8af0fdab4765095f61bc5b877ee7252",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-governance.md": {
+      "sha256": "8f14129539135d13dc4e4a93c6d4f0ebb39d596ff30b8fb5362effacd06fb6f6",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-handoff.md": {
+      "sha256": "6d1d6855fa83f1343f5bc6facedf736a3791e49258ed96c8e48eb77958a38ffe",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-help.md": {
+      "sha256": "43905f7db9c0fa5557273d9e091392f730381f04bcd9d052bfd541a04e5914a3",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-insights.md": {
+      "sha256": "29b57e3e2ec70f32248777fcc2662934daaa1bd4176c0e8df1be1f394f2218c9",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-install.md": {
+      "sha256": "135fd3093932c79c67e59080b7905f28379b9a69fc9b33c90ee20d3933b87fa6",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-learn.md": {
+      "sha256": "c4664b5d31af770b5879975713528a7d5cfc057bd3534adce276363b3e9320e1",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-lint.md": {
+      "sha256": "24d88797436cebd56cc4519103688bb3ec4d77061e8272087f3606f78a0b3d80",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-log.md": {
+      "sha256": "2e6983ddc09523dddc8315c8d061b9420491e59bb5a3af9f75619577ea240406",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-mcp.md": {
+      "sha256": "c808e97d466b1aefd6231471126fec26de348df4b42bc88db8ea2f21ea7b7d0a",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-memory.md": {
+      "sha256": "aeb1a8673cbfff7c6c630118de5eee5589440c72007be49c28923d4733583ffe",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-note.md": {
+      "sha256": "5bc40c2ea5ed6559ef7448ac4fd2d2c165a4c3541db4552b55e10d83fc192a2a",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-orient.md": {
+      "sha256": "449420014381d9f976605096f0309d095ab6ea8c802b67b245b133cbf393b449",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-plan-loop.md": {
+      "sha256": "9d351c73e6b1b78370f193acac8988da303026e950db25eee1e02a900fe7700f",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-plan.md": {
+      "sha256": "d4b19de0eeb4e9592e84916823ddb9a176914cdd8df494c9b0de2e2e7a18a9bb",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-plugin.md": {
+      "sha256": "b01659596307a9ff75de1932a3d983b6260764fac5ce368936acca803e265f96",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-ralph.md": {
+      "sha256": "f308455aab682cfc00e1cd720854a8b432185256f3aee1b0548b7b15f912bbce",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-review.md": {
+      "sha256": "7ac4a3d102dbfa8f5fb73e36683c9d7549df4a3c0861a4cfed4d62e7b54af742",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-search.md": {
+      "sha256": "f7c09cb1d30380bc531f70ede446ee056872bd7f06a0e94778ec5db4b458cf23",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-self-test.md": {
+      "sha256": "4e50e5c326b58e9c85eb810a33407f43ba197ab4fd31a0ef9f93f8ee4f263b23",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-skill.md": {
+      "sha256": "138968786c39a5ac4a3940c5db531968e06903a82ca51aaadf12b470f656bdd9",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-skills-review.md": {
+      "sha256": "b10c0375ce8862c1bc7148b4a471fad3954df782c78781f5156066aced088637",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-status.md": {
+      "sha256": "95116a462d89543cb60ed2af17d82cb94cf8027489ce5cda8a5e8d31de1258b4",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-suggest.md": {
+      "sha256": "13f4c489e09a90066e419c098158ab6f3fd40d8a406380e3c734308d276a9341",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-task.md": {
+      "sha256": "09a469cd41868a4e8bf5339b2751f71104fbafc866c0e1da0630c17ec9b9392b",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-team.md": {
+      "sha256": "9a6197da73d697fddaea4ef1c3f9acf97be429e665945ef9da2e0ee44247b4db",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-test.md": {
+      "sha256": "443d4e0ccdc7947d765bb6a086af8295e6e9e7de57cce611eee687c8ab6ab63e",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/maddu-trust.md": {
+      "sha256": "0d89d31dee798e7f6e5c20deacc0784aeafa2519727457b3ddd7cbcda272f903",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/commands/README.md": {
+      "sha256": "3566aa1f7497f3ba5b49930b1a0a7c7d62efbed0c8e2f5a037248da07eb1f813",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/GLOBAL-INSTALL.section.md": {
+      "sha256": "ccc9a2bddc2f018237ee581025423e40392dfda67b3e5f12b2af5bb0afeb2e93",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/MADDU.md": {
+      "sha256": "1afe74a2f3d46bdd557c4bdefc5bd4a93ec033d69d6f1b6b8b8a81cfa98c326b",
+      "installedBy": "1.93.0"
+    },
+    "maddu/agent-files/rules.json": {
+      "sha256": "e55b15a111f6bf686afe1f846363f5d531fee2e923726cb725fc6415ad7702c7",
+      "installedBy": "1.93.0"
+    },
+    "maddu/CLAUDE.md": {
+      "sha256": "a50c327d688b545c68fee3088a31a4c6cafd87738c383967aa1ffadf52b82278",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/brand-horizontal.svg": {
+      "sha256": "4a7169016f2bbbb599ae005c90291603d50f0e68132c0537ab383f996f9d40d8",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/brand-mark.svg": {
+      "sha256": "2b1883ec7e003ea497bc3bc08119431d58a3bf2911f1b1b1c91815e7dceecf0e",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit-backbone-cards.js": {
+      "sha256": "698dbce4e078d27806705c224209521fb546bbde51a71111e415893d5af97692",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit-command-bar.js": {
+      "sha256": "1cc7d966909176cd910347b067e49bc267375a374ef0d4f8d43ba970cf394c77",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit-comms.js": {
+      "sha256": "086ee97e371840609acccd9c24c486b9cdbef17d6aa1ade5552e1dbd36c9afb6",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit-event-rows.js": {
+      "sha256": "8308ab6066ae12175356ea6ebd70bfccc9895d8daa5e64f879471fa634a2ca56",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit-inspector.js": {
+      "sha256": "1403348c470f0cc54864bb2fa7d310319331cd95a659548433b3fe7130fd4104",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit-markdown.js": {
+      "sha256": "1bc6c3d18b337f8fde5dd370ae4fe62f50ce933443e2a7d39f6acf717e3d2d60",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit-route-meta.js": {
+      "sha256": "a9de34946efd02a04334c0cc9df695343085ac89b22c68daa28e6d22f2107292",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit-util.js": {
+      "sha256": "770f16b2bbfac4459dd8f89229152765050ef0772e934fdc70d0ddfdce399da8",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit-views-backbone.js": {
+      "sha256": "dd335d06c96e7bfd2711021de53e2a15e0ea2020362ddfd4c01b220f907b646e",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit-views-connect.js": {
+      "sha256": "2702359800d3095e586de2c999ab43e13ed8538504ff496e5d7c50efa41c2e10",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit-views-docs.js": {
+      "sha256": "29325a7eae19b65a48e4385845a9d7b0b86d8ae7d5cba6994ab45d0ec2cae8de",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit-views-focus.js": {
+      "sha256": "d4a6046d971e574ac21c5e60b932a14d51c70c1db75731b39efbb0e6ed0bd274",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit-views-inspect.js": {
+      "sha256": "e6671a82d6ccc5545c6d771d8a18f5c1deb2f0a86cfa4fadd03a270a04939d37",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit-views-live.js": {
+      "sha256": "df5053cd2bad14468aabc9a82e0046bd1987eaa830234fc414a169b470097608",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit-views-reference.js": {
+      "sha256": "8286231dba75cd5dcdbde6d15259d375e52bd55aa81013585ab0d233ed346c0a",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit-widgets.js": {
+      "sha256": "28f62062e1355146fb6c295d15103729d289b768619c4adecdee3571b0cd0ebf",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit.css": {
+      "sha256": "93d3b48eb4fe44ee31c567560c6a797236c2cd651ef9dbcdb17555fffd0e349b",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/cockpit.js": {
+      "sha256": "d412452e5b3e357d1e25d5eae36ec37189eb243a9dacdbe873a47f3c3c27ce20",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/favicon-128.png": {
+      "sha256": "f324dd8b56ecf0723c1aaa7649237dbba7c7dd938e1407a736ced06569dbbc28",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/favicon-32.png": {
+      "sha256": "a18d15499dfb0e93d5351aaa1eb7cb4e9828a6b114874c197287c9c8e1c9c4fa",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/favicon.ico": {
+      "sha256": "1772cc9dac519403d910d42c8c56b1eb2d3cffb3225b1377621c4a9efd28d8b2",
+      "installedBy": "1.93.0"
+    },
+    "maddu/cockpit/index.html": {
+      "sha256": "e55aafa59e0217c4c34617650ac0826cf951fe346b47fde905008be0796c0bfb",
+      "installedBy": "1.93.0"
+    },
+    "maddu/config/pipelines/fix-a-bug.json": {
+      "sha256": "4df45ba71e81aeb7c88d67eddd50a576c07ef281375cfedf8510253e50a5781a",
+      "installedBy": "1.93.0"
+    },
+    "maddu/config/pipelines/plan-and-delegate.json": {
+      "sha256": "a73e15e7cb0f8bae5265aec82f48bd171339d8821dff68ad8ddf33312561ab1d",
+      "installedBy": "1.93.0"
+    },
+    "maddu/config/pipelines/ship-a-feature.json": {
+      "sha256": "c8dc71d636abf594af38269ec4ac9982088483af9350464d2b0dcdb1f98aa5d7",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/00-index.md": {
+      "sha256": "14e7e7b0e0df1a65bc0bf84581ba75ae2e564896717d5fdeb63473352ffa1894",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/01-getting-started.md": {
+      "sha256": "7cc2835cc74c8e91420767c20d49737dcdeb39409c008d24473c3a0bd1309022",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/02-concepts.md": {
+      "sha256": "0d6d0d9c84a7801faaeadeb49d94c4c8ebab749edf2d1f26a29aac234cdcddfc",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/03-cli-reference.md": {
+      "sha256": "1c5f385206af6f8a7b0d1632b911350583264239d2b8ebebed88c523a145d591",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/04-cockpit-tour.md": {
+      "sha256": "f2fefafb16710b54b197bfb543778adb1f2305db40d3588a2a7ff027567e95a5",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/05-bridge-endpoints.md": {
+      "sha256": "9163037925549e7978f1eb487d0a9ee4062ca1485d1d737cc0c3f7807e90fe76",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/06-hard-rules.md": {
+      "sha256": "9c099ef77bfd8fe5786b09177a6a6bdb4b522fe7d3e0d9a1c18cb16c2e3c82ab",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/07-lanes-and-sessions.md": {
+      "sha256": "9fbfa042f2ad740b574cecf0a6a0f0519b2496e1ef2ca9d7d970eb2c6f28c195",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/08-slice-stop-ritual.md": {
+      "sha256": "f2ae537c8f040c85e024a619c140a45aa9a52bb8d5f0d5758233e3e5cee2632b",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/09-approvals-and-permissions.md": {
+      "sha256": "2699f7cef41979ca2f6519f7c4bc6f75639e6b1268c8db4fa4870f75d402dc4e",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/10-skills-and-hindsight.md": {
+      "sha256": "c1bc3850a18706d255d81f7f79d7af651bad39ce89c95e1eceafb0349b8f0c58",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/11-runtimes-and-mcp.md": {
+      "sha256": "af53b42bc720ee0816cb22ae9f04b4c908a265059803a57f7ec581e4071e9df1",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/12-auth-and-imports.md": {
+      "sha256": "8b8a1321fa8259fcc1379a044793facf55c748589b23d4e9b999c43d75ea5b00",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/13-troubleshooting.md": {
+      "sha256": "509eeb0a93ebdc05cc53e455659f98f5e1a89cebe70b93a66c1528ed72410366",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/14-upgrading.md": {
+      "sha256": "7ca851d4a09be940f9ff1b261a8d5a18bef5b8fefe1b21e4f54f6f8648b19f95",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/15-architecture.md": {
+      "sha256": "ca4765601d18678104259f0e54dd386e25cbe48417216b3111a6411ef4bf893c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/16-widget-kit.md": {
+      "sha256": "0eb252da25a94df2f8131309cc400318f286b7f2d69aafca09e6dddd9cbf1871",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/17-validation-checklist.md": {
+      "sha256": "80c930aaf55ba3bdd322e4c30bd233c9d2656b267cc526ba13c61350c7e7f670",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/18-first-slice.md": {
+      "sha256": "add6979ebd40ad0022ad2e53506d23d4d9b7c232745f8494bccba4ca158135c7",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/19-multi-workspace.md": {
+      "sha256": "857d72c3f5c595638046a8776433bfd975735ab462483232b8045d79708c61e0",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/20-governance.md": {
+      "sha256": "46134035816f089fd006c92c29c745c9a5b15e0114c2daf68d43c641c44e5dc8",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/21-agent-onboarding.md": {
+      "sha256": "c9a250ababa057c2ca3d16dc200cd579554c43a24b23840832a6670efb6e72d0",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/22-slash-commands.md": {
+      "sha256": "bfccc291d96ea121921881f9a9bd8f76f8eee63b7781095273c97bf18972a30f",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/23-natural-language-routing.md": {
+      "sha256": "c1db83a2f3fa08e742ce90a6616e891ad21793656e11f3638be9f29909167833",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/24-skills-auto-inject.md": {
+      "sha256": "019d3f7980cb9e678130bbeb79e7ba21e2676b8df4c33e70c28139303194cf2f",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/25-model-routing.md": {
+      "sha256": "143931f4b4d2c4f111f34646b245ecb3df2fe129765e764261c71d8f8514af1e",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/26-stress-testing.md": {
+      "sha256": "2975762eb7bfe5223d39644884bc8121a8163169ef9fefe88f8adb9854517021",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/27-transcript-import.md": {
+      "sha256": "61c255393d932ef9211071b12ffa2971fe883dc74c0a1246760c6faa4778640d",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/28-default-tools.md": {
+      "sha256": "0d87feea5ec8cdc26cf1416d4f6c9ec7aa26e5033d63a7b8f1129c437e625e63",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/29-mcp-templates.md": {
+      "sha256": "8a36af668d7ec8bd404ad5dc5ad96eebe17a8d19f1aba552f238419658a35b1c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/30-governance-tiers.md": {
+      "sha256": "f25606cd48384db78957b358b5a33649a06e0d5b1238d45f99294480a8e755cd",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/31-operations-log.md": {
+      "sha256": "07f0e5a6b8c5483fe58213ddf115dbdac04ecfc866a75688b9998a681e12550d",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/32-kanban-and-plans.md": {
+      "sha256": "9033091358940e1291623f3232ad3d91e3f6ea48de35fe120ba03e1941698b0a",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/33-loops-and-coordinator.md": {
+      "sha256": "5fb42256f886f2e43be1ddc12b5a372db2916478c01994e1d0814791a7c3f56b",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/34-threat-model.md": {
+      "sha256": "224a1a98cac4e338e40fadabb62cc2a22542962639b6ed5bf1092bfe24dc362e",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/35-hermes-adapter.md": {
+      "sha256": "c78eac85dd7978979be8360577055397cf0820243c07579536d515b1fd9bc4aa",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/36-trust-audit.md": {
+      "sha256": "9c548704ff5b16a082e0ed25502cdf46e32a042997b8124a61971587f3c55abb",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/37-failure-learning.md": {
+      "sha256": "4bc88c6ca88a8af10614bc2d151d3bb1fbad993cbbc72a988ec02d04c2ee176a",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/38-blueprint.md": {
+      "sha256": "de571ab2b79eff8f7c95b9427500c9ab37982127404fe428d5d009a706e8b2af",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/39-rule-gate-traceability.md": {
+      "sha256": "1b786959d95fb9fe1ea9a367209e8d8efb3cdcd6f8406586c0e0c9a8c53891bc",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/40-architecture-drift.md": {
+      "sha256": "376a92995c7ddc46a6fd5cf5a878be2892032d47ed84256d3808a40c65b38bdf",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/41-debt.md": {
+      "sha256": "8c31ec8f3e58dd73dcec014bcf650c306912350aaf554a53da002dce38306e62",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/42-agents-global-install.md": {
+      "sha256": "9a633a1c70a1b031f4360d857a2a9b622741d4196580c4368b8ca5bda3df4d46",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/43-focus-director.md": {
+      "sha256": "ef633bcd3dba16bcf24e92312caccd0d2d05ad56d16a6ff160ba4b8941209d38",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/44-session-hooks.md": {
+      "sha256": "9ea624500720eb874e849b605eabecb8c725cd4e3e35761366a05a2efa8a59d5",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/45-category.md": {
+      "sha256": "862a7522536bbcfc49fa84017e52b74a4a1d89a7dfc4d7db631a16247c46c893",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/46-ci.md": {
+      "sha256": "c0e1890dfbecc9883645ca5a37f191493d5702fa77370eaf60732f8a7f94208e",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/47-earned-autonomy.md": {
+      "sha256": "185298881dfaf160b3501cf469517568247ec3f0a559430319fa6243071fe126",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/48-otel-export.md": {
+      "sha256": "ee419d9c7a65f9611b5617f2f39573b79a511ab6553e7e23d30b83bf00e4f8a6",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/capability-docs.json": {
+      "sha256": "818640a7c0b40d29eafa761de0f44490521e59c28edff436a705b246c902a9ed",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/charter.md": {
+      "sha256": "3ff79e058cebff762e6d62415a759fd648eda41e1d92c2a22944ad49a3aa8ba3",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/DESIGN-SYSTEM.md": {
+      "sha256": "8931b37c4a4333f084589670697b55fdf93d419957935d43059126db6f9d5f9b",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/event-schema.json": {
+      "sha256": "de3e7f9d65c5700053cf0d73d88061108829b9ed206461911ad3f8f3fd2ce9cd",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/event-schema.md": {
+      "sha256": "b0b12fd12e55e65376de904cb2e12384afe4bda12dffa75d8594fb47a9cfa359",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/hard-rules.md": {
+      "sha256": "c6b73c6b04c5db0ab5678808413387dba248468bcb2266a3c1320659779dd081",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/installation.md": {
+      "sha256": "9ee32078f8ca86d56ebeb7d9f13c02d17b00b806a2dc55f7a907edb37086431c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/lanes.md": {
+      "sha256": "14aa71790d7a2d989f638b500a280792818213a488557fcb0deb2579922ec4e9",
+      "installedBy": "1.93.0"
+    },
+    "maddu/docs/upgrade-policy.md": {
+      "sha256": "2cfcf25085ed854239d7fe1ad5bea34a70e89c89c552a53ce61a4246e696ca2c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/mcp-templates/calculator.json": {
+      "sha256": "9fbda5248ef8f0ff65b6d52fbee81d95838018db94c4dbc9a083620dd5773c47",
+      "installedBy": "1.93.0"
+    },
+    "maddu/mcp-templates/git-advanced.json": {
+      "sha256": "f33fe75daa5598d05eb66450d30b184881ab2fb0a9b6bf6e3f7851ff0fb294b9",
+      "installedBy": "1.93.0"
+    },
+    "maddu/mcp-templates/local-fs.json": {
+      "sha256": "5471eb8ba14dc7112387331e86b084bce99bb6c3117b373bd610db6520bb50ef",
+      "installedBy": "1.93.0"
+    },
+    "maddu/mcp-templates/local-search.json": {
+      "sha256": "70bf5d4f5e38cced24125ba7e202cb7fceaccea96f0d4b286f94621b1a47415c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/mcp-templates/time-and-date.json": {
+      "sha256": "dcc34e8919ac15d2793e602e3d942fb69e03a012ecce43422fbeb8f4533ffb5c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/package.json": {
+      "sha256": "9f693a9ac293af00b30ff7e070771d36321a5f335e4ca353638e38bc84e6ba14",
+      "installedBy": "1.93.0"
+    },
+    "maddu/plugins/comms/boot.mjs": {
+      "sha256": "a1c2722d04a9ec2c842be5d3a0e5ea6a27d2a6b2b869ab296ab7c02c4fcee2e1",
+      "installedBy": "1.93.0"
+    },
+    "maddu/plugins/comms/discord.mjs": {
+      "sha256": "8b8680fc45eb380d94701740bd8559ead879f82c40f2ce49d52fa978f10d2466",
+      "installedBy": "1.93.0"
+    },
+    "maddu/plugins/comms/email.mjs": {
+      "sha256": "8d7b0edbccd18fface9f5a995f8fccb2a1435bbdff1b3abd7bb21e7fdda4bbb9",
+      "installedBy": "1.93.0"
+    },
+    "maddu/plugins/comms/plugin.json": {
+      "sha256": "288d45fd1d59ac8a112d9014c55bb3d8115593dad0bf3019614b0565ec7d1d20",
+      "installedBy": "1.93.0"
+    },
+    "maddu/plugins/comms/server.mjs": {
+      "sha256": "ed83566b029742734f1babf88d6e8e8660340fd072fa71d74ce32ea99ee9d283",
+      "installedBy": "1.93.0"
+    },
+    "maddu/plugins/comms/telegram.mjs": {
+      "sha256": "edbfd81cbb7a54266d88501ac97b22ea2fa9b66d7ca8ffd3e2a868d71a794fdc",
+      "installedBy": "1.93.0"
+    },
+    "maddu/run": {
+      "sha256": "812a187a4ca9820fb8548abb60ae7edfbc244a2b8351732264e25a2fa39e09a1",
+      "installedBy": "1.93.0"
+    },
+    "maddu/run.cmd": {
+      "sha256": "0a15e53136bb347d91992f237a54320237de2ed9bd0372c114ab30ee14602310",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/active-session-cache.mjs": {
+      "sha256": "8af09f910f37f056131c7b962e4cc2431400750b52084d81105337e2d07bdcfd",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/advisor-non-claiming.mjs": {
+      "sha256": "d730847071ece0f6ddc0b9b4e61c04af35d384fa99d3bfb77cf8015455553964",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/agent-file-current.mjs": {
+      "sha256": "2c19fd82c77dbd3ba6236e143f25761dfddb439eb41d3454f5433a0aa6ce933e",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/approval-ledger-completeness.mjs": {
+      "sha256": "4c62dca9bb5afffeefb1d169e8bb6ad96996e61004324934283a58eb02b02af5",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/architecture-drift.mjs": {
+      "sha256": "ff58450cde4afa17cae5258e0e80993ce92137abbaa4580303ed37b8789a1d06",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/architecture-mass.mjs": {
+      "sha256": "9be35cc2da153bc36bc4ee5de8980bde7c8fa0c4723983fce459db6926798fd8",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/audit-ledger-coherent.mjs": {
+      "sha256": "2d7de6f9b35c5af7063df71ae7193851995bd71904e07dd2df9c14e051bb9d37",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/brief-coherence.mjs": {
+      "sha256": "235045261278d53838e7ed9745d9cddd3f1400e4b6c9df5e8539e822cf89c8b2",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/can-read-old-state.mjs": {
+      "sha256": "7b36fde58601f34cbb34b37485db791a852f9a619343dd5b8858008153c0a9b1",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/cockpit-routes-reachable.mjs": {
+      "sha256": "268afac12fa280e4a6b9b426843dc3d9bcc0485914ff0c9b30457ca50492ec85",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/command-surface-coherent.mjs": {
+      "sha256": "d09dbb895ac530f7252a271aad9e12d6a0721db1c35d86163ded7b7298589290",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/command-tier-discipline.mjs": {
+      "sha256": "45b129cd7b61e3ac15ec170946f3eebda8db9b29856ed7786301d30094da1c53",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/completion-claim.mjs": {
+      "sha256": "4c1b137baf6e20c35c983cf1b4b1a39c4acb185be3283bf56720209bba068106",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/coordinator-phase-coherent.mjs": {
+      "sha256": "69b5dd36ff8856319c934613cd0e91584bc8a9ccd18f3b4a580a098837cd83eb",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/cost-budget.mjs": {
+      "sha256": "3de68e8cb8017dc962de6aa1b902ebd99dea9cb3f16569831209f58d4ee74613",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/default-tools-shipped.mjs": {
+      "sha256": "076eb01fa0c1ce6c1e9b62143661601e5bc05427213122f22088e5e71e5025ad",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/defaults-single-sourced.mjs": {
+      "sha256": "266e4899f4196c7014a82c6ef0a551c9f1ec46e860ace335c811d4e510dd1a95",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/dep-pinning-respected.mjs": {
+      "sha256": "529414c0ff15c5e1bb7439115fe9ba61b3e7f2a54aa5189c5b346c80f302d12b",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/dependency-freshness.mjs": {
+      "sha256": "1f99a982dcbbb6b09b4cbc13fdfe14d9ead38d02fb8adebd559308613e388b9b",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/docs-indexed.mjs": {
+      "sha256": "aca6205ce30bf701a3ce0b669165be8cb37ea6513561c1d75b7b51ab4312b8f0",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/event-dispositions-complete.mjs": {
+      "sha256": "98cb8d62ea333e787edf39d4ccde8108112fd13c97167933ca2d94c27a294454",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/event-schema-complete.mjs": {
+      "sha256": "7f79764097541365917e98109ce5b5ef04cff21d0712d45f316d329cd717aab8",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/event-types-reachable.mjs": {
+      "sha256": "2ddd78c1d7c3179e59d205c0e73b07d3d6f4d25481dbfdf6f27297f735693c9e",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/focus-ledger-coherent.mjs": {
+      "sha256": "4cc563c3987fa44b57f6c9b0dbb66eb95ede6237e8b84312c334f1e764da3e60",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/framework-layout.mjs": {
+      "sha256": "7b5a7c50abf73a6f19a6a045bb22e1a59d7ca7b40bfa80f7d32bbf74328a189a",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/funnel-integrity.mjs": {
+      "sha256": "35855fe5e99d852502bccc7705dcddf58418492626af8704cd0c8be9ce214df4",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/generated-artifacts-current.mjs": {
+      "sha256": "ea0d94ab3d94492e629e1970f6e005f729a64aa0e5f1c11c7fb5f94465da7eab",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/governance-mode-coherent.mjs": {
+      "sha256": "aef547ca44af8808564af82cf5b5502eb7f62d5a46b5b34a3ca4408c62646898",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/heavy-suites-recent.mjs": {
+      "sha256": "211fb127745825e9b79b04923248988bb0549bea817ae51f00e6eb08db2c534c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/help-roster-matches-cli.mjs": {
+      "sha256": "1571732b2ebfa9c4015ff58babbbc24180513fa68a833a06587e3ba035afc7b1",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/install-integrity.mjs": {
+      "sha256": "9cfbff72682dc4696ea245ada838632ed0a549ca71cf3a45fdbae6d915b885ac",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/intent-routing-current.mjs": {
+      "sha256": "4a187b7008dead61df753ab87386b1808e95eda9a05c7b44aad1d54e38feef86",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/kanban-coherent.mjs": {
+      "sha256": "5985924cfad45d0263517aacbc743ad9dfc7d7b8635eb02b0dad86bff6a8f37a",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/lane-force-discipline.mjs": {
+      "sha256": "a3913a4ee82513fd75388df363f08501823f9127783390ca2d7b41b5217f8e7e",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/lanes-catalog-parseable.mjs": {
+      "sha256": "b7937158fd80a463a9460fa3c93e805277d03e0e225eec1558522f6dd4292c59",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/learn-corrections-coherent.mjs": {
+      "sha256": "428f58caf802cd00854dea6d3541570cca78697896e106e31227c14db462d721",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/loop-cooldown-respected.mjs": {
+      "sha256": "dc3befc27ec15fab4be601f74047c829fd37ee2980d20ea221a438525ab8a79f",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/loop-iteration-audit.mjs": {
+      "sha256": "deabec3b95b239dfa59515ff38b0f3bbd3689d2462c7e57d5421a6ca14a568ab",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/maddu-state-untracked.mjs": {
+      "sha256": "838d28a2483a25e3ea94cfa279568261536c1f73e1459851f0bc28442e9b5dbd",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/mcp-provenance-verified.mjs": {
+      "sha256": "6ba1e527f1ea39e2489963f915aaa79596f347522bc3f476681709573105b9f2",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/mcp-template-shape.mjs": {
+      "sha256": "8d02b770dbf57b1dd7cb9f59f74c85ee02dd536eec7520ccda649aecff039aed",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/model-hint-shape.mjs": {
+      "sha256": "a7523d70e07069a90793503367f39f906892d896dad4b14fd434794a6f5cda4c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/pipeline-schema-valid.mjs": {
+      "sha256": "eb60790a77a5628a23dd36d07e7d45f38f4b3e4030bebe971173b3c96fe93d1c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/plan-state-derivable.mjs": {
+      "sha256": "ea79d8cf810ac9a5a107f7d1ea8e11afe33940cdd1659bf4bc3edb514237d904",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/project-test-recent.mjs": {
+      "sha256": "79fbe944e498e9d613fb76457f2622bd11fb330e0fac10cbeb8db01ea43b72ed",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/receipts-coherent.mjs": {
+      "sha256": "b7451a20adc1b36a980fd6e11875ab7bbe72f49a613e90ba95f4033bcb87a86b",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/release-parity.mjs": {
+      "sha256": "898711e82ce0391e711bd01a240b38e72ba167d0e252e10f5110ca466539d573",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/replica-untracked.mjs": {
+      "sha256": "1df04131af516599b1f5603112ddc7bd0011dc091aa6efcc5ab7560252c5f48f",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/rule-1-files-only.mjs": {
+      "sha256": "fc4eae37617cefebca97cdd9bddd1a9c7770633fba7623c3fdb547671a260310",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/rule-2-no-sqlite.mjs": {
+      "sha256": "f95a701467321354d49ab807be2751375e9d5058b8b1496cfa9f924583385533",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/rule-5-no-provider-sdks.mjs": {
+      "sha256": "5a05c40d01facd6bbeb0aee0e89352754073d60d38c66824b7cad16514e9714c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/rule-6-no-token-leaks.mjs": {
+      "sha256": "8dcec406600fae9dad5919db6187214ae8a98022372043bfffd761d7c584d8a8",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/rule-8-no-duplicate-claims.mjs": {
+      "sha256": "1c860a5de23eb9353b5871038f79296407f44cef2f9d71666ec328b02d65eff3",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/rule-8-team-lane-disjoint.mjs": {
+      "sha256": "da11e5af0c72f1b10f759db2c4ae3ef784882ffbb873fb2570b17841434ffc7e",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/secret-scan-active.mjs": {
+      "sha256": "20cb560e61c67c37c987faf6115f7b0d94d42faac7194af5dfacaa309f974105",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/self-test-recent.mjs": {
+      "sha256": "37b6ef7e95ac18c148fa37b9df9b1ae16b90e5578a22bf1481a37cda28d63b6d",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/skill-candidates-bounded.mjs": {
+      "sha256": "299d3dcb499a65449619c9f628d085346608b3157055b5e29add494d91b6183d",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/skill-injection-bounded.mjs": {
+      "sha256": "45b222b49bc59bf965ab45761454b99a0ccb49fcad0c2372cdd61e827866ccdd",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/skill-provenance-required.mjs": {
+      "sha256": "1b10b71b7ab319228139492cef8555a6f9e32d5be8aa3335473f8edc9bb7752e",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/skills-starter-pack-installed.mjs": {
+      "sha256": "9febc9c4db28e032a0812a63fe475e0672c88cf4c67ec1661951b201af55b69f",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/slash-command-display-pattern.mjs": {
+      "sha256": "380223e46bf5ee619db4d44ef960b5a51ae97ce1dfe71feb2bcfe11c26674795",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/slash-commands-installed.mjs": {
+      "sha256": "afd52eb66f5527606974116803988e0db9ff2f634469e548ff628b6176431ca9",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/slice-scope.mjs": {
+      "sha256": "6ecc4cdb4293603debddc220f2f1646961e6afd19650235a5f9c52aef5e084ae",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/spine-integrity.mjs": {
+      "sha256": "530f8a0cfd9d890bde239eeb4c8b0833d4a47d9f5fa76ce6f833ef662a5b48a8",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/strict-mode-approval-active.mjs": {
+      "sha256": "80b0a54cc5703a1b97f45de42a25d508cb349e796de49c0fe59d63952350a8cb",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/suggest-engine-deterministic.mjs": {
+      "sha256": "8ca570acadc503213215709af98633bfeb7c0ad82e9891ebdebf0cbf1d202e73",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/token-ledger-populated.mjs": {
+      "sha256": "f03777fd7cbdfcf444062e90fa5ab97d178560c45957bc4b952da79f55734306",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/token-ledger-schema.mjs": {
+      "sha256": "d979cab8c097346d7c4b313d5733431a9f98698b9eb5017331ec6d895507ad2a",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/tool-allowlist.mjs": {
+      "sha256": "d7ecc18b220cc2fd89a31f771e18ac45f7113232ba02d25c5094b9b4ea03a434",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/tracked-source-drift.mjs": {
+      "sha256": "01cb7e3e9aa78622861b35ac8a62cf206c7963341c8d03b9c3071e2fb2a38f88",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/worker-env-policy-coherent.mjs": {
+      "sha256": "d33369559c7c2ae65daad6157032175f0c3ad7d84dbec9c4219bd9e90c93a742",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/gates/builtin/worktree-lane-coherence.mjs": {
+      "sha256": "b185fce64089d1860b8328b315c6e67e68c2ef22cab57a99cf54a443b0bcc02a",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/agent-context.mjs": {
+      "sha256": "c90ad070f2f1a90999fe1cbc3de16193773277f48c872b0747dc42c137da1426",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/agent-targets.mjs": {
+      "sha256": "892b98966d07aa72fc058f78ec4887abddeb66790dc5c2347d831b783b78a4d8",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/append-lock.mjs": {
+      "sha256": "c538c03087df1bb2c3c588167d6e37853d61e504a8aaef1937144f753d12b900",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/approvals.mjs": {
+      "sha256": "0489bee5663d9781858131cefca844f6befd4c6ed680796cc4b7ec41e922e740",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/architecture.mjs": {
+      "sha256": "b1b6107677bf4d3ec437feb07b9e7e81a9f7d6cf605daa867a7628c3b242121c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/audit-ledger.mjs": {
+      "sha256": "663fbfeabb89496c6dec7634d0ce26137082bfa40980333295584e97d428e26f",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/auth.mjs": {
+      "sha256": "9427536f6ae69c52ae7350ac81e8ecceee1e70d1a597e1ac54a05188f795d255",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/autonomy.mjs": {
+      "sha256": "0ee2e27ed5ed671b0ac6707ca4afc0a172e8ce913c13c3a334415e5b01f87a50",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/blueprint.mjs": {
+      "sha256": "f6cf1b4005ddaac50c47ea655aac7b626ff0b8cb1704829c5f8048cce60193c3",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/bridge-bootstrap.mjs": {
+      "sha256": "58922e47b34a5cdc35ad36050c524d552599236a8d028cc0fcd7e1df32af3589",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/bridge-builders.mjs": {
+      "sha256": "0990420f806582c75e24a6127203d3e515a0df9cadd0ec71fb45bb45e46a7b11",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/bridge-fanout.mjs": {
+      "sha256": "3d1d8fccb4ddf31830200229db6189e333e619e62fe320643e98e4383273a41c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/bridge-routes-approvals.mjs": {
+      "sha256": "9f2c554cb88b73443a82f7012d95365dbe39e6daa9712b1c5f4a166b22595f21",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/bridge-routes-capabilities.mjs": {
+      "sha256": "78875ed193dac967324dfe142ccfdf5d062b05204fbf867db04fdd73b1da1a27",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/bridge-routes-collab.mjs": {
+      "sha256": "bd40008a332d3da36cba518cb6217511a5c5248ef9d840ce697a507183c46e21",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/bridge-routes-lanes.mjs": {
+      "sha256": "493b1ae526eb48f02162483560c8dbf188c0eda687238a2d1f2b6a5a099eaefd",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/bridge-routes-registries.mjs": {
+      "sha256": "79e380b7fe3162e0394cf16c8da212a623ba66275c91828992cac3e20a39e350",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/bridge-routes-work.mjs": {
+      "sha256": "55eb2ea39b7173c8b244b098bb4771d1b3fafa63e33d4f79b4513e35bedf3825",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/bridges-registry.mjs": {
+      "sha256": "f907eb8e36b6b31d1283d070a94dec6efe3eadfe3e357e4fbfb94456e7a24a4c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/briefings.mjs": {
+      "sha256": "b4460ee1b62d5c2019b29853b6e70a05f570ec2e4dd5761ddc813cc5fe54d0cd",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/capability-positioning.mjs": {
+      "sha256": "e29d91f084d4aa6834eb255b159146e4edc318e295cc2f6be6e7b243cda23d96",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/checkpoints.mjs": {
+      "sha256": "2c4cca1a0796b4bd4913866f79833a25cb60efbd830e7709e344974f4cf89705",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/claude-hooks.mjs": {
+      "sha256": "d7afca4fbbf54f82f4805fd756d214b9d725074855d8415f0d015234c45ae6da",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/coordinator.mjs": {
+      "sha256": "677be7ea049cea12c808a555b55e51cde39a2b035255c57e968a9d27979e1fa6",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/cost-budget.mjs": {
+      "sha256": "a6a0ce64a21ae756263883a38f9bf4aa8bb6c3b3e3b0af6f56123190caa9ee41",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/defaults.mjs": {
+      "sha256": "781e477fb6277ca4b6c652d1ef3ebc3d67f667bb7e18015f313e090db5ff048c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/deliverables.mjs": {
+      "sha256": "82d93020672d5d28210f11fff0b20e0a18e7f308ca73dc100b5963e846f73d20",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/enforcer.mjs": {
+      "sha256": "094429225f2c74973aede69665e76bd83b4ed792f4c04bb3be1dc639a3ce93b1",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/event-dispositions.mjs": {
+      "sha256": "6bd6ea72b89c0b8528c57fea2b2df6c6e2453f3cee701a1e55aa1b9b6a047a78",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/event-schema.mjs": {
+      "sha256": "f37c914762382500f84268bd43bbc195542e578fa946bd69d98215a4cef05acb",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/fleet-upgrade.mjs": {
+      "sha256": "242921f578dc329f6c5032edd7d12ef6ac0e5e644dc447a1ea94aa8b86f00454",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/fleet.mjs": {
+      "sha256": "f689c8ebd0a7882b91a8d4a8afe38e6a05d582e3156a8540edfeb2639fec6335",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/focus-flag.mjs": {
+      "sha256": "f5bf377a2d975945284a3c7f0498cf68678fd3719f5188f2e2ee12750843413d",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/focus-trigger.mjs": {
+      "sha256": "4042099a35840bb3f9c17d0fd6a214cc6cefa2be0c65d01424988b195c4633c5",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/focus.mjs": {
+      "sha256": "e99575758a1ab7ad4681c7ee19a7a223d41ac9a670be3e60ba98912f53803eb8",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/framework-currency.mjs": {
+      "sha256": "1e66183d0f13ccb636df95280c5894fe49a3a2f455abea0789ae65369441edf6",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/gate-ledger.mjs": {
+      "sha256": "3058b5f4275ec0e0344428f2e5123862500d0e5a776c881386b585525d825926",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/gate-libroot.mjs": {
+      "sha256": "1b7ce61f3ebcec87a51c55bc41d200443cb6fd903c1688b5726c40e03563f0e9",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/gates.mjs": {
+      "sha256": "db26bcf41b1285c33ce2f527ed867cbda13ed239c47946759c3cd6d8650b98d6",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/gauntlet.mjs": {
+      "sha256": "c5366960fd4a86582f3b220ba0e584c822fe748c173084e5c2417179f4bce77c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/generate.mjs": {
+      "sha256": "2bb61fda8e1aa5ec4f983c56801d1528957a383d9c8a97791cf71a14938448c9",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/git-exec.mjs": {
+      "sha256": "e12c6d0c4d1275277b7c5e7bcc94e5fbbd4c8f86d23235a9fb30d67846d2883b",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/global.mjs": {
+      "sha256": "fac9fef78b009c4160234091738706511f44d7064ff0adfddcbf1744c5c73be4",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/governance-budget.mjs": {
+      "sha256": "dd2875dd36f92f9136081095969b1ed79627e478dfbe6f86ca19307ca4ac3584",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/governance.mjs": {
+      "sha256": "87d09bf7e9bd679c58185c76b59a973202636c8159438b47d38dba37ed785d48",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/handoff-trigger.mjs": {
+      "sha256": "2e85ccf50fc8a80e3a0096574b98c082ec315ae3b6be9314b9a51aa01a7627bf",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/handoff.mjs": {
+      "sha256": "55ad32ab82b93d8917a6eb7b580683a60e84b69c73f13a3f60ef4adc837e54ba",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/hindsight.mjs": {
+      "sha256": "e2c5510857e51a7b52ded0c74fc487fc942cc6cc83056f5819047503296f391b",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/http-util.mjs": {
+      "sha256": "dae9ab2bd1322663c1c815fce82140c4f58ee3e8985d403ec5dcc02da0d95c95",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/imports.mjs": {
+      "sha256": "76aac89f7fa8e1b50fe35de1a090112d0300d7aca343cfb422845b77d99e6a93",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/insights.mjs": {
+      "sha256": "6985c2a54862daf65f708445411cae620e336f2b5751ecd3a4530ac3c0a8ec8f",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/janitor.mjs": {
+      "sha256": "34ac5c6bbfbbf9930c8e097c210a598682a3a9ea5c52e14e178c6e84ab060e44",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/learn.mjs": {
+      "sha256": "0d6fdbad59f121c7aeeb6a2db61ec349805e0791c0b7c2034747a16710c6a683",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/lesson-federation.mjs": {
+      "sha256": "f9b53203e63d94a04250cbd815df54eece614975ae40f735904d061be3d4b38c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/loops.mjs": {
+      "sha256": "faa77396f48424b9019ee5da6c9f0ace96de507c22c53f10f72bf5932a04b5d7",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/mailbox.mjs": {
+      "sha256": "99ef8f26c3e843f33b0870df064f8e552a84abec4aa52c119e6d31cbbe4a9c29",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/mcp.mjs": {
+      "sha256": "9c7c2277ba959ad00e3a0b365a44c6611813d263010f3bd2fc0226f246000b62",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/otel.mjs": {
+      "sha256": "0e2409921a9fa6eb21cf15e5c1516d1cab17bf57f058c6d968052ddfe637ff52",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/outcome.mjs": {
+      "sha256": "24995f251baf801073a1f41e8143f624e3fd9f5e23b367897308ca51538a7219",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/paths.mjs": {
+      "sha256": "2712b55c8b57b42c43c1821563cd810e76abd0325563ed9c9f18cd5bb4fc5bb0",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/pending-actions.mjs": {
+      "sha256": "74b90c5cb49bf1522a4b25c6f35620e844cb57a72603f274b81307fc7c2c1aa9",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/plans.mjs": {
+      "sha256": "8dc9043c9110065060cc520326dd1689cbb5dd3fe480f2d0103b7f454772e7f0",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/plugins.mjs": {
+      "sha256": "669601db7a072992251798c5df7913ee60db1a63634842bb6cb50d9b018015a0",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/projections.mjs": {
+      "sha256": "3f4dd8dfbb0248af1ed18a65255fa367fe7d5406f6f6563e64c4c88c86660127",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/receipts.mjs": {
+      "sha256": "a0d1d01de4d8d6911293b58ef392ee42b63e59fa7f6a39c86bea32fd0e266f72",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/reflect.mjs": {
+      "sha256": "a7194ada490bc71c1a6ef6c618f4b8c6b42e17b1ee4395cb051892c3654b54e1",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/review-trigger.mjs": {
+      "sha256": "d80667c194f244f950f68986e16a9a7247bb16b0fb93dc7da5ad922c62981301",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/review.mjs": {
+      "sha256": "2ff874e488c8a19823e56f2bb8c24164e776750d232c7227cf9e6d658b504923",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/risk-assess.mjs": {
+      "sha256": "820a41a7a0f611acadf10d3a53084ed901aacb9f6ef0d4ce4efc2668cfaf44f4",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/runtimes/claude-wrapper.mjs": {
+      "sha256": "061618aa9aa74913fc34db8e2fcdb9842de40324eb2d0819db03b6863a5514cc",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/runtimes/codex-wrapper.mjs": {
+      "sha256": "329fa4f6f7562a81275d91437e7e41f6359c3063375eefe224d5f71deddd2ab4",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/runtimes/gemini-wrapper.mjs": {
+      "sha256": "6c3a59269e74070929e46bca9995df85582ba1bf6af2d4a473ec3a96dd68436c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/runtimes/hermes-wrapper.mjs": {
+      "sha256": "dc9eb532634cb51070ab66d781e90261cec0b12b8c5f66cf868b7a6de3b99215",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/runtimes/_wrapper-common.mjs": {
+      "sha256": "3ac03be1be25c212b8f5f6ad6420b2b8350b84a9208168228436a69a5877b25d",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/runtimes.mjs": {
+      "sha256": "95ef10c4bf06105578205ee40809bf2f88750e8a111b2c78e5391194509e0bdf",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/schedule.mjs": {
+      "sha256": "e11dd64c3f15795a7f88a1582abd7869bab3fa3d22959fb5e3687bf398cf9f5f",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/search.mjs": {
+      "sha256": "0585ab17cc2282f59c126fb14daf27543ecb308dac69590af1c224a531162e60",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/secret-scan.mjs": {
+      "sha256": "8144642c5236a3151184b9d0e72de2072db1efcd46467a62db6669ffb40070d8",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/session-active.mjs": {
+      "sha256": "28e38d6f5b686438d66f61a9492968e8d793100fc44bf5dd768e5cbed6caf5e3",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/skill-candidates.mjs": {
+      "sha256": "16930748ff4daedb9c086e6e39bfd91a2dae4a32e8432d2bc5ce98098d847992",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/skills.mjs": {
+      "sha256": "72a20e8acace5393685d193b99561b8937e345fe580067a48c5cf4f98335a978",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/spine-append-core.mjs": {
+      "sha256": "848805f0054af7a4f219ee2f680663f2b0dba6ba1801597f164ec0534184293e",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/spine-sync.mjs": {
+      "sha256": "d0a635e0ae4f276c643d6024ddb2d24621113575a581070ce12e287c16bc040b",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/spine.mjs": {
+      "sha256": "074e18e23a96152c3a113e68c15089748b65d88763e9bcfbbd520f6d8d07f618",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/tools.mjs": {
+      "sha256": "32f8d6482e76e9f57b536c4b118916a594d498fdf8f6133efbcd2d57d6f0f4ce",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/trust-trigger.mjs": {
+      "sha256": "1f4a828344934a22672ec4c774812b3cbe1ecd95be0dee42d8281a29333303ec",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/trust.mjs": {
+      "sha256": "ab9f6cd1e2c68897a034031f57a911bcd71c682e59396f45366f20835fd79bef",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/vendor-memory.mjs": {
+      "sha256": "4b0869c3413b16c1e042dfc1db6b4715f2856761cf53044360d219d862a0991c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/verify.mjs": {
+      "sha256": "0859518ae94acbd38067a16871f2c756fe66ba72dc24f09eda38c3d7d0969226",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/wiki.mjs": {
+      "sha256": "f5c2ff7104a66f236bee5e649a259a17a30261b17d8f59b31da51ff7ce4c54a1",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/worker-env.mjs": {
+      "sha256": "5c15763b910d07d336e3b19636080ce2aede4fefc243aa6c844545f4ed3c8365",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/workspaces.mjs": {
+      "sha256": "cd4e49de266fd0e64410131cd1efa66d7d90a48af5d7c62b68c4a8a153129cd4",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/lib/worktrees.mjs": {
+      "sha256": "24c46ef1c48555109287de5e424bf49d2116c9945e2dcaef0febad6f82d86673",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtime/server.js": {
+      "sha256": "1b8e1544324ac441889ce326ac694a0a10c348521cd446be7ae1658a43666307",
+      "installedBy": "1.93.0"
+    },
+    "maddu/runtimes/hermes.json": {
+      "sha256": "52d448e71fef6ab915523e32a1f42082096ce8dbec6c70b4f863e0fc9cb52c5d",
+      "installedBy": "1.93.0"
+    },
+    "maddu/skills/starter/commit-discipline.md": {
+      "sha256": "fdb39bc8c60e3901956a5c5d31566a6b8abb5b140410f3990304ae29532986ea",
+      "installedBy": "1.93.0"
+    },
+    "maddu/skills/starter/error-recovery.md": {
+      "sha256": "2b48ae228bb9344da706ed02cede7bc9a26eed7ba4438a78c9008042d6c66c17",
+      "installedBy": "1.93.0"
+    },
+    "maddu/skills/starter/marker-discipline.md": {
+      "sha256": "3831448a7548632fcec0a5ec4235c22c3971c5dafa8e77a99519ff307f3c452d",
+      "installedBy": "1.93.0"
+    },
+    "maddu/skills/starter/npm-install-clean.md": {
+      "sha256": "1eeeba92d5cb9f680ebaca9e29ee210a28f1732f25b99c31ff401238d7c0364b",
+      "installedBy": "1.93.0"
+    },
+    "maddu/skills/starter/parallel-tool-use.md": {
+      "sha256": "825bbfa8a8cbe3b4a26da1b61a5558f6a7b86d7946dbc3c3d762582e0488b6b1",
+      "installedBy": "1.93.0"
+    },
+    "maddu/skills/starter/read-before-edit.md": {
+      "sha256": "cc5c6b787daa3b68e7a5a681d00e6e3fe5fac21b425a908a34a0d998a0c3e8bb",
+      "installedBy": "1.93.0"
+    },
+    "maddu/skills/starter/slice-stop-quality.md": {
+      "sha256": "88b59aa0e1caede302cd17d4a9a725021933267771fa7a4f9b5f97d6d96b877b",
+      "installedBy": "1.93.0"
+    },
+    "maddu/skills/starter/test-first-discipline.md": {
+      "sha256": "b3429065bff2c00b1c6b666cd27090e61fe03bab62d1daa20604fd48fd14833d",
+      "installedBy": "1.93.0"
+    },
+    "maddu/bin/maddu.mjs": {
+      "sha256": "8ed139dc731d0fac6d2274f716d39e9013cec4caa77cc8bdd72bada206425492",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/advise.mjs": {
+      "sha256": "90f8d6880ef900302cf4abbf9bbfd689742ec790b789d7d1fcbbb58b89cd96d9",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/agents.mjs": {
+      "sha256": "86dbffe8d733f31e25b76bb6612c5f39284ae2866b394cc4b9413f2d2926f73f",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/approval.mjs": {
+      "sha256": "f2ef8ab2db4b6b95946853896f9ede636d209ccce91407b8be2bd5e26fb8962f",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/architecture.mjs": {
+      "sha256": "5ded6ad81d08a75821533270bf01b4e018a0a8b407739ce3cbdf7373f405ab4f",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/audit.mjs": {
+      "sha256": "c899e05063e31916ee63ff86459dbe670e8d77bac8d7628012f31374aadd41e1",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/auth.mjs": {
+      "sha256": "263e83a30a681b1cd3fa97f67ce25330a0f43f47014f288e255a448fefbe6aaf",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/autonomy.mjs": {
+      "sha256": "e6d27c02b7d7bc5399213fac636b26b07e22a3023f717e57f8ab7ada147249de",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/blueprint.mjs": {
+      "sha256": "975414c4f1eb1e7645f6065a683ab617d2aee4cfee9b00f2022645229265f151",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/bridges.mjs": {
+      "sha256": "88e05a78a84d12e78b525485fec0a9ed7ed9e6a4aaac96c052fe46202236d363",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/brief.mjs": {
+      "sha256": "400cba96de6f5d1877b660aa55ba994e56d9627596a8bbb195abd9c7a2f303ac",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/checkpoint.mjs": {
+      "sha256": "f4c26ecf03fc841e35052a66beca35a525c77bb88702e7a1cf25403dbe01b6c1",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/ci.mjs": {
+      "sha256": "dc45c4a9f127a5dc71941d2ffe83d8471ad72b9e74980ab13ebd5d2b57e3805c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/coordinator.mjs": {
+      "sha256": "a09b1c881635c94705c15764581772976610f85dec9a7c185928494a24baa57d",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/cost.mjs": {
+      "sha256": "2c44ba3fa552da301b8e80776222b88932e6d37f1d618fc66a7d648962553aef",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/debt.mjs": {
+      "sha256": "de716b2cd4a92526a552fe4e084010e50578b55eb74d9e26b3e06cd7d5b8f832",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/doctor.mjs": {
+      "sha256": "9e05bfc05c573ce4422963a4130a73cf6fd380a2780242aedf6548cf27b0b2d0",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/events.mjs": {
+      "sha256": "abc9259c2c0ae7c3f230f69ff91dba94602280662c71403fac5efeb790dec1d2",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/export.mjs": {
+      "sha256": "3baa0e9cb09b0ff049af9b3fdcfe3382e7bedc3f1adb4db19e314247c1015e88",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/fleet.mjs": {
+      "sha256": "ba009d14457937aaa4682a97f51c3eac365fa4ec14da87560a384eed2d92e30c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/focus.mjs": {
+      "sha256": "5b0c6b7f557012c92a3d9bfe8eef28f1b08d0b724fa34251903444c513c3462b",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/format.mjs": {
+      "sha256": "9fced387ee0831d1c6baeb4d863130458c23f165fe2c08f2e2b6cb50d2278fad",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/git.mjs": {
+      "sha256": "a8e9738370bb035af53f32df7c1850af13d9ffdfc548d78bbaccb18dfb9f90fe",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/global.mjs": {
+      "sha256": "ce89733a0f93a774cdd8868eb57ddf2cab34adc730ca5dc16eb63f4c3c775df0",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/goal.mjs": {
+      "sha256": "613fab1748e6b79041602b6fd68975cc549359e80506368cdc223ad31879f4e2",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/governance.mjs": {
+      "sha256": "52cbcb969417d31430d27c8c08956f9541a8b282fc1b284420e62910c436468d",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/handoff.mjs": {
+      "sha256": "47b5909ed0c193e91ad2772fd8ab137513140af9906cd38a3e19a877856e9f05",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/help.mjs": {
+      "sha256": "aab5c565c686679b159886f3b25c12d90ef7c63870b5056990a58b2278f466da",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/hooks.mjs": {
+      "sha256": "1f7d32cd5512aabfdfbb383a8a66f6359dbb47eac936a8cacfee6f4f10188fea",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/import.mjs": {
+      "sha256": "b490c7fe0b165304931b2f858fa990b2701ece4c79c3a2af5549fe2522673e31",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/init.mjs": {
+      "sha256": "6a623a958ef8d9885054414a78bd5787bb18bd325850ab62c651766865855cca",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/insights.mjs": {
+      "sha256": "9e459d013ab7881329668d4e153b67b769356ed7ef9c6164251fceb5ca395914",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/install.mjs": {
+      "sha256": "e0a8b5843d73906257e60cd794ac9632c6cb5e50cdaa26c346c73760bb43b1c9",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/lane.mjs": {
+      "sha256": "b4e426357149c00dd9e83030508338689ccdb3d59444453efe84055c1f50e8d2",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/learn.mjs": {
+      "sha256": "55db9c0775be0acf2fdb97e0ef6646c71abbac52dc6ceaaa62a63dea9930e3e9",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/lint.mjs": {
+      "sha256": "cdc17811b67cc4da1ee2105b5f02557c775bc8a24a06c5fa1a543d8ad99e1d92",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/log.mjs": {
+      "sha256": "00fd62cf20d8612fb71c8579b03576c41cbe171596d3993c784dd355fea85782",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/loop.mjs": {
+      "sha256": "6386bb1a68e09a53805b294d6e86fb45f01c2a2b21255155cc96eeb1b468b89f",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/mailbox.mjs": {
+      "sha256": "b9af80da06eeeb051edae905ee606de3107b021fcfd76eb352888b24f2609939",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/mcp.mjs": {
+      "sha256": "192253e6ede4126fad9400cf510a7808af2188d2397a6c453f812439b7ea3852",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/memory.mjs": {
+      "sha256": "ea5a26cc3c6712a4a11887694e53b7857bd82503ee0c6fe6ca2765e513489365",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/orient.mjs": {
+      "sha256": "be6cc64b8bd5e91d262b70b324ef92b88ea384fe92537c42e5e11882764e149f",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/phase.mjs": {
+      "sha256": "b4cf0a8d3b755271ba91b16ed2cfd1c317f85e331ce1d3ab2c5409ff71e3d919",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/pipeline.mjs": {
+      "sha256": "1450cd0b6b50cddb1166c54496507734ce115bcf74d646b355dc7979b9804cc9",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/plan.mjs": {
+      "sha256": "e305b7ba86050103cf0e206bc5b6d8f4cca1112941a312fedcf956649912a695",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/plugin.mjs": {
+      "sha256": "41b1895fd696fe08c8071aa81e89b9560219e80b4901958d3387f5ebae5523b2",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/register.mjs": {
+      "sha256": "eb07e6995d0cc46f03ff6ea6b4aedcad43e32a1909a0b68fd673a0027a879470",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/review.mjs": {
+      "sha256": "e1f9bc1634f8d48a696645e67649e8132669db52af6f860bb0b8879940c4bbdb",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/runtime.mjs": {
+      "sha256": "ac435c96b4d35a55ddf04e945f9d6a061d47faef1b338cc86af55b9d1e46876c",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/schedule.mjs": {
+      "sha256": "1305acb966fddb6531d27b4c56323203c3d1798d96026059ff73d11f947e2a87",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/search.mjs": {
+      "sha256": "2daf5ae662d0750f7244f496d669304810f1efe56d436f6434f330a639a49dc6",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/self-test.mjs": {
+      "sha256": "85fd5aec4db2251220b5cf00980d69b55586317e310cae0b74ce765de324b4b2",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/session.mjs": {
+      "sha256": "cff48faf74c3eb6d0f6bcaae6954fa01505c1fb0329446d2a22d2929ffb007eb",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/skill.mjs": {
+      "sha256": "ed3cb2594b20f04579f125a34622d1de69b57c12f1fa5b81c6caf078cb22a14e",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/slice-stop.mjs": {
+      "sha256": "67996444f2f56f8545f2276255e057e5a67722ef51ace6e62bb6b6a7c02b8eb0",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/slice.mjs": {
+      "sha256": "aa0c9b545de75408f76b9e81eedecf519ec02cddb1d81e7f5fe04761f769ef8a",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/sources.mjs": {
+      "sha256": "dd6707195b403643f49575a84f81030f4f43ee777180e5b0adb63ba74631f320",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/spine.mjs": {
+      "sha256": "95d5c79ab34a6b3067123c1f2067117536e5217d27a7a3be08e0eb0490669ea1",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/start.mjs": {
+      "sha256": "5442d99fa12a1ccc7a11a40f077813cb34ca8831d48db7a7f076410d76be9cdc",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/status.mjs": {
+      "sha256": "a17c20b646f18d86fd236d54f9e745cc2d6f0419b24de1681ec6a0e47f72b2bc",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/stop.mjs": {
+      "sha256": "3d1015385d756c32e8d8ded10f23911a21d0e88251b127bf2a580cdf6d76869a",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/suggest.mjs": {
+      "sha256": "0e2d411ddf155694b6e20336e4e9b90056e2ec2fe20b618f806335a37b27d3c0",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/task.mjs": {
+      "sha256": "ebeaae542b2015586dd16b4e363a86b92139ecdd6aac632db635da6a562b5775",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/team.mjs": {
+      "sha256": "1a269986ed5c09b4ea9f699a9f4c6d3fa71b2d39c7b9ae68bbe835daf7f19f66",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/test.mjs": {
+      "sha256": "ad88c670e5f1bb5d0b19b95227a5be5d7d979f7f936a893e0b913fa07109da3d",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/trust.mjs": {
+      "sha256": "649303f8e907de2c496a31ee3dd0cb05b767f3a08e320d21117f1e145e6e250b",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/upgrade.mjs": {
+      "sha256": "aa9e0d39c8c4ea4c2953133531486bdf56419d46125373604a38e31f177fb8a1",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/usage.mjs": {
+      "sha256": "9f39e153e9c4beeed813c8c0f83eb19f6a45a8477696ce1f989f851bd2fa5943",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/worker.mjs": {
+      "sha256": "013e3e633a91a433aa11b0e8b0ae155674cbadaf510b525a279d174e4232c4f0",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/workspace.mjs": {
+      "sha256": "afca443c8aa1f95ef6f1c1eccfb36c0c3d5511ed768e05508fa0155aa7a80e80",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/_agent-files.mjs": {
+      "sha256": "553659bcb96d5c8c3df52e0c5d4c082cb3108f5d1e597d85199bdc33168601c2",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/_args.mjs": {
+      "sha256": "c30bcf10322abc30f799970023d88440f5fb97cb08e8bcd96f22995c1b01d808",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/_config-seed.mjs": {
+      "sha256": "34277b4facfb3a19fdea17200ff53640222fa08da9d908f0c6082f84b9879a1a",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/_libroot.mjs": {
+      "sha256": "36a5a8de89153b2436a0dbacef5939290ec9723da62b210e191c046d776ed1de",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/_manifest.mjs": {
+      "sha256": "2a3b926a7e05b0a7efbee6c15016a4af85e6c83a7f4adb5e631bf4de9e8f38a7",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/_project-test-runner.mjs": {
+      "sha256": "33640ff8ba1d75bca01a87b749f58ec2dd6cba53af18154857b8dfa8e9664436",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/_resolve.mjs": {
+      "sha256": "da571a29ac3c939f0ab5c3c9dc2bb0e2d96912fdef52314c959a0ed2e05a75f5",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/_spine.mjs": {
+      "sha256": "c8080b133a4d1f084f933b5fbc5412f5fef58a582c7bf83e7076454e006d33ba",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/_strict-approval.mjs": {
+      "sha256": "2c73bb93b031887dcc1b54e29b4ab23403153493f226ea387a77daab60f5e508",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/_tiers.mjs": {
+      "sha256": "e8936ea865d990695722a489e19b7334c791b5e8d99e427435eb80e35a80b8e4",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/_tools.mjs": {
+      "sha256": "3766e17810f4d7775b052bafb944e11083a03cb420b74b2b37761e6f16234d49",
+      "installedBy": "1.93.0"
+    },
+    "maddu/commands/_worker-spawn.mjs": {
+      "sha256": "7b47b107b9a426513fdc150de930031a2d8e9e68ec768a8e5da64eb63385693a",
+      "installedBy": "1.93.0"
+    },
+    "maddu/version.json": {
+      "sha256": "45c5eccc60d1f3aaad353b4695a7d0f565639eeedfadfecc3da37508c3f20f26",
+      "installedBy": "1.93.0"
+    }
+  }
+}

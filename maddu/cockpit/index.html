@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Máddu — the Source of local truth</title>
+<link rel="icon" type="image/svg+xml" href="/brand-mark.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="128x128" href="/favicon-128.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/cockpit.css">
+</head>
+<body>
+  <div id="app" aria-busy="true">
+    <aside class="rail">
+      <div class="rail-mark">
+        <img class="rail-mark-svg" src="/brand-mark.svg" alt="" aria-hidden="true" width="22" height="22">
+        <span class="rail-mark-name">Máddu</span>
+      </div>
+      <div class="rail-workspace" id="rail-workspace" hidden></div>
+      <nav class="rail-nav" aria-label="Cockpit routes"></nav>
+      <div class="rail-foot">
+        <div class="rail-foot-row"><span class="rail-foot-label">Workspace</span><span class="rail-foot-value" id="status-workspace" title="" data-truncate="basename-visible">…</span></div>
+        <div class="rail-foot-row"><span class="rail-foot-label">Path</span><span class="rail-foot-value" id="status-repo-root" title="" data-truncate="basename-visible">…</span></div>
+        <div class="rail-foot-row"><span class="rail-foot-label">Bridge</span><span class="rail-foot-value" id="status-bridge">…</span></div>
+        <div class="rail-foot-row"><span class="rail-foot-label">Version</span><span class="rail-foot-value" id="status-version">…</span></div>
+        <div class="rail-foot-row"><span class="rail-foot-label">Mode</span><span class="rail-foot-value" id="status-governance">…</span></div>
+        <div class="rail-foot-row"><span class="rail-foot-label">Uptime</span><span class="rail-foot-value" id="status-uptime">…</span></div>
+      </div>
+    </aside>
+
+    <main class="stage">
+      <header class="stage-head">
+        <div class="stage-head-route">
+          <span class="stage-head-glyph">◈</span>
+          <span class="stage-head-title" id="route-title">Dashboard</span>
+        </div>
+        <div class="stage-head-meta" id="route-meta"></div>
+      </header>
+      <div class="stage-banner" id="stuck-banner" hidden></div>
+      <section class="stage-body" id="route-view" aria-live="polite"></section>
+      <footer class="stage-foot">
+        <div class="composer">
+          <span class="composer-glyph">▸</span>
+          <textarea id="composer-input" class="composer-input" rows="1" autocomplete="off" spellcheck="false"
+                    placeholder="/ to issue a slash-command  ·  /help for the list  ·  Shift+Enter for newline"></textarea>
+          <span class="composer-hint" id="composer-hint"></span>
+          <div class="composer-suggest" id="composer-suggest" hidden></div>
+        </div>
+        <div class="stage-foot-meta">
+          <span class="stage-foot-tagline">The Source of local truth.</span>
+          <span class="stage-foot-coord"><span id="status-host">127.0.0.1</span>:<span id="status-port">4177</span></span>
+        </div>
+      </footer>
+    </main>
+    <div class="slice-line" id="slice-line" aria-hidden="true"></div>
+    <div class="palette" id="palette" role="dialog" aria-modal="true" aria-label="Command palette" hidden>
+      <div class="palette-scrim" id="palette-scrim"></div>
+      <div class="palette-panel">
+        <div class="palette-head">
+          <span class="palette-glyph" aria-hidden="true">⌕</span>
+          <input class="palette-input" id="palette-input" type="text" placeholder="Type a route, group, or action — Enter to go, Esc to close" autocomplete="off" spellcheck="false">
+          <kbd class="palette-kbd">esc</kbd>
+        </div>
+        <div class="palette-results" id="palette-results" role="listbox"></div>
+        <div class="palette-foot">
+          <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+          <span><kbd>↵</kbd> open</span>
+          <span class="palette-foot-hint" id="palette-foot-hint"></span>
+        </div>
+      </div>
+    </div>
+    <nav class="dock" id="dock" aria-label="Mobile groups" hidden></nav>
+    <div class="dock-sheet" id="dock-sheet" role="dialog" aria-modal="true" hidden>
+      <div class="dock-sheet-scrim" id="dock-sheet-scrim"></div>
+      <div class="dock-sheet-panel">
+        <div class="dock-sheet-head">
+          <span class="dock-sheet-glyph" id="dock-sheet-glyph">◆</span>
+          <span class="dock-sheet-title" id="dock-sheet-title">Decide</span>
+          <span class="dock-sheet-summary" id="dock-sheet-summary"></span>
+          <button class="dock-sheet-close" id="dock-sheet-close" aria-label="Close">✕</button>
+        </div>
+        <div class="dock-sheet-body" id="dock-sheet-body"></div>
+      </div>
+    </div>
+    <div id="toast-region" class="toast-region" role="status" aria-live="polite" aria-atomic="false"></div>
+  </div>
+  <script type="module" src="/cockpit.js"></script>
+</body>
+</html>

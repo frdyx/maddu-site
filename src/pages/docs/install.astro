@@ -1,0 +1,99 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="Install" pathname="/docs/install" section="Getting started">
+  <h1>Install</h1>
+  <p class="dx-lede">
+    One command turns any git repo into a Máddu workspace &mdash; runtime, cockpit, and
+    state directory scaffolded in under a minute, touching nothing else in your tree.
+  </p>
+
+  <h2>Prerequisites</h2>
+  <p>Two things, both likely already in place:</p>
+  <ul>
+    <li>A <strong>git repository</strong> &mdash; run the install from its root.</li>
+    <li><strong>Node.js &ge; 20</strong> on your <code>PATH</code>.</li>
+  </ul>
+
+  <h2>Install command</h2>
+  <p>
+    Máddu installs straight from the public GitHub repo. No auth, no account &mdash; the
+    repo is public, so the command runs for anyone. The npm package is on its way; until it
+    ships, the GitHub path is canonical, and both produce identical doctor output.
+  </p>
+
+  <div class="dx-code">
+    <div class="dx-code-head"><span class="dx-code-dot"></span> terminal</div>
+    <pre><code><span class="tok-c"># install the latest from GitHub</span>
+npx github:frdyx/maddu init
+
+<span class="tok-c"># verify the install + hard rules</span>
+maddu doctor</code></pre>
+  </div>
+
+  <h2>What it creates</h2>
+  <p>The installer scaffolds exactly three paths and leaves the rest of your tree untouched:</p>
+  <ul>
+    <li><code>.maddu/</code> &mdash; the state directory: config, the append-only spine, and projections.</li>
+    <li><code>maddu/</code> &mdash; the runtime and cockpit you drive the framework with.</li>
+    <li><code>maddu.json</code> &mdash; the workspace manifest.</li>
+  </ul>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">&#9670;</span>
+    <p><strong>Nothing else moves.</strong> No files outside those three paths are added or changed, so the install is safe to run in an existing project.</p>
+  </div>
+
+  <h2>Verify</h2>
+  <p>
+    Run <code>maddu doctor</code> to check install integrity and the hard rules against
+    Máddu's own files. A fresh install on a foreign repo returns <strong>77 pass &middot; 1
+    warn &middot; 0 fail</strong> &mdash; the single warn is just &ldquo;no project test run
+    yet.&rdquo; If doctor fails, surface it and stop rather than papering over it.
+  </p>
+
+  <h2>Upgrading</h2>
+  <p>
+    If <code>.maddu/</code> already exists, this is an upgrade, not a fresh install &mdash;
+    <code>init</code> refuses to overwrite an existing state directory. Run the upgrade path
+    instead:
+  </p>
+
+  <div class="dx-code">
+    <div class="dx-code-head"><span class="dx-code-dot"></span> terminal</div>
+    <pre><code><span class="tok-c"># already have .maddu/ ? upgrade in place</span>
+maddu upgrade</code></pre>
+  </div>
+
+  <h2>Optional: session hooks</h2>
+  <p>
+    On Claude Code, you can wire session discipline so a repo never starts building
+    unrecorded. This installs <code>SessionStart</code> and <code>SessionEnd</code> hooks
+    &mdash; auto-registering a session and recording it to the spine, then closing it &mdash;
+    idempotently, without disturbing existing hooks.
+  </p>
+
+  <div class="dx-code">
+    <div class="dx-code-head"><span class="dx-code-dot"></span> terminal</div>
+    <pre><code><span class="tok-c"># wire SessionStart / SessionEnd into Claude Code</span>
+maddu hooks install</code></pre>
+  </div>
+
+  <p>
+    After that a single auto-registered session flows into <code>lane claim</code> and
+    <code>slice-stop</code> with no extra flags. The hooks are Claude Code&ndash;specific;
+    skip this step on other runtimes.
+  </p>
+
+  <div class="dx-pager">
+    <a class="dx-pager-link" href="/docs">
+      <span class="dx-pager-dir">&larr; Prev</span>
+      <span class="dx-pager-title">Introduction</span>
+    </a>
+    <a class="dx-pager-link is-next" href="/docs/how-it-works">
+      <span class="dx-pager-dir">Next &rarr;</span>
+      <span class="dx-pager-title">How it works</span>
+    </a>
+  </div>
+</DocsLayout>

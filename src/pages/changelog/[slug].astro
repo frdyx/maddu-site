@@ -7,6 +7,8 @@
 // Note: getStaticPaths is hoisted and runs before the frontmatter
 // consts, so RELEASES must live inside it.
 
+import { RELEASES } from '../../data/releases';
+
 interface Release {
   slug: string;
   v: string;
@@ -16,49 +18,16 @@ interface Release {
 }
 
 export function getStaticPaths() {
-  const RELEASES: Release[] = [
-    { slug: 'v1-18-0', v: 'v1.18.0', date: '2026-06-18', type: 'feature',   headline: 'Architecture drift — maddu architecture (MVP)' },
-    { slug: 'v1-17-0', v: 'v1.17.0', date: '2026-06-18', type: 'hardening', headline: 'Robustness bundle — drift gate, debt ledger, risk + deliverable checks' },
-    { slug: 'v1-16-0', v: 'v1.16.0', date: '2026-06-18', type: 'feature',   headline: 'Test command split — source self-test + adaptive project tests' },
-    { slug: 'v1-15-0', v: 'v1.15.0', date: '2026-06-11', type: 'feature',   headline: 'Blueprint robustness (--distill) + README rework' },
-    { slug: 'v1-14-0', v: 'v1.14.0', date: '2026-06-09', type: 'hardening', headline: 'Spine tamper-evidence — forward prev_hash chain' },
-    { slug: 'v1-13-0', v: 'v1.13.0', date: '2026-06-09', type: 'hardening', headline: 'Robustness hardening — tighten the guarantees' },
-    { slug: 'v1-12-0', v: 'v1.12.0', date: '2026-06-09', type: 'feature',   headline: 'Project blueprint — maddu blueprint' },
-    { slug: 'v1-11-0', v: 'v1.11.0', date: '2026-06-09', type: 'hardening', headline: 'Drift-proofing — single-source config seeding + coherence guards' },
-    { slug: 'v1-10-0', v: 'v1.10.0', date: '2026-06-09', type: 'feature',   headline: 'Invocation-logic pass 2 — light up the dead domains' },
-    { slug: 'v1-9-2',  v: 'v1.9.2',  date: '2026-06-09', type: 'patch',     headline: 'Name maddu learn in the worker brief' },
-    { slug: 'v1-9-1',  v: 'v1.9.1',  date: '2026-06-09', type: 'patch',     headline: 'maddu learn — Windows judgment-worker spawn fix' },
-    { slug: 'v1-9-0',  v: 'v1.9.0',  date: '2026-06-09', type: 'feature',   headline: 'Failure learning — maddu learn' },
-    { slug: 'v1-8-0',  v: 'v1.8.0',  date: '2026-06-05', type: 'hardening', headline: 'Rule scope boundary — Máddu’s rules govern Máddu, not your product' },
-    { slug: 'v1-7-0',  v: 'v1.7.0',  date: '2026-06-04', type: 'feature',   headline: 'Invocation logic — wire WHEN the still-dead domains fire' },
-    { slug: 'v1-6-0',  v: 'v1.6.0',  date: '2026-06-04', type: 'feature',   headline: 'Orchestration handoff — goal progress + cross-session briefing' },
-    { slug: 'v1-5-0',  v: 'v1.5.0',  date: '2026-06-03', type: 'feature',   headline: 'Real sub-worker spawn + tracking' },
-    { slug: 'v1-4-0', v: 'v1.4.0', date: '2026-06-03', type: 'feature',   headline: 'Empirical insights, plugin loader, tighter core' },
-    { slug: 'v1-3-0', v: 'v1.3.0', date: '2026-05-24', type: 'feature',   headline: 'Coherence realignment + completeness' },
-    { slug: 'v1-2-3', v: 'v1.2.3', date: '2026-05-24', type: 'polish',    headline: 'Entity drawer' },
-    { slug: 'v1-2-2', v: 'v1.2.2', date: '2026-05-24', type: 'polish',    headline: 'Cockpit path polish' },
-    { slug: 'v1-2-1', v: 'v1.2.1', date: '2026-05-24', type: 'polish',    headline: 'Multi-bridge polish' },
-    { slug: 'v1-2-0', v: 'v1.2.0', date: '2026-05-24', type: 'hardening', headline: 'Supply-chain hardening + Hermes' },
-    { slug: 'v1-1-2', v: 'v1.1.2', date: '2026-05-23', type: 'patch',     headline: 'Narrative refresh + P3 patches' },
-    { slug: 'v1-1-1', v: 'v1.1.1', date: '2026-05-22', type: 'patch',     headline: 'Burn-in patch · 12 fixes' },
-    { slug: 'v1-1-0', v: 'v1.1.0', date: '2026-05-22', type: 'feature',   headline: 'Autonomy + planning + tool gateway' },
-    { slug: 'v1-0-5', v: 'v1.0.5', date: '2026-05-22', type: 'patch',     headline: 'Docs sweep · Phase-X cleared' },
-    { slug: 'v1-0-4', v: 'v1.0.4', date: '2026-05-22', type: 'patch',     headline: 'Generic default lane catalog' },
-    { slug: 'v1-0-3', v: 'v1.0.3', date: '2026-05-22', type: 'patch',     headline: 'Framework-only routes' },
-    { slug: 'v1-0-2', v: 'v1.0.2', date: '2026-05-22', type: 'patch',     headline: 'Stage-scroll hotfix' },
-    { slug: 'v1-0-1', v: 'v1.0.1', date: '2026-05-22', type: 'patch',     headline: 'Cockpit UX patch' },
-    { slug: 'v1-0-0', v: 'v1.0.0', date: '2026-05-22', type: 'milestone', headline: 'Stable declaration' },
-    { slug: 'v0-19-2', v: 'v0.19.2', date: '2026-05-21', type: 'polish',  headline: 'UX polish · 6 cockpit routes' },
-    { slug: 'v0-19-1', v: 'v0.19.1', date: '2026-05-21', type: 'patch',   headline: 'Burn-in patch · 11 fixes' },
-    { slug: 'v0-19-0', v: 'v0.19.0', date: '2026-05-21', type: 'feature', headline: 'Completeness + hardening · Rule #9 permanent' },
-    { slug: 'v0-18-0', v: 'v0.18.0', date: '2026-05-21', type: 'feature', headline: 'OMC-inspired UX shell' },
-    { slug: 'v0-17-1', v: 'v0.17.1', date: '2026-05-20', type: 'milestone', headline: 'Arc starting point · baseline' },
-  ];
-  return RELEASES.map((r) => ({ params: { slug: r.slug }, props: { release: r } }));
+  // Single-sourced from src/data/releases.ts — every release gets a stub page
+  // (and matching og:image), so the list never drifts from the feeds.
+  return RELEASES.map((r) => ({
+    params: { slug: r.id },
+    props: { release: { slug: r.id, v: r.v, date: r.date, type: r.type, headline: r.headline } },
+  }));
 }
 
 const { release } = Astro.props as { release: Release };
-const siteUrl = 'https://maddu.dev';
+const siteUrl = 'https://maddu.frdyx.com';
 const ogImage = `${siteUrl}/og/changelog/${release.slug}.png`;
 const canonical = `${siteUrl}/changelog#${release.slug}`;
 const fullTitle = `${release.v} · ${release.headline} — Máddu changelog`;

@@ -1,0 +1,16 @@
+
+# Máddu framework files are authored LF. Force LF for them so a Windows
+# core.autocrlf=true checkout doesn't rewrite them to CRLF — which makes every
+# managed file read as "locally modified" and makes upgrade/doctor skip them.
+# Scoped to Máddu paths; your own files keep your repo's line-ending policy.
+# text=auto lets git's binary detection skip real assets; eol=lf pins text.
+maddu/** text=auto eol=lf
+.maddu/** text=auto eol=lf
+maddu.json text=auto eol=lf
+maddu/**/*.png binary
+maddu/**/*.jpg binary
+maddu/**/*.jpeg binary
+maddu/**/*.gif binary
+maddu/**/*.ico binary
+maddu/**/*.woff binary
+maddu/**/*.woff2 binary

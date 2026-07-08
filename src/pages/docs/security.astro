@@ -1,0 +1,85 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+<DocsLayout title="Security" pathname="/docs/security" section="Core concepts">
+  <h1>Security</h1>
+  <p class="dx-lede">
+    Security here is structural, not advisory. The posture is load-bearing — if the rules don't hold, <code>maddu doctor</code> refuses to start. There's no "secure mode" toggle, because there's no other mode.
+  </p>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>The spawn boundary is the load-bearing line.</strong> Everything past it is a worker subprocess. Everything before it is framework code that never touches a provider SDK. Five surfaces typically leak — secrets in env vars, secrets in tool arguments, tokens in transit, supply-chain compromise via deps or MCP tools, and unbounded propagation of a wrong action. Máddu addresses each at the layer it occurs.</p>
+  </div>
+
+  <h2>Worker subprocess isolation</h2>
+  <p>Every provider call lives in a subprocess worker. The bridge, the cockpit, and the harness never import <code>anthropic</code>, <code>openai</code>, <code>@google/generative-ai</code>, or any other provider SDK. Credentials are injected at spawn time, not read from env at runtime by framework code. Doctor's layout check fails the build if an SDK shows up in an app-code path (Rule #5).</p>
+  <p>Isolation bounds blast radius — it doesn't eliminate compromise. A compromised worker can still leak its own credentials, so pair it with least-privilege keys.</p>
+
+  <h2>Worker environment allowlist</h2>
+  <p>Spawned workers don't inherit your shell. The allowlist is default-deny: secret-keyed env vars — anything matching <code>*_TOKEN</code>, <code>*_KEY</code>, or <code>*_SECRET</code> patterns, plus provider-specific prefixes — are stripped at spawn unless explicitly allowed in the workspace governance config (<code>.maddu/config/governance.json</code>). The emitted <code>WORKER_ENV_APPLIED</code> event records how many vars were stripped and how many allowed.</p>
+  <p>Vars the operator explicitly allowlists reach the worker at full scope. The allowlist is the contract; it doesn't protect you from a permissive allowlist you wrote yourself.</p>
+
+  <h2>Secret scan on tool arguments</h2>
+  <p>Tool arguments pass a pattern scanner before any logging. AWS, OpenAI, Anthropic, GitHub, GitLab, and Slack token shapes are detected and the tool call is refused. Raw values never reach the spine — only a <code>SECRET_SCAN_BLOCKED</code> event carrying the pattern name, never the matched content, plus an operator notification.</p>
+  <p>Tokens that don't match a known pattern slip through. The pattern set is deliberately conservative — check the full threat model before relying on it for a novel provider.</p>
+
+  <h2>Device-bound OAuth tokens</h2>
+  <p>Tokens live in OS device-bound paths: <code>~/.config/maddu/auth/</code> with restrictive permissions on Linux/macOS, <code>%APPDATA%\maddu\auth\</code> on Windows. There is no cross-machine sync, by design — that's what turns one compromised laptop into N compromised sessions. <code>maddu export</code> scrubs auth paths from any bundle; <code>maddu import</code> refuses to overwrite an existing token path (Rule #6).</p>
+  <p>A user who manually copies the token file across machines defeats this. The framework refuses; the operator can always reach around it. Treat the policy as the contract, not the wall.</p>
+
+  <h2>Supply-chain pinning</h2>
+  <p>Every dependency is a supply-chain surface, and loose versioning lets a fresh install pull a newly published malicious release. <code>maddu trust audit / pin / verify</code> pins every dependency with a SHA256 of its tarball, recorded in the ledger at <code>.maddu/trust/</code>. Every install and upgrade re-verifies the pinned hash; the <code>dependency-freshness</code> and <code>dep-pinning-respected</code> gates fail doctor on tamper (Rule #4).</p>
+  <p>Pinning protects against post-release tamper of a specific version. It doesn't catch a dependency that was published malicious from day one — that's the review-before-install problem, not the pin-on-install problem.</p>
+
+  <h2>MCP gallery provenance</h2>
+  <p>MCP servers are tools agents reach for at runtime. If an agent could pull an arbitrary MCP server from npm or a URL, it would bypass dependency pinning entirely. Instead, servers come from a curated template gallery shipping JSON descriptors with SHA256 provenance. The operator installs via <code>maddu mcp install &lt;template&gt;</code>; anything else is refused. The gallery is small, hand-curated, and version-pinned.</p>
+  <p>Anything in the gallery is trusted by definition — curation is the bottleneck. Treat the gallery list as a security-critical surface.</p>
+
+  <h2>The gauntlet</h2>
+  <p>The defenses above bound the blast radius of any single action. They don't stop a confidently wrong agent from chaining legitimate-looking actions — rolling back a deploy, dropping a table, force-pushing over your work. The gauntlet is the behavioral defense (Rule #9). Read-only actions pass through, still logged. Anything that mutates state must:</p>
+  <ul>
+    <li>be on the <code>triggers.json</code> allowlist,</li>
+    <li>respect its cooldown,</li>
+    <li>satisfy the active governance tier, and</li>
+    <li>emit a <code>TRIGGER_FIRED</code> event with <code>triggered_by</code> provenance.</li>
+  </ul>
+  <p>Auto-fire without all four is structurally impossible. The gauntlet stops auto-fires; it doesn't stop an operator who manually approves every refusal in a panic. The point is to make confidently-wrong propagation visible and intentional. See <a href="/docs/governance">Governance</a> for the three tiers built on it.</p>
+
+  <h2>Forbidden patterns</h2>
+  <p>Some patterns are named, refused, and structurally impossible inside the charter — not TODOs.</p>
+  <ul>
+    <li><strong>The Hermes pattern.</strong> A hosted webhook holding many users' bot tokens and accepting inbound commands — the exact failure mode where one breach cascades across every connected operator. Chat and connector integrations are allowed only if local, direct-API, device-bound token, off-by-default, allowlisted, and never inbound-as-command.</li>
+    <li><strong>Auto-repair of the spine.</strong> Spine corruption is never silently fixed. A system that quietly heals can quietly hide a successful attack. <code>maddu spine verify</code> detects, surfaces, and stops; the operator reads the failure and decides.</li>
+  </ul>
+
+  <h2>The boundary — what's still yours</h2>
+  <p>Máddu is the audit and posture layer. It is <strong>not</strong> a secret store, a vault, or a key rotator. Pair it with a real vault — HashiCorp Vault, AWS Secrets Manager, Cloudflare Secrets, 1Password Connect, pick one. Use least-privilege IAM. Rotate keys on a schedule. Máddu's job is to keep your agents from leaking what's in those stores; it isn't the store itself.</p>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>Read the full deep dive before anything consequential.</strong> The <a href="/threat-model">threat model</a> enumerates every assumed attack surface, the structural defense at that layer, the spine event that proves it ran, and the residual risk each defense does <em>not</em> cover.</p>
+  </div>
+
+  <div class="dx-cards">
+    <a class="dx-card" href="/threat-model">
+      <span class="dx-card-title"><span>Full threat model</span><span>&rarr;</span></span>
+      <p>Seven defenses, each with its attack, spine event, and residual risk.</p>
+    </a>
+    <a class="dx-card" href="/docs/governance">
+      <span class="dx-card-title"><span>Governance</span><span>&rarr;</span></span>
+      <p>The gauntlet and the three tiers that fit it.</p>
+    </a>
+  </div>
+
+  <div class="dx-pager">
+    <a class="dx-pager-link" href="/docs/hard-rules">
+      <span class="dx-pager-dir">&larr; Prev</span>
+      <span class="dx-pager-title">Hard rules</span>
+    </a>
+    <a class="dx-pager-link is-next" href="/docs/features">
+      <span class="dx-pager-dir">Next &rarr;</span>
+      <span class="dx-pager-title">Features</span>
+    </a>
+  </div>
+</DocsLayout>

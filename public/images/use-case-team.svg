@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 380" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="A team sharing one repo through git-native spine sync">
+  <title>A team sharing one repo</title>
+  <desc>Each checkout writes only its own partition; the record syncs through the existing git remote; a deterministic merged read surfaces contentions by name.</desc>
+  <defs>
+    <style>
+      .canvas    { fill: #050B17; }
+      .panel     { fill: #0A1524; stroke: rgba(80,113,149,0.30); stroke-width: 1; }
+      .node      { fill: #0D1A2E; stroke: #507195; stroke-width: 1.2; }
+      .node.blue { fill: #0C2138; stroke: #56B8FF; }
+      .node.warn { fill: #241C0A; stroke: #F2BD5C; }
+      .edge      { fill: none; stroke: #6E86A3; stroke-width: 1.5; }
+      .edge.live { stroke: #56B8FF; stroke-width: 2; }
+      .cond-b    { font-family: 'IBM Plex Sans Condensed','Inter','Helvetica Neue',sans-serif; font-weight: 600; letter-spacing: 0.06em; }
+      .mono      { font-family: 'IBM Plex Mono','JetBrains Mono','Consolas',monospace; }
+    </style>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6E86A3"/>
+    </marker>
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#56B8FF"/>
+    </marker>
+  </defs>
+
+  <rect class="canvas" width="1480" height="380"/>
+
+  <g transform="translate(40,34)">
+    <text x="0" y="0" class="cond-b" fill="#D0FF00" font-size="11" letter-spacing="0.14em">◈ USE CASE 03 · TEAM</text>
+    <text x="0" y="22" class="cond-b" fill="#E8E6E3" font-size="20">One repo, N checkouts, one record — over plain git</text>
+    <text x="0" y="42" class="mono" fill="#8A93A0" font-size="11">no server · no daemon · no new credentials · identity = your remote's ACL</text>
+  </g>
+
+  <!-- checkouts -->
+  <rect class="panel" x="40" y="110" width="400" height="100" rx="8"/>
+  <text x="60" y="134" class="cond-b" fill="#8A93A0" font-size="10" letter-spacing="0.14em">◈ CHECKOUT A</text>
+  <rect class="node" x="60" y="146" width="360" height="48" rx="6"/>
+  <text x="76" y="167" class="mono" fill="#E8E6E3" font-size="12">by-replica/A/*.ndjson</text>
+  <text x="76" y="185" class="mono" fill="#8A93A0" font-size="11">single writer — git never line-merges</text>
+
+  <rect class="panel" x="40" y="240" width="400" height="100" rx="8"/>
+  <text x="60" y="264" class="cond-b" fill="#8A93A0" font-size="10" letter-spacing="0.14em">◈ CHECKOUT B</text>
+  <rect class="node" x="60" y="276" width="360" height="48" rx="6"/>
+  <text x="76" y="297" class="mono" fill="#E8E6E3" font-size="12">by-replica/B/*.ndjson</text>
+  <text x="76" y="315" class="mono" fill="#8A93A0" font-size="11">single writer — git never line-merges</text>
+
+  <!-- remote -->
+  <path d="M 440 170 C 520 170, 540 205, 600 218" class="edge live" marker-end="url(#arr-blue)"/>
+  <path d="M 600 232 C 540 245, 520 280, 440 292" class="edge live" marker-end="url(#arr-blue)"/>
+  <text x="470" y="152" class="mono" fill="#8A93A0" font-size="11">plain git push / pull</text>
+
+  <rect class="node blue" x="606" y="190" width="240" height="70" rx="6"/>
+  <text x="622" y="217" class="cond-b" fill="#56B8FF" font-size="14">git remote</text>
+  <text x="622" y="238" class="mono" fill="#8A93A0" font-size="11">your ACL · your signing policy</text>
+
+  <path d="M 846 225 L 930 225" class="edge live" marker-end="url(#arr-blue)"/>
+
+  <rect class="node blue" x="936" y="190" width="280" height="70" rx="6"/>
+  <text x="952" y="214" class="cond-b" fill="#E8E6E3" font-size="14">deterministic k-way merged read</text>
+  <text x="952" y="234" class="mono" fill="#8A93A0" font-size="11">same history on every machine</text>
+  <text x="952" y="250" class="mono" fill="#8A93A0" font-size="11">reconciliation writes zero events</text>
+
+  <path d="M 1216 225 L 1290 225" class="edge" marker-end="url(#arr)"/>
+
+  <rect class="node warn" x="1296" y="190" width="150" height="70" rx="6"/>
+  <text x="1312" y="214" class="cond-b" fill="#F2BD5C" font-size="14">contentions</text>
+  <text x="1312" y="234" class="mono" fill="#8A93A0" font-size="11">concurrent claims</text>
+  <text x="1312" y="250" class="mono" fill="#8A93A0" font-size="11">surfaced by name</text>
+</svg>

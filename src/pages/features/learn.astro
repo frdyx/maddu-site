@@ -1,0 +1,124 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import EventStream from '../../components/EventStream.astro';
+import PageNext from '../../components/PageNext.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+---
+
+<Layout title="Failure learning — a fix learned once propagates" pathname="/features/learn">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Feature</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">maddu learn</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">since v1.90.0</span>
+      </div>
+      <h1>Solve it once. <span class="dim-h1">Carry it everywhere.</span></h1>
+      <p class="lede">
+        A mistake corrected in one session becomes a durable rule the next agent already knows — and, when it recurs across repos, a correction your whole fleet inherits.
+      </p>
+      <pre class="feat-cli"><code>$ maddu learn
+distilled 4 corrections · 2 project facts → CLAUDE.md · 2 patterns → memory</code></pre>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · The problem</span>
+        <h2>The same mistake, in every fresh session.</h2>
+        <p>
+          A hard-won fix lives in one transcript, then evaporates. The next agent — a fresh context, or a different repo entirely — rediscovers the same wrong turn, because nothing turned that experience into a rule it could read first.
+        </p>
+      </header>
+
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Mined from what failed</span>
+            <span class="panel-aside">typed</span>
+          </div>
+          <p><code>learn</code> reads past sessions for failed→succeeded tool-call pairs and distils typed corrections: stable project facts go to the project's <code>CLAUDE.md</code>; volatile patterns go to queryable memory.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Federated across repos</span>
+            <span class="panel-aside">approval-only</span>
+          </div>
+          <p><code>learn sync</code> shares the portable corrections — a lesson recurring in ≥2 repos, or tagged <code>@portable</code>. Adopted on approval only, redacted before it travels.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Vendor memory, imported</span>
+            <span class="panel-aside">since v1.90.0</span>
+          </div>
+          <p><code>learn sync --from-claude-memory</code> imports Claude Code's auto-memory as provenance-carrying facts. Import-only by contract — the vendor directory is never written — and content-hash-deduped, so re-running is idempotent.</p>
+        </div>
+      </div>
+
+      <Callout tone="ok" title="A claim of done needs proof" tag="completion-claim-gate">
+        <p>
+          A deterministic completion-claim gate flags hedged "done" claims — "should work", "seems to pass" — that carry no observed proof. It's evidence, not a model checking a model: the record either shows the run or it doesn't.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · On the record</span>
+        <h2>What learning and federating looks like on the spine.</h2>
+      </header>
+      <EventStream
+        eyebrow="Distil, import, then federate"
+        source=".maddu/events/2026-07-05.ndjson"
+        entries={[
+          { time: '15:41:12.006', type: 'LESSON_DISTILLED',         tone: 'accent',   payload: 'pair=eslint-flat-config · target=CLAUDE.md · type=project-fact', actor: 'claude-code' },
+          { time: '15:41:12.220', type: 'VENDOR_MEMORY_IMPORTED',   tone: 'session',  payload: 'source=claude-memory · adopted=3 · deduped=5 · preview=false', actor: 'claude-code' },
+          { time: '15:52:03.771', type: 'LESSON_FEDERATED',         tone: 'ok',        payload: 'lesson=win-path-quoting · repos=3 · redacted · approved', actor: 'operator' },
+        ]}
+      />
+      <p class="feat-note">
+        Preview is the default; <code>--adopt</code> writes. Each import rides a <code>VENDOR_MEMORY_IMPORTED</code> event, so a memory rebuild replays the corpus faithfully from the record.
+      </p>
+      <p class="feat-note">
+        Related verbs: <a href="/capabilities/learn"><code>maddu learn</code></a> · <a href="/capabilities/memory"><code>maddu memory</code></a> · <a href="/capabilities/skill"><code>maddu skill</code></a> · <a href="/capabilities/blueprint"><code>maddu blueprint</code></a>
+      </p>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="Next feature"
+    title="Fleet view — know which of your installs are stale, offline."
+    hint="One glance across every registered workspace: version, freshness, last activity."
+    href="/features/fleet"
+    tone="accent"
+  />
+  <CtaBlock />
+</Layout>
+
+<style>
+  .feat-cli {
+    margin: var(--m-space-5) 0 0;
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent);
+    border-radius: var(--m-radius);
+    font-family: var(--m-font-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--m-fg-1);
+    overflow-x: auto;
+  }
+  .feat-note {
+    margin-top: var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+  }
+  .feat-note code { font-size: 12px; }
+</style>

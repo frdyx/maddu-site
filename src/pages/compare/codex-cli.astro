@@ -1,0 +1,168 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import PageNext from '../../components/PageNext.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+import CapabilityMatrix from '../../components/CapabilityMatrix.astro';
+import { DOCTOR_GATES } from '../../data/stats';
+---
+
+<Layout title="Máddu + Codex CLI" pathname="/compare/codex-cli">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Compare</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">CLI coding agents</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">layer on top</span>
+      </div>
+      <h1>Máddu + Codex CLI. <span class="dim-h1">The governance mode OpenAI declined to build.</span></h1>
+      <p class="lede">
+        In April 2026 someone asked OpenAI for a persistent governed repo mode for long-running local workflows. It was closed as not planned. Codex still shipped the lifecycle hooks — the exact attachment points Máddu uses to build that mode anyway.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · What Codex CLI is</span>
+        <h2>A strong agent with sandboxing built in.</h2>
+        <p>
+          Codex CLI is OpenAI's terminal coding agent — roughly 95k GitHub stars as of July 2026 — and a genuinely capable one, with OS-level sandboxing and approval modes shipped in the core. It also ships lifecycle hooks: PreToolUse, PermissionRequest, PostToolUse, PreCompact and PostCompact, SessionStart, UserPromptSubmit, and Stop. What it does not ship is a persistent, governed repo mode. Issue #18273 asked for exactly that in April 2026, and OpenAI closed it as not planned.
+        </p>
+      </header>
+
+      <div class="vs-honest">
+        <h4>Where Codex CLI is stronger — plainly</h4>
+        <ul>
+          <li>It is a strong, fast-moving agent with a large community and OpenAI's release cadence behind it.</li>
+          <li>Native OS sandboxing and approval modes ship in the core — real process boundaries Máddu deliberately does not attempt.</li>
+          <li>Its hooks are first-party and free; you don't need Máddu to make them fire.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · Where Máddu differs</span>
+        <h2>OpenAI declined the mode. Máddu is the mode.</h2>
+      </header>
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">The persistent governed mode</span>
+            <span class="panel-aside">what #18273 asked for</span>
+          </div>
+          <p>Long-running local workflows that carry state across sessions: exclusive lane claims, an approvals ledger, cost budgets, and a durable record. That is the request OpenAI declined — and it is, almost line for line, what Máddu is. The hooks Codex ships are how Máddu attaches.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Deterministic gates</span>
+            <span class="panel-aside">{DOCTOR_GATES} + ci</span>
+          </div>
+          <p>Sandboxing bounds what the agent <em>may</em> do at the OS boundary. Máddu checks what it <em>did</em>: {DOCTOR_GATES} deterministic gates, a headless <code>maddu ci</code> rail that goes red only on pinned gates, and a completion-claim check that demands observed proof for every "done".</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">A repo-owned spine</span>
+            <span class="panel-aside">tamper-evident</span>
+          </div>
+          <p>Máddu's history is a hash-chained, append-only spine in <code>.maddu/</code> — auditable with <code>cat</code>, verified with <code>maddu spine verify</code>, and portable across runtimes. Swap Codex for another agent tomorrow and the record, the policy, and the earned trust all carry over.</p>
+        </div>
+      </div>
+
+      <Callout tone="accent" title="Cooperative, never a proxy" tag="the framing">
+        <p>
+          Máddu doesn't wrap Codex, sit in its request path, or duplicate its sandbox — it records, gates, and verifies from beside the agent, hanging off the same lifecycle hooks Codex already fires. The persistent governed repo mode is real; OpenAI just decided it wasn't theirs to build.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <CapabilityMatrix
+        players={['codex-cli']}
+        eyebrow="§ 03 · The matrix"
+        title="Axis by axis."
+        subtitle="The fifteen research axes, focused on this matchup. Conservative marks — shipped, documented surfaces only."
+      />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 04 · Choose honestly</span>
+        <h2>Keep the agent. Add the mode.</h2>
+      </header>
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Codex CLI alone is enough when</span>
+          </div>
+          <ul class="vs-list">
+            <li>You want a strong agent with OS sandboxing and nothing more</li>
+            <li>Work is short-lived — no long-running state to carry across sessions</li>
+            <li>No one needs a durable, portable record of what was allowed</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Add Máddu when</span>
+          </div>
+          <ul class="vs-list">
+            <li>You want the persistent governed repo mode #18273 asked for</li>
+            <li>You need lanes, an approvals ledger, and deterministic gates around the work</li>
+            <li>The spine must survive the session and travel with the repo</li>
+          </ul>
+        </div>
+      </div>
+      <p class="feat-note">
+        Related: <a href="/features/worktrees">worktree lanes</a> · <a href="/features/autonomy">earned autonomy</a> · <a href="/features/ci">governance in CI</a> · <a href="/hard-rules">the hard rules</a>
+      </p>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="Next comparison"
+    title="Máddu vs Paperclip."
+    hint="The one head-on competitor — and the record is the difference."
+    href="/compare/paperclip"
+    tone="danger"
+  />
+  <CtaBlock />
+</Layout>
+
+<style>
+  .vs-honest {
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-warn);
+    border-radius: var(--m-radius);
+    max-width: 720px;
+  }
+  .vs-honest h4 {
+    margin: 0 0 var(--m-space-2);
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--m-warn);
+  }
+  .vs-honest ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+  .vs-honest li { font-size: 13.5px; color: var(--m-fg-1); }
+  .vs-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .vs-list li { font-size: 13.5px; color: var(--m-fg-1); line-height: 1.5; }
+  .feat-note {
+    margin-top: var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+  }
+  .feat-note code { font-size: 12px; }
+</style>

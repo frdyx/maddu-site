@@ -1,12 +1,13 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Callout from '../components/Callout.astro';
+import { VERBS_TOTAL, PURPOSE_AREAS, RELEASE_COUNT, VERSION } from '../data/stats';
 ---
 
 <Layout
   title="Page not found"
   pathname="/404"
-  description="The page you're looking for doesn't exist on maddu.dev. Try the search palette or one of the popular routes below."
+  description="The page you're looking for doesn't exist on maddu.frdyx.com. Try the search palette or one of the popular routes below."
 >
   <section class="nf">
     <div class="container">
@@ -39,10 +40,10 @@ import Callout from '../components/Callout.astro';
           <li><a href="/architecture">Architecture</a> — the 14 layers, color-coded</li>
           <li><a href="/threat-model">Threat model</a> — 7 defenses, residual risk named</li>
           <li><a href="/hard-rules">Hard rules</a> — the 8+1 invariants</li>
-          <li><a href="/capabilities">Capabilities</a> — 62 verbs across 8 areas</li>
+          <li><a href="/capabilities">Capabilities</a> — {VERBS_TOTAL} verbs across {PURPOSE_AREAS} areas</li>
           <li><a href="/manifesto">Manifesto</a> — why Máddu exists, in prose</li>
-          <li><a href="/changelog">Changelog</a> — 36 releases from v0.17.1 → v1.18.0</li>
-          <li><a href="/install">Install</a> — coming soon when the repo flips public</li>
+          <li><a href="/changelog">Changelog</a> — {RELEASE_COUNT} versions from v0.17.1 → v{VERSION}</li>
+          <li><a href="/install">Install</a> — one command, npx github:frdyx/maddu init</li>
         </ul>
       </Callout>
 

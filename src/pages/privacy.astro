@@ -30,13 +30,13 @@ import Annotated from '../components/Annotated.astro';
       <header class="section-head">
         <span class="eyebrow">§ 01 · What this site collects</span>
         <h2>Nothing the operator didn't already log themselves.</h2>
-        <p>The site is static HTML / CSS / JS served from Cloudflare Pages. No server you control. No database you maintain. No analytics dashboard. No marketing pixel. No A/B test framework.</p>
+        <p>The site is static HTML / CSS / JS served from a plain static host. No server you control. No database you maintain. No analytics dashboard. No marketing pixel. No A/B test framework.</p>
       </header>
 
       <Annotated
         columns={['Surface', 'What we collect', 'Where it goes']}
         rows={[
-          { action: 'page view',           effect: 'nothing in our code',                                provenance: '(Cloudflare access log)',    provTone: 'framework' },
+          { action: 'page view',           effect: 'nothing in our code',                                provenance: '(host access log)',          provTone: 'framework' },
           { action: 'cookies',             effect: 'none set by this site',                              provenance: '0 cookies',                  provTone: 'ok' },
           { action: 'analytics',           effect: 'no script installed',                                provenance: '0 endpoints',                provTone: 'ok' },
           { action: 'fonts',               effect: 'self-hosted Plex woff2 from same origin',             provenance: '/fonts/*.woff2',             provTone: 'accent' },
@@ -94,7 +94,7 @@ import Annotated from '../components/Annotated.astro';
         <h2>If you want to ask about this.</h2>
       </header>
       <p>
-        The site is part of the Máddu framework's public surface. There's no contact form on this page (a contact form would be a third-party integration). When the repo flips public, GitHub issues will be the canonical channel.
+        The site is part of the Máddu framework's public surface. There's no contact form on this page (a contact form would be a third-party integration). The repo is public — GitHub issues are the canonical channel.
       </p>
     </div>
   </section>

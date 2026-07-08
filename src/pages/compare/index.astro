@@ -1,0 +1,367 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+import CapabilityMatrix from '../../components/CapabilityMatrix.astro';
+import { HUB_PLAYERS } from '../../data/capability-matrix';
+import { VERSION_SHORT, DOCTOR_GATES } from '../../data/stats';
+
+const axesHeld = [
+  'Multi-agent coordination',
+  'Approvals workflow',
+  'Deterministic gates / CI',
+  'Tamper-evident audit record',
+  'Vendor / runtime-agnostic',
+  'Local-first — no cloud',
+  'Cockpit UI',
+  'Multi-repo / workspace',
+  'Learning / memory',
+  'Cost tracking / budgets',
+  'Autonomy / trust scoring',
+];
+
+const categories = [
+  {
+    name: 'CLI coding agents',
+    players: 'Claude Code · Codex CLI · Gemini CLI · Aider',
+    stance: 'The layer under them — never against them',
+    detail: 'Máddu is what their hooks attach to. It survives the tool swap.',
+    links: [
+      { label: 'Máddu + Claude Code', href: '/compare/claude-code' },
+      { label: 'Máddu + Codex CLI', href: '/compare/codex-cli' },
+    ],
+    tone: 'accent',
+  },
+  {
+    name: 'Agent control planes & orchestrators',
+    players: 'Paperclip · Vibe Kanban · Claude Squad · oh-my-claudecode · Ruflo · kodo',
+    stance: 'Head-on — the record is the difference',
+    detail: 'They manage sessions and worktrees. Máddu governs and records — in your repo.',
+    links: [
+      { label: 'Máddu vs Paperclip', href: '/compare/paperclip' },
+      { label: 'Máddu vs worktree orchestrators', href: '/compare/orchestrators' },
+    ],
+    tone: 'danger',
+  },
+  {
+    name: 'Agent frameworks / SDKs',
+    players: 'LangGraph · CrewAI · OpenAI Agents SDK',
+    stance: 'Not our market — theirs',
+    detail: 'Building programmable agent graphs? Use them. Governing CLI agents in a repo? That\'s Máddu.',
+    links: [{ label: 'Máddu vs LangGraph', href: '/compare/langgraph' }],
+    tone: 'warn',
+  },
+  {
+    name: 'Enterprise control planes',
+    players: 'GitHub Agent HQ · Coder · Microsoft Agent Governance Toolkit',
+    stance: 'Principled decline',
+    detail: 'They govern which agents run in your org. Máddu governs how they work in your repo.',
+    links: [{ label: 'Máddu vs the enterprise planes', href: '/compare/enterprise' }],
+    tone: 'accent-2',
+  },
+  {
+    name: 'Observability / tracing',
+    players: 'Langfuse · LangSmith · Arize Phoenix',
+    stance: 'Partners, not competitors',
+    detail: 'maddu export --otel feeds them. Traces say what the model did; the spine says what was allowed.',
+    links: [{ label: 'Máddu + Langfuse', href: '/compare/langfuse' }],
+    tone: 'ok',
+  },
+  {
+    name: 'Durable execution',
+    players: 'Temporal · Inngest · DBOS',
+    stance: 'Conceptual twin, different weight class',
+    detail: 'Same durability philosophy — zero infrastructure instead of a database cluster.',
+    links: [{ label: 'Máddu vs Temporal', href: '/compare/temporal' }],
+    tone: 'accent',
+  },
+  {
+    name: 'Memory layers',
+    players: 'Letta · Mem0 · Zep',
+    stance: 'Integration, not competition',
+    detail: 'Memory is a feature of the record, not the product. Vendor memory imports with provenance.',
+    links: [{ label: 'Failure learning', href: '/features/learn' }],
+    tone: 'lane',
+  },
+];
+---
+
+<Layout title="Compare — where Máddu sits" pathname="/compare">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Compare</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">{VERSION_SHORT}</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">landscape read as of July 2026</span>
+      </div>
+      <h1>Where Máddu sits. <span class="dim-h1">And where it refuses to.</span></h1>
+      <p class="lede">
+        Máddu is the repo-local governance layer for AI coding agents. Not an agent, not a framework, not a control plane — the layer those plug into. Here is the honest map: who we compete with, who we complement, and the claims we will never make.
+      </p>
+    </div>
+  </section>
+
+  <!-- The quadrant -->
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · The position</span>
+        <h2>Four properties. No one else holds all four.</h2>
+        <p>
+          Every alternative gives up at least one: proxies intercept your keys, harness hooks lock you to one vendor, workflow engines need a database cluster, orchestrators own your session instead of your record.
+        </p>
+      </header>
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">External</span>
+            <span class="panel-aside">vs. framework SDKs</span>
+          </div>
+          <p>Sits beside the agent, not compiled into it. No SDK to build around, nothing to rewrite when you swap Claude Code for Codex.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Cooperative</span>
+            <span class="panel-aside">vs. proxy gateways</span>
+          </div>
+          <p>The agent calls Máddu — Máddu never sits in the request path, never touches your keys. A compromised proxy leaks every provider it fronts; there is no proxy here to compromise.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Zero-infrastructure</span>
+            <span class="panel-aside">vs. workflow engines</span>
+          </div>
+          <p>Append-only files on disk. No Postgres, no Docker network, no hosted account. The record travels with <code>git clone</code>.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Agent-agnostic</span>
+            <span class="panel-aside">vs. native hooks</span>
+          </div>
+          <p>One governance spine under Claude Code, Codex, Gemini, or any CLI agent. Your policies outlive whichever tool wins this quarter.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- The honest matrix -->
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · The scorecard</span>
+        <h2>Eleven axes held. <span class="dim">Four deliberately not.</span></h2>
+        <p>
+          Two independent competitive analyses in July 2026 scored the same fifteen axes. Both gave Máddu the same row — the only tool with all eleven governance axes, and the same four honest gaps.
+        </p>
+      </header>
+      <div class="score-grid">
+        <div class="score-col score-col--held">
+          <h4>Held — shipped and gate-checked</h4>
+          <ul>
+            {axesHeld.map((a) => <li>{a}</li>)}
+          </ul>
+        </div>
+        <div class="score-col score-col--absent">
+          <h4>Not held — on purpose or not yet</h4>
+          <ul>
+            <li><strong>Enterprise SSO / identity</strong> — principled decline. Authorship binds to git commit identity, not accounts.</li>
+            <li><strong>Real-time team / multi-user</strong> — honest gap. Direction is git-native sync; never a cloud tenant.</li>
+            <li><strong>Hosted / managed option</strong> — never. Hard rule #3.</li>
+            <li><strong>Ecosystem size</strong> — young and solo-built, against 25k–130k-star incumbents. The record is the moat, not the stars.</li>
+          </ul>
+        </div>
+      </div>
+      <Callout tone="accent" title="The gaps got shipped" tag={VERSION_SHORT}>
+        <p>
+          Both analyses named the same top ergonomics gaps: collision-free parallel sessions and an exportable event stream. v1.93 shipped both — <a href="/features/worktrees">worktree lanes</a> and <code>maddu export --otel</code>.
+        </p>
+      </Callout>
+
+      <CapabilityMatrix players={HUB_PLAYERS} />
+      <p class="cm-note">
+        Cells resolve conservatively to shipped, documented surfaces — where the two analyses disagreed, the stricter mark wins. Each <a href="#landscape">matchup page</a> carries its own focused cut of this table.
+      </p>
+    </div>
+  </section>
+
+  <!-- Category map -->
+  <section class="section" id="landscape">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 03 · The landscape</span>
+        <h2>Seven categories, seven different answers.</h2>
+        <p>"Vs" is the wrong word for most of them. Máddu competes in exactly one lane and cooperates everywhere else.</p>
+      </header>
+      <div class="cat-list">
+        {categories.map((c) => (
+          <article class:list={['cat-row', `cat-row--${c.tone}`]}>
+            <div class="cat-main">
+              <h3>{c.name}</h3>
+              <span class="cat-players">{c.players}</span>
+            </div>
+            <div class="cat-stance">
+              <span class="cat-verdict">{c.stance}</span>
+              <p>{c.detail}</p>
+              <div class="cat-links">
+                {c.links.map((l) => (
+                  <a href={l.href}>{l.label} →</a>
+                ))}
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Never claims -->
+  <section class="section absent-like">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow eyebrow-danger">§ 04 · The refusals</span>
+        <h2>Claims we will never make.</h2>
+        <p>A comparison page you can trust has to name what the other side does better.</p>
+      </header>
+      <ul class="never-grid">
+        <li><span class="never-no">never</span> "best for programmable agent workflows" — LangGraph, CrewAI, and the Agents SDK own that.</li>
+        <li><span class="never-no">never</span> "an enterprise control plane" — GitHub, Coder, and Microsoft do identity and fleet policy better.</li>
+        <li><span class="never-no">never</span> "the best mission-control UX" — visual boards and PR dashboards are others' turf.</li>
+        <li><span class="never-no">never</span> "sandboxing" — Máddu is cooperative; OS isolation belongs to the runtime.</li>
+        <li><span class="never-no">never</span> "prompt forensics" — Máddu audits actions and outcomes, not prompts.</li>
+        <li><span class="never-no">never</span> "zero-trust" — Máddu's story is <em>earned</em> trust, deterministically verified. Better story anyway.</li>
+      </ul>
+      <p class="never-close">
+        What's left is the claim that holds: <strong>the governance record lives in your repo, survives every agent, and is checked by {DOCTOR_GATES} deterministic gates.</strong>
+      </p>
+    </div>
+  </section>
+
+  <CtaBlock />
+</Layout>
+
+<style>
+  .page-head { padding: var(--m-space-16) 0 var(--m-space-8); }
+  .cm-note {
+    margin-top: var(--m-space-3);
+    font-size: 12.5px;
+    color: var(--m-fg-3);
+    max-width: 78ch;
+  }
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--m-space-4);
+    margin-bottom: var(--m-space-6);
+  }
+  .score-col {
+    padding: var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+  }
+  .score-col--held { border-top: 2px solid var(--m-ok); }
+  .score-col--absent { border-top: 2px solid var(--m-danger); }
+  .score-col h4 {
+    margin: 0 0 var(--m-space-3);
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .score-col--held h4 { color: var(--m-ok); }
+  .score-col--absent h4 { color: var(--m-danger); }
+  .score-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .score-col--held li {
+    font-family: var(--m-font-mono);
+    font-size: 12.5px;
+    color: var(--m-fg-1);
+    padding-left: 18px;
+    position: relative;
+  }
+  .score-col--held li::before { content: '✓'; position: absolute; left: 0; color: var(--m-ok); }
+  .score-col--absent li { font-size: 13px; color: var(--m-fg-2); line-height: 1.5; }
+  .score-col--absent li strong { color: var(--m-fg-0); }
+
+  .cat-list { display: flex; flex-direction: column; gap: var(--m-space-3); }
+  .cat-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) 2fr;
+    gap: var(--m-space-5);
+    padding: var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-line);
+    border-radius: var(--m-radius);
+  }
+  .cat-row--accent   { border-left-color: var(--m-accent); }
+  .cat-row--accent-2 { border-left-color: var(--m-accent-2); }
+  .cat-row--warn     { border-left-color: var(--m-warn); }
+  .cat-row--danger   { border-left-color: var(--m-danger); }
+  .cat-row--ok       { border-left-color: var(--m-ok); }
+  .cat-row--lane     { border-left-color: var(--m-accent-2); }
+  .cat-main h3 { margin: 0 0 6px; font-size: 16px; text-transform: none; letter-spacing: 0; color: var(--m-fg-0); }
+  .cat-players {
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    color: var(--m-fg-3);
+    line-height: 1.6;
+  }
+  .cat-verdict {
+    display: inline-block;
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--m-accent);
+    margin-bottom: 6px;
+  }
+  .cat-stance p { margin: 0 0 var(--m-space-2); font-size: 13.5px; color: var(--m-fg-2); }
+  .cat-links { display: flex; gap: var(--m-space-4); flex-wrap: wrap; }
+  .cat-links a {
+    font-family: var(--m-font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  @media (max-width: 720px) {
+    .cat-row { grid-template-columns: 1fr; gap: var(--m-space-3); }
+  }
+
+  .absent-like { background: linear-gradient(180deg, transparent, rgba(255, 94, 122, 0.04)); }
+  .never-grid {
+    list-style: none;
+    padding: 0;
+    margin: var(--m-space-4) 0 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--m-space-3);
+  }
+  .never-grid li {
+    padding: var(--m-space-3) var(--m-space-4);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-danger);
+    border-radius: var(--m-radius);
+    font-size: 13px;
+    color: var(--m-fg-1);
+    line-height: 1.55;
+  }
+  .never-no {
+    color: var(--m-danger);
+    font-family: var(--m-font-mono);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-right: 8px;
+    font-size: 11px;
+  }
+  .never-close {
+    margin-top: var(--m-space-6);
+    font-size: 15px;
+    color: var(--m-fg-1);
+    max-width: 72ch;
+  }
+  .never-close strong { color: var(--m-fg-0); }
+</style>

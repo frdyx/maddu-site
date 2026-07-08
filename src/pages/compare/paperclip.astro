@@ -1,0 +1,168 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import PageNext from '../../components/PageNext.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+import CapabilityMatrix from '../../components/CapabilityMatrix.astro';
+import { DOCTOR_GATES } from '../../data/stats';
+---
+
+<Layout title="Máddu vs Paperclip" pathname="/compare/paperclip">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Compare</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">agent control planes</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">head-on</span>
+      </div>
+      <h1>Máddu vs Paperclip. <span class="dim-h1">The record is the difference.</span></h1>
+      <p class="lede">
+        Paperclip is the closest thing to a direct competitor Máddu has — and a good tool. Both do locks, budgets, and approvals. The split is <em>where the truth lives</em>: their control plane, or your repo.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · What Paperclip is</span>
+        <h2>An org chart for agent teams.</h2>
+        <p>
+          Paperclip is an open-source orchestration platform for managing teams of AI agents: org-chart roles and reporting lines, atomic task checkout with execution locks, per-agent budgets, heartbeat scheduling, and approval workflows. It drives Claude Code, Codex, Cursor, Gemini, and bash-based agents. At roughly 70k+ GitHub stars as of July 2026, its ecosystem is orders of magnitude larger than Máddu's.
+        </p>
+      </header>
+
+      <div class="vs-honest">
+        <h4>Where Paperclip is stronger — plainly</h4>
+        <ul>
+          <li>Ecosystem and community size — ~1000× Máddu's, with the contributor depth that brings.</li>
+          <li>Organizational modeling — roles, reporting lines, and permissions as first-class visual structure.</li>
+          <li>Scheduling — heartbeat-driven agent teams out of the box.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · Where Máddu differs</span>
+        <h2>Their locks manage the work. The spine survives it.</h2>
+      </header>
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Repo-owned record</span>
+            <span class="panel-aside">tamper-evident</span>
+          </div>
+          <p>Máddu's governance history is a hash-chained, append-only spine in <code>.maddu/</code> — it travels with <code>git clone</code>, survives the platform, and verifies with <code>maddu spine verify</code>. A control plane's history lives in the control plane.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Deterministic gates</span>
+            <span class="panel-aside">{DOCTOR_GATES} + ci</span>
+          </div>
+          <p>Locks and budgets bound what agents <em>may</em> do. Máddu also checks what they <em>did</em>: {DOCTOR_GATES} deterministic gates, a headless <code>maddu ci</code> rail, and a completion-claim check that demands observed proof for every "done".</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Trust that's earned</span>
+            <span class="panel-aside">recommend-only</span>
+          </div>
+          <p>Per-lane autonomy is scored from verified slice outcomes and only ever <em>recommended</em> — the operator applies it. Permissions you assign are a policy; trust computed from the record is evidence.</p>
+        </div>
+      </div>
+
+      <Callout tone="warn" title="Same wedge, opposite center of gravity" tag="the real split">
+        <p>
+          If you want a mission-control platform that runs your agent org, Paperclip is built for that. If you want the governance record to belong to the repository — auditable with <code>cat</code>, alive after any tool dies — that is the entire reason Máddu exists.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <CapabilityMatrix
+        players={['paperclip']}
+        eyebrow="§ 03 · The matrix"
+        title="Axis by axis."
+        subtitle="The fifteen research axes, focused on this matchup. Conservative marks — shipped, documented surfaces only."
+      />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 04 · Choose honestly</span>
+        <h2>Two defensible choices.</h2>
+      </header>
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Choose Paperclip when</span>
+          </div>
+          <ul class="vs-list">
+            <li>You're running a standing team of agents with roles and schedules</li>
+            <li>Visual org management matters more than a portable audit trail</li>
+            <li>You want the largest possible community around the tool</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Choose Máddu when</span>
+          </div>
+          <ul class="vs-list">
+            <li>The audit record must live in the repo and survive every tool swap</li>
+            <li>You want deterministic verification, not just permission boundaries</li>
+            <li>Zero infrastructure is a requirement, not a preference</li>
+          </ul>
+        </div>
+      </div>
+      <p class="feat-note">
+        Related: <a href="/features/worktrees">worktree lanes</a> · <a href="/features/autonomy">earned autonomy</a> · <a href="/features/ci">governance in CI</a> · <a href="/hard-rules">the hard rules</a>
+      </p>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="Next comparison"
+    title="Máddu vs the worktree orchestrators."
+    hint="Vibe Kanban, Claude Squad, oh-my-claudecode, Ruflo, kodo — session managers vs a governance record."
+    href="/compare/orchestrators"
+    tone="accent"
+  />
+  <CtaBlock />
+</Layout>
+
+<style>
+  .vs-honest {
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-warn);
+    border-radius: var(--m-radius);
+    max-width: 720px;
+  }
+  .vs-honest h4 {
+    margin: 0 0 var(--m-space-2);
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--m-warn);
+  }
+  .vs-honest ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+  .vs-honest li { font-size: 13.5px; color: var(--m-fg-1); }
+  .vs-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .vs-list li { font-size: 13.5px; color: var(--m-fg-1); line-height: 1.5; }
+  .feat-note {
+    margin-top: var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+  }
+  .feat-note code { font-size: 12px; }
+</style>

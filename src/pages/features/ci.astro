@@ -1,0 +1,123 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import EventStream from '../../components/EventStream.astro';
+import PageNext from '../../components/PageNext.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+---
+
+<Layout title="Governance in CI — red only on gates you pinned" pathname="/features/ci">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Feature</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">maddu ci</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">since v1.87.0</span>
+      </div>
+      <h1>Governance in CI. <span class="dim-h1">Red only on gates you pinned.</span></h1>
+      <p class="lede">
+        Every deterministic gate runs headlessly — no LLM, no network. The pipeline goes red only on the gates you committed as required, so a framework upgrade never breaks a build behind your back.
+      </p>
+      <pre class="feat-cli"><code>$ maddu ci
+pinned 12/70 gates · 12 pass · exit 0</code></pre>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · The problem</span>
+        <h2>A gate you never chose shouldn't fail your build.</h2>
+        <p>
+          Governance that fails on every gate the framework happens to ship turns each upgrade into a broken pipeline. Teams respond by pinning the version and never updating. Enforcement that punishes upgrades is enforcement nobody keeps.
+        </p>
+      </header>
+
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Deterministic only</span>
+            <span class="panel-aside">headless</span>
+          </div>
+          <p><code>maddu ci</code> runs every deterministic gate with no LLM and no network. The same checks doctor runs locally, run in the pipeline — reproducible, fast, and free of any provider call.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Pin what matters</span>
+            <span class="panel-aside">churn-proof</span>
+          </div>
+          <p><code>maddu ci pin</code> writes a committed config of the gates you require. CI exits nonzero <strong>only</strong> on those — so an upgrade can add gates without turning anyone's pipeline red until they choose to re-pin.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Local first</span>
+            <span class="panel-aside">offline</span>
+          </div>
+          <p>The same exit code drives a fully-offline git pre-push hook, so violations are caught before they ever reach the remote. GitHub Actions detection — <code>::error</code> annotations and a job-summary table — layers on top, optional.</p>
+        </div>
+      </div>
+
+      <Callout tone="ok" title="Upgrades stay green by construction" tag="ci-pin-contract">
+        <p>
+          Because required is a committed decision and not a framework default, new gates arrive dark. Your pipeline's color depends only on the gates you pinned — nothing the next release adds can change that until you re-pin on purpose.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · On the record</span>
+        <h2>What a CI run looks like on the spine.</h2>
+      </header>
+      <EventStream
+        eyebrow="CI run, pin to exit"
+        source=".maddu/events/2026-07-06.ndjson"
+        entries={[
+          { time: '11:02:07.004', type: 'CI_STARTED',       tone: 'framework', payload: 'runtime=github-actions · llm=off · net=off',   actor: 'ci-runner' },
+          { time: '11:02:07.219', type: 'CI_PINS_LOADED',   tone: 'session',   payload: 'required=12 · defined=70 · config=committed',  actor: 'ci-runner' },
+          { time: '11:02:08.640', type: 'GATE_EVALUATED',   tone: 'ok',        payload: 'pinned=12 pass · unpinned=58 skipped',        actor: 'ci-runner' },
+          { time: '11:02:08.702', type: 'CI_ANNOTATED',     tone: 'accent',    payload: 'annotations=0 · summary-table=rendered',      actor: 'ci-runner' },
+          { time: '11:02:08.741', type: 'CI_COMPLETED',     tone: 'approval',  payload: 'exit=0 · 12/12 required green',               actor: 'ci-runner' },
+        ]}
+      />
+      <p class="feat-note">
+        Related verbs: <a href="/capabilities/ci"><code>maddu ci</code></a> · <a href="/capabilities/doctor"><code>maddu doctor</code></a> · <a href="/capabilities/architecture"><code>maddu architecture</code></a> · <a href="/capabilities/test"><code>maddu test</code></a>
+      </p>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="Next feature"
+    title="Focus Director — drift, noticed. A choice, never a gate."
+    hint="Máddu notices when a slice wanders from its declared focus and offers a choice — it never blocks you."
+    href="/features/focus"
+    tone="accent"
+  />
+  <CtaBlock />
+</Layout>
+
+<style>
+  .feat-cli {
+    margin: var(--m-space-5) 0 0;
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent);
+    border-radius: var(--m-radius);
+    font-family: var(--m-font-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--m-fg-1);
+    overflow-x: auto;
+  }
+  .feat-note {
+    margin-top: var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+  }
+  .feat-note code { font-size: 12px; }
+</style>

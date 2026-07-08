@@ -1,0 +1,125 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import EventStream from '../../components/EventStream.astro';
+import PageNext from '../../components/PageNext.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+---
+
+<Layout title="Focus Director — drift, noticed" pathname="/features/focus">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Feature</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">maddu focus</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">since v1.92.2</span>
+      </div>
+      <h1>Drift, noticed. <span class="dim-h1">Never blocked.</span></h1>
+      <p class="lede">
+        Focus Director watches whether each turn moves toward the goal you declared. When a session wanders for real, it asks — swap, revert, or continue. It never gates.
+      </p>
+      <pre class="feat-cli"><code>$ maddu focus
+turn tagged: away · anchors=[drawer, entity] · anchorHits=0</code></pre>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · The problem</span>
+        <h2>Drift is obvious in hindsight, invisible mid-session.</h2>
+        <p>
+          A session slides off its goal one reasonable-looking turn at a time. By the time the wandering is undeniable, you've spent the budget getting there — and no one flagged the turn where the work stopped being the work.
+        </p>
+      </header>
+
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Tags every turn</span>
+            <span class="panel-aside">opt-in</span>
+          </div>
+          <p>Each turn is tagged <em>toward</em>, <em>lateral</em>, or <em>away</em> of the declared goal. Domain-blind by design — it reads the goal's own terms, not your subject matter.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Counts real anchors</span>
+            <span class="panel-aside">calibrated</span>
+          </div>
+          <p>The metric counts absolute anchors — whether the goal's distinctive terms appear at all. <code>≥2</code> → toward, <code>1</code> → lateral, <code>0</code> → away, with light deterministic stemming. The goal axis is objective and constraints only.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Asks, never blocks</span>
+            <span class="panel-aside">a choice</span>
+          </div>
+          <p>Sustained drift surfaces as a swap / revert / continue choice — never a gate. Focus Director raises its hand; the operator decides whether the detour stays.</p>
+        </div>
+      </div>
+
+      <Callout tone="accent-2" title="Verbosity is not drift" tag="focus-tagged">
+        <p>
+          A detailed, on-goal summary tags <em>toward</em>; a terse, off-goal one tags <em>away</em>. Every <code>FOCUS_TAGGED</code> event carries its anchors and <code>anchorHits</code>, so every tag explains itself — no black-box verdicts.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · On the record</span>
+        <h2>What drift looks like on the spine.</h2>
+      </header>
+      <EventStream
+        eyebrow="Toward, then a sustained slide"
+        source=".maddu/events/2026-07-05.ndjson"
+        entries={[
+          { time: '13:04:18.301', type: 'FOCUS_TAGGED',   tone: 'ok',      payload: 'tag=toward · anchors=[drawer, entity] · anchorHits=2',   actor: 'claude-code' },
+          { time: '13:19:52.744', type: 'FOCUS_TAGGED',   tone: 'accent',  payload: 'tag=lateral · anchors=[drawer, entity] · anchorHits=1', actor: 'claude-code' },
+          { time: '13:33:41.118', type: 'FOCUS_TAGGED',   tone: 'warn',    payload: 'tag=away · anchors=[drawer, entity] · anchorHits=0',    actor: 'claude-code' },
+          { time: '13:41:07.902', type: 'DRIFT_FLAGGED',  tone: 'warn',    payload: 'sustained=3 turns · choice=swap|revert|continue',       actor: 'claude-code' },
+        ]}
+      />
+      <p class="feat-note">
+        Calibrated on real incident data. A sustained run of <em>away</em> tags emits <code>DRIFT_FLAGGED</code> — the point where a wander stops being noise and becomes a decision.
+      </p>
+      <p class="feat-note">
+        Related verbs: <a href="/capabilities/focus"><code>maddu focus</code></a> · <a href="/capabilities/goal"><code>maddu goal</code></a> · <a href="/capabilities/orient"><code>maddu orient</code></a>
+      </p>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="Next feature"
+    title="Cost accounting — catch a runaway session before it's a surprise."
+    hint="Token and call rollups per session, day, runtime, or model — on the same record."
+    href="/features/cost"
+    tone="accent"
+  />
+  <CtaBlock />
+</Layout>
+
+<style>
+  .feat-cli {
+    margin: var(--m-space-5) 0 0;
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent);
+    border-radius: var(--m-radius);
+    font-family: var(--m-font-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--m-fg-1);
+    overflow-x: auto;
+  }
+  .feat-note {
+    margin-top: var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+  }
+  .feat-note code { font-size: 12px; }
+</style>

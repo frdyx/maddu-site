@@ -6,21 +6,52 @@ import type { APIRoute } from 'astro';
 import { RELEASES } from '../data/releases';
 import capDetail from '../data/capabilities-detail.json';
 
-const SITE = 'https://maddu.dev';
+const SITE = 'https://maddu.frdyx.com';
 
 const PAGES = [
   { path: '/', priority: 1.0, changefreq: 'weekly' },
-  { path: '/how-it-works', priority: 0.9, changefreq: 'monthly' },
-  { path: '/architecture', priority: 0.9, changefreq: 'monthly' },
-  { path: '/security', priority: 0.9, changefreq: 'monthly' },
+  { path: '/docs', priority: 0.9, changefreq: 'weekly' },
+  { path: '/features', priority: 0.9, changefreq: 'monthly' },
   { path: '/threat-model', priority: 0.9, changefreq: 'monthly' },
-  { path: '/governance', priority: 0.8, changefreq: 'monthly' },
-  { path: '/hard-rules', priority: 0.8, changefreq: 'monthly' },
   { path: '/capabilities', priority: 0.8, changefreq: 'monthly' },
   { path: '/install', priority: 0.7, changefreq: 'weekly' },
   { path: '/changelog', priority: 0.6, changefreq: 'weekly' },
   { path: '/manifesto', priority: 0.8, changefreq: 'monthly' },
 ];
+
+// Docs section — the dedicated docs shell. Reading order mirrors the sidebar.
+const DOCS_PATHS = [
+  '/docs/install',
+  '/docs/how-it-works',
+  '/docs/architecture',
+  '/docs/governance',
+  '/docs/hard-rules',
+  '/docs/security',
+  '/docs/features',
+  '/docs/features/discipline',
+  '/docs/features/autonomy',
+  '/docs/features/fleet',
+  '/docs/features/cost',
+  '/docs/capabilities',
+  '/docs/compare',
+  '/docs/changelog',
+];
+for (const d of DOCS_PATHS) {
+  PAGES.push({ path: d, priority: 0.8, changefreq: 'monthly' });
+}
+
+// Feature landing pages — the marketing layer over the capability docs.
+const FEATURE_SLUGS = ['discipline', 'worktrees', 'autonomy', 'learn', 'fleet', 'ci', 'focus', 'cost'];
+for (const f of FEATURE_SLUGS) {
+  PAGES.push({ path: '/features/' + f, priority: 0.8, changefreq: 'monthly' });
+}
+
+// Comparison pages — the honest landscape map + per-matchup pages.
+PAGES.push({ path: '/compare', priority: 0.9, changefreq: 'monthly' });
+const COMPARE_SLUGS = ['claude-code', 'codex-cli', 'paperclip', 'orchestrators', 'langgraph', 'langfuse', 'temporal', 'enterprise'];
+for (const c of COMPARE_SLUGS) {
+  PAGES.push({ path: '/compare/' + c, priority: 0.7, changefreq: 'monthly' });
+}
 
 // Per-release stub pages — emitted but flagged noindex (release context
 // lives on /changelog itself); included here so sitemap crawlers can
@@ -31,7 +62,7 @@ for (const r of RELEASES) {
 }
 
 // Per-verb capability entity pages — derived from the audited capability
-// detail map (scripts/gen-capabilities.mjs), so all 62 stay discoverable
+// detail map (scripts/gen-capabilities.mjs), so all 66 stay discoverable
 // and the list never has to be hand-maintained.
 for (const v of capDetail.verbs) {
   PAGES.push({ path: '/capabilities/' + v.verb, priority: 0.5, changefreq: 'monthly' });

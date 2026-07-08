@@ -1,0 +1,167 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import PageNext from '../../components/PageNext.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+import CapabilityMatrix from '../../components/CapabilityMatrix.astro';
+---
+
+<Layout title="Máddu vs Temporal" pathname="/compare/temporal">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Compare</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">durable execution</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">conceptual twin</span>
+      </div>
+      <h1>Máddu vs Temporal. <span class="dim-h1">Same philosophy, different weight class.</span></h1>
+      <p class="lede">
+        Temporal made durable, replayable execution normal for distributed systems. Máddu shares the philosophy — append-only history, deterministic replay, projections rebuilt from the log — but at a different scale, and with one honest limit worth stating up front.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · What Temporal is</span>
+        <h2>Durable execution for distributed workflows.</h2>
+        <p>
+          Temporal (with Inngest and DBOS) turned durable, replayable execution into the norm for distributed systems: workflows survive process death and genuinely <em>resume</em> where they left off, re-driven from a persisted history at enterprise scale. It's a mature platform with real SDKs and a cloud offering. Máddu borrows the same event-sourced instincts, but it is a repo tool, not a workflow engine — and it does not do the resume half.
+        </p>
+      </header>
+
+      <div class="vs-honest">
+        <h4>Where Temporal is stronger — plainly</h4>
+        <ul>
+          <li>True durable execution — workflows that crash and resume exactly where they stopped.</li>
+          <li>Enterprise-scale distributed orchestration across services and long-running processes.</li>
+          <li>Mature SDKs and a hosted cloud; Máddu is files on disk with none of that reach.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · Where Máddu differs</span>
+        <h2>The same instincts, at the weight of a repo.</h2>
+      </header>
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Files, not a cluster</span>
+            <span class="panel-aside">zero infrastructure</span>
+          </div>
+          <p>Temporal is a database cluster and a service mesh. Máddu is an append-only NDJSON spine in <code>.maddu/</code> — the same event-sourced shape at the weight of a repo, not a distributed backend. Nothing to deploy, nothing to run.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Records, doesn't re-drive</span>
+            <span class="panel-aside">honest limit</span>
+          </div>
+          <p>Be precise: the spine survives crashes because it's append-only files, but Máddu does <em>not</em> do durable-execution resume — it records and verifies; it doesn't re-drive workflows. Temporal genuinely resumes. Máddu keeps the history; it doesn't replay the work.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">A governed record</span>
+            <span class="panel-aside">tamper-evident</span>
+          </div>
+          <p>What Máddu does keep is the audit half: a hash-chained, replayable log you can verify with <code>maddu spine verify</code> and rebuild projections from — what was claimed, gated, and verified, owned by the repository.</p>
+        </div>
+      </div>
+
+      <Callout tone="warn" title="Durable record, not durable execution" tag="the honest line">
+        <p>
+          Both are event-sourced and both replay from an append-only log — that's the shared philosophy. The difference that matters: Temporal replays to <em>resume the workflow</em>; Máddu replays to <em>rebuild the record</em>. If you need work to pick up mid-flight after a crash, that's Temporal, not Máddu.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <CapabilityMatrix
+        players={['temporal']}
+        eyebrow="§ 03 · The matrix"
+        title="Axis by axis."
+        subtitle="The fifteen research axes, focused on this matchup. Conservative marks — shipped, documented surfaces only."
+      />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 04 · Choose honestly</span>
+        <h2>Two defensible choices.</h2>
+      </header>
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Choose Temporal when</span>
+          </div>
+          <ul class="vs-list">
+            <li>You're orchestrating distributed production workflows across services</li>
+            <li>Crash-and-resume execution is a hard requirement, not a nice-to-have</li>
+            <li>You need enterprise scale, mature SDKs, and a hosted platform</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Choose Máddu when</span>
+          </div>
+          <ul class="vs-list">
+            <li>The "workflows" are coding agents working inside a repo</li>
+            <li>You need a governed, auditable record — not a re-drivable engine</li>
+            <li>Zero infrastructure is a requirement: files on disk, no cluster, no cloud</li>
+          </ul>
+        </div>
+      </div>
+      <p class="feat-note">
+        Related: <a href="/architecture">the spine</a> · <a href="/features/ci">governance in CI</a> · <a href="/hard-rules">the hard rules</a>
+      </p>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="Next comparison"
+    title="Máddu vs the enterprise control planes."
+    hint="A principled decline."
+    href="/compare/enterprise"
+    tone="accent"
+  />
+  <CtaBlock />
+</Layout>
+
+<style>
+  .vs-honest {
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-warn);
+    border-radius: var(--m-radius);
+    max-width: 720px;
+  }
+  .vs-honest h4 {
+    margin: 0 0 var(--m-space-2);
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--m-warn);
+  }
+  .vs-honest ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+  .vs-honest li { font-size: 13.5px; color: var(--m-fg-1); }
+  .vs-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .vs-list li { font-size: 13.5px; color: var(--m-fg-1); line-height: 1.5; }
+  .feat-note {
+    margin-top: var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+  }
+  .feat-note code { font-size: 12px; }
+</style>
