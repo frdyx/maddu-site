@@ -29,9 +29,18 @@ import EventStream from '../../../components/EventStream.astro';
       <p><code>PreCompact</code> writes a <code>COMPACTION_CHECKPOINT</code> before every compaction — manual <code>/compact</code> and automatic alike — capturing the last <code>slice-stop</code> as the durable anchor: anything after it that wasn't recorded did not survive.</p>
     </div>
     <div class="dx-card">
-      <span class="dx-card-title"><span>It never breaks you</span></span>
-      <p>The hooks always exit 0. A governance instrument must never break the session it observes, so a failing checkpoint degrades to a note — never a blocked session.</p>
+      <span class="dx-card-title"><span>Stale rituals block the edit</span></span>
+      <p>Since v1.97.0, <code>PreToolUse</code> denies a mutating edit when a ritual is stale (no session, lane, governing goal/plan, an overdue <code>slice-stop</code>, or an uncommitted pileup), naming the first blocker and its remedy. Tier-scaled: <code>strict</code> blocks, <code>standard</code> is graduated, <code>relaxed</code> nudges.</p>
     </div>
+    <div class="dx-card">
+      <span class="dx-card-title"><span>It never breaks you</span></span>
+      <p>The hooks never exit <code>2</code>. A governance instrument must never crash the session it observes, so any evaluator/git/parse error degrades to allow — enforcement can only deny an edit through a structured decision. Reads and the remedy commands are never gated, so a block can't deadlock its own fix.</p>
+    </div>
+  </div>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>Block-and-tell, never auto-perform.</strong> Máddu never auto-slice-stops or auto-commits to clear a block — that would fake the record. It stops the edit and hands you the one command that fixes it. At enforcing tiers, <code>goal done</code>/<code>plan complete</code> also refuse to close while a required gate is red; the <code>discipline-observed</code> doctor gate flags a pinned tier with no hook wired; <code>maddu hooks uninstall</code> is the off-switch.</p>
   </div>
 
   <div class="dx-note">

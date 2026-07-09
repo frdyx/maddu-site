@@ -23,6 +23,7 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   <h2>Secret scan on tool arguments</h2>
   <p>Tool arguments pass a pattern scanner before any logging. AWS, OpenAI, Anthropic, GitHub, GitLab, and Slack token shapes are detected and the tool call is refused. Raw values never reach the spine — only a <code>SECRET_SCAN_BLOCKED</code> event carrying the pattern name, never the matched content, plus an operator notification.</p>
   <p>Tokens that don't match a known pattern slip through. The pattern set is deliberately conservative — check the full threat model before relying on it for a novel provider.</p>
+  <p>Since v1.96.0 a <strong>central write-boundary sweep</strong> backs this up: every event's <code>data</code> is routed through the canonical redactor inside <code>spine.append</code> — one choke point covering every emit site, present and future — before the line is built and hashed. A key-aware rule redacts a long token under a sensitive key name (<code>password</code>, <code>apiKey</code>, …) that a value-only scan structurally misses. Clean data — the normal case — passes through by reference: zero clones, zero byte changes.</p>
 
   <h2>Device-bound OAuth tokens</h2>
   <p>Tokens live in OS device-bound paths: <code>~/.config/maddu/auth/</code> with restrictive permissions on Linux/macOS, <code>%APPDATA%\maddu\auth\</code> on Windows. There is no cross-machine sync, by design — that's what turns one compromised laptop into N compromised sessions. <code>maddu export</code> scrubs auth paths from any bundle; <code>maddu import</code> refuses to overwrite an existing token path (Rule #6).</p>
@@ -44,7 +45,11 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     <li>satisfy the active governance tier, and</li>
     <li>emit a <code>TRIGGER_FIRED</code> event with <code>triggered_by</code> provenance.</li>
   </ul>
-  <p>Auto-fire without all four is structurally impossible. The gauntlet stops auto-fires; it doesn't stop an operator who manually approves every refusal in a panic. The point is to make confidently-wrong propagation visible and intentional. See <a href="/docs/governance">Governance</a> for the three tiers built on it.</p>
+  <p>Auto-fire without all four is structurally impossible. The gauntlet stops auto-fires; it doesn't stop an operator who manually approves every refusal in a panic. The point is to make confidently-wrong propagation visible and intentional. See <a href="/docs/governance">Governance</a> for the three tiers built on it &mdash; and, since v1.97.0, the <code>PreToolUse</code> discipline hook that <em>blocks</em> a mutating edit when the session ritual is stale.</p>
+
+  <h2>Oversight &mdash; fed vs withheld</h2>
+  <p>A defense that fires silently is invisible to the person accountable for the agent. When an auto-injectable skill is <strong>withheld</strong> &mdash; for example the URL-swap guard refuses a skill that points its body at an off-box, unreviewed link (<code>SKILL_INJECTION_REFUSED</code>) &mdash; that refusal used to live in the record but surface nowhere. The <strong>oversight surface</strong> (<code>maddu spine oversight</code> and the cockpit <code>oversight</code> route) lists each skill the agent was <em>fed</em> and each one <em>withheld</em>, with a per-item plain-language reason, so a non-technical operator can see what the agent was and wasn't handed &mdash; on a record they can verify themselves.</p>
+  <p>It is an accountability surface, not a safety proof. It reports what happened with the capabilities the agent was given; it does not certify the outcome was correct. Pair it with the gates and your own review.</p>
 
   <h2>Forbidden patterns</h2>
   <p>Some patterns are named, refused, and structurally impossible inside the charter — not TODOs.</p>

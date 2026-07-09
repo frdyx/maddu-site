@@ -26,6 +26,12 @@ import EventStream from '../../components/EventStream.astro';
     <li><strong>release</strong> &mdash; the lane frees for the next agent.</li>
     <li><strong>close</strong> &mdash; the session leaves the record cleanly.</li>
   </ul>
+  <p>
+    On Claude Code this loop is <strong>enforced</strong>, not just asked for: with the
+    session hooks installed, a stale ritual &mdash; no session, no lane, an overdue
+    <code>slice-stop</code> &mdash; blocks the next mutating edit until you clear it (see
+    <a href="/docs/governance">Governance</a>).
+  </p>
 
   <Mermaid
     caption="Spine view — every transition appends, hindsight feeds memory"

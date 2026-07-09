@@ -4,7 +4,7 @@ import CompareStrip from '../components/CompareStrip.astro';
 import CtaBlock from '../components/CtaBlock.astro';
 import SubstrateLoop from '../components/SubstrateLoop.astro';
 import EventStream from '../components/EventStream.astro';
-import { VERSION_SHORT, VERBS_TOTAL, DOCTOR_GATES, HARD_RULES, RELEASE_COUNT, EVENT_TYPES } from '../data/stats';
+import { VERSION_SHORT, VERBS_TOTAL, DOCTOR_GATES, HARD_RULES, RELEASE_COUNT, EVENT_TYPES, CONTRACT_VERSION } from '../data/stats';
 import { RELEASES } from '../data/releases';
 
 // Marketing homepage — leads with verification + the record-as-contract, then
@@ -126,7 +126,7 @@ maddu model gates install
 ];
 
 const features = [
-  { tone: 'accent',   glyph: '⌗', title: 'Session discipline', body: 'Hooks auto-register every session, close it cleanly, and checkpoint governance before every compaction. Never build unrecorded.', href: '/features/discipline' },
+  { tone: 'accent',   glyph: '⌗', title: 'Session discipline', body: 'Hooks auto-register every session, checkpoint before every compaction, and — since v1.97 — block a mutating edit when the ritual is stale. Never build unrecorded.', href: '/features/discipline' },
   { tone: 'accent-2', glyph: '⑂', title: 'Worktree lanes',     body: 'Each lane claims its own isolated git worktree — parallel agents never share a checkout, every event lands on one spine.', href: '/features/worktrees' },
   { tone: 'warn',     glyph: '⟁', title: 'Earned autonomy',    body: 'A deterministic trust ladder over verified outcomes recommends relaxing a lane’s governance — never applies it.', href: '/features/autonomy' },
   { tone: 'accent',   glyph: '∴', title: 'Failure learning',   body: 'Mines past sessions for failed→succeeded tool calls and distils corrections. A fix learned once propagates across repos.', href: '/features/learn' },
@@ -226,7 +226,7 @@ const features = [
         ))}
       </div>
       <div class="contract-artifact">
-        <code class="schema-chip">docs/event-schema.json &middot; draft 2020-12 &middot; x-contractVersion 1.1.0 &middot; {EVENT_TYPES} event types</code>
+        <code class="schema-chip">docs/event-schema.json &middot; draft 2020-12 &middot; x-contractVersion {CONTRACT_VERSION} &middot; {EVENT_TYPES} event types</code>
         <p>
           Validate your governance record against its own published contract with <code>ajv</code>, <code>check-jsonschema</code>, or any validator — the witness is a contract a third party can verify, not a log you&rsquo;re asked to trust. And it&rsquo;s safe to hand over: every event&rsquo;s payload is redacted at the write boundary, so the record you share can&rsquo;t leak a pasted secret.
         </p>

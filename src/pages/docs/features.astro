@@ -21,7 +21,7 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   <div class="dx-cards">
     <a class="dx-card" href="/docs/features/discipline">
       <span class="dx-card-title"><span>Session discipline</span><span>&rarr;</span></span>
-      <p>Hooks auto-register every session, close it cleanly, and checkpoint governance before each context compaction. Never start building unrecorded.</p>
+      <p>Hooks auto-register every session, checkpoint before each compaction, and &mdash; since v1.97 &mdash; block a mutating edit when the ritual is stale. Never start building unrecorded.</p>
     </a>
     <a class="dx-card" href="/docs/features/autonomy">
       <span class="dx-card-title"><span>Earned autonomy</span><span>&rarr;</span></span>
@@ -46,6 +46,7 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     <li><a href="/features/learn">Failure learning</a> — mine past sessions for failed&rarr;succeeded tool calls, then federate the portable corrections across your repos.</li>
     <li><a href="/features/ci">Governance in CI</a> — run every deterministic gate headlessly and fail only on the gates the repo pinned as required.</li>
     <li><a href="/features/focus">Focus Director</a> — an opt-in, domain-blind instrument that flags sustained drift from the declared goal as a choice, never a gate.</li>
+    <li><a href="/changelog#v1-97-0">The Operator Plane</a> — read-only readouts for the human on the hook: <code>status --line</code>, a &ldquo;while you were away&rdquo; digest, a decision ledger tied to the tamper chain, a cross-workspace portfolio wall, and the oversight surface (what a skill was fed vs withheld, and why).</li>
   </ul>
   <p>
     The full grid, including every feature above, lives on <a href="/features">the features overview</a>.

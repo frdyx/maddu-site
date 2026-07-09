@@ -23,6 +23,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v1.97.0',
+    id: 'v1-97-0',
+    date: '2026-07-09',
+    type: 'milestone',
+    headline: 'Máddu’s governance stopped being advisory — self-enforcing discipline + the Operator Plane',
+    summary: 'Thirteen PRs (#251–#263) across four arcs, the enforcement work adversarially reviewed by Codex over three rounds, **without touching the deterministic default path**. The Claude Code `PreToolUse` hook now **hard-blocks a mutating edit** (Edit/Write/MultiEdit/NotebookEdit + classified Bash writes) when a session ritual is stale — no session, no lane, no governing goal/plan, an overdue slice-stop, or an uncommitted pileup. **Tier-scaled** by governance (`strict` blocks, `standard` is graduated warn→block, `relaxed` nudges), **fails open** (any error → allow; the hook never exits 2), and **never gates the remedy** (`maddu slice-stop`/`goal set`/`plan`/`lane claim`, `git commit`) so a block can’t deadlock its own fix. Plus **gates-before-done** (`goal done`/`plan complete` refuse at strict while a required gate is red) and the `discipline-observed` doctor gate. Alongside it, **the Operator Plane** — a read-only readout for the human who can’t read the code: `maddu status --line`, a “while you were away” digest, a single-project cockpit, a **decision ledger** whose every row-sha ties to the tamper chain, an enriched handoff, and a cross-workspace **portfolio wall** with “needs-the-human”. The **oversight surface** shows what the agent did with a skill — fed vs **withheld** and the plain-language why. Event contract **1.3.0**, **175** typed event types; verbs **72**; gates **74**; cockpit routes **46→50**.',
+  },
+  {
     version: 'v1.96.0',
     id: 'v1-96-0',
     date: '2026-07-07',
@@ -1273,7 +1281,7 @@ function typeMeta(t: ReleaseType) {
       <div class="eyebrow-chain">
         <span class="eyebrow">Changelog</span>
         <span class="eyebrow-sep">·</span>
-        <span class="eyebrow-dim">v0.17.1 → v1.96.0</span>
+        <span class="eyebrow-dim">v0.17.1 → v1.97.0</span>
         <span class="eyebrow-sep">·</span>
         <span class="eyebrow-dim">{RELEASES.length} releases · ~6 weeks</span>
       </div>

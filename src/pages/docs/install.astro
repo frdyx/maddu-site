@@ -69,21 +69,26 @@ maddu upgrade</code></pre>
   <h2>Optional: session hooks</h2>
   <p>
     On Claude Code, you can wire session discipline so a repo never starts building
-    unrecorded. This installs <code>SessionStart</code> and <code>SessionEnd</code> hooks
-    &mdash; auto-registering a session and recording it to the spine, then closing it &mdash;
-    idempotently, without disturbing existing hooks.
+    unrecorded. This installs four hooks &mdash; <code>SessionStart</code> and
+    <code>SessionEnd</code> auto-register a session and close it; <code>PreCompact</code>
+    writes a governance checkpoint before every context compaction; and (since v1.97.0)
+    <code>PreToolUse</code> <strong>blocks a mutating edit</strong> when a session ritual is
+    stale &mdash; idempotently, without disturbing existing hooks.
   </p>
 
   <div class="dx-code">
     <div class="dx-code-head"><span class="dx-code-dot"></span> terminal</div>
-    <pre><code><span class="tok-c"># wire SessionStart / SessionEnd into Claude Code</span>
+    <pre><code><span class="tok-c"># wire SessionStart / SessionEnd / PreCompact / PreToolUse into Claude Code</span>
 maddu hooks install</code></pre>
   </div>
 
   <p>
     After that a single auto-registered session flows into <code>lane claim</code> and
-    <code>slice-stop</code> with no extra flags. The hooks are Claude Code&ndash;specific;
-    skip this step on other runtimes.
+    <code>slice-stop</code> with no extra flags. Enforcement is tier-scaled by governance
+    (<code>strict</code> blocks, <code>standard</code> is graduated, <code>relaxed</code>
+    nudges), fails open, and never gates the remedy &mdash; back out any time with
+    <code>maddu hooks uninstall</code>. The hooks are Claude Code&ndash;specific; skip this
+    step on other runtimes.
   </p>
 
   <div class="dx-pager">
