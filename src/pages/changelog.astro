@@ -23,6 +23,22 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v1.99.0',
+    id: 'v1-99-0',
+    date: '2026-07-10',
+    type: 'hardening',
+    headline: 'Audit remediation — secret-scrub write-boundary + doc-drift (P5, the final tier)',
+    summary: 'The last tier of the 2026-07-09 flaw audit — the remediation roadmap is now **fully drained (6/6 tiers)**. The “secrets are redacted at the write boundary” guarantee was aspirational: the redactor covered the spine, but ~10 auxiliary state stores wrote caller/agent/subprocess text **raw**, the detector missed several common secret shapes, and a second stale scanner had drifted. One **canonical detector** (`secret-scan.mjs`) now recognises GitHub fine-grained (`github_pat_`) + user-to-server (`ghu_`) + refresh (`ghr_`), Google (`AIza…`), Stripe live/test secret+restricted keys, and a **correct PEM private-key matcher** (complete-label backreference block + an unterminated-to-EOF fallback so a truncated key body can’t survive); field-name awareness adds `refresh_token`/`client_secret`/`bearer` — bare `token`/`secret` deliberately excluded (the key match is substring-based; they’d eat `sessionToken`). **Every discrete state-store write is now scrubbed at the boundary** via a new value-pattern `redactLeaves` (non-breaking on config field names): checkpoint tag message + index, active-session, schedules (repo + global), review archives, memory facts, MCP/runtime descriptors + health, and the lane catalog; the importer routes through the **same** detector. **Documented residual** (stated plainly in SECURITY.md + the threat model): worker subprocess stdout/stderr **log files** are fd-direct streams and are *not* auto-redacted — a correct fix needs a chunk-boundary-safe streaming redactor. Doc/count drift reconciled too — `version.json`/`package.json`/`package-lock` to 1.99.0 (pinned by a new version-parity self-test), the governance gate count (10→74), and the README landing page (contract 1.7.0 / 182 types). **No new gate/verb/event type** — the new checks are auto-discovered self-tests. Plan + diff Codex-reviewed; Actions green under the required `ci` check.',
+  },
+  {
+    version: 'v1.98.0',
+    id: 'v1-98-0',
+    date: '2026-07-10',
+    type: 'milestone',
+    headline: 'Audit remediation — the spine becomes tamper-detecting, and no agent is the sole witness to its own work (P0–P4)',
+    summary: 'A **2026-07-09 seven-auditor flaw audit** (Codex-verified) found several headline guarantees passing for the *wrong reason* — two systemic patterns: **green-because-wrong-scope** (a gate scans a path that misses the real code) and **actor-is-witness** (a gate re-reads a record the actor’s own process wrote). Five tiers, each shipping the gate that would have caught its own bug. **P0a** (#266) closes a cockpit **stored-XSS** — the mailbox subject + five defense sinks escape to text nodes; markdown `safeHref` rejects `javascript:`/control-char bypasses. **P0b** (#267) adds **bridge capability-token auth** — a per-boot timing-safe secret gates every mutating route and any cross-workspace request (`BRIDGE_CROSS_WORKSPACE`); honestly a loopback-CSRF boundary, *not* inter-process auth. **P1** (#268) makes the spine **tamper-detecting**: a post-cutover chain **FAILs** `spine verify` on an interior edit, deletion, insertion, reorder, or `prev_hash`-strip, backed by one funnel-locked flat-append primitive so concurrent writers can’t fork — **unkeyed**, so a determined actor who recomputes the whole chain stays out of scope (the OS’s job); the claim is reworded from *evident* to **detecting** throughout. **P2** (#269) makes discipline **honest** — a 5-class Bash classifier where WRITE dominates self-disable, `DISCIPLINE_SKIPPED`/`ENFORCEMENT_ERROR` witnesses on every fail-open, and a guarded governance off-switch (domain-checked, rank-weakening, write-ahead `GOVERNANCE_OVERRIDE_CHANGED`). **P3** (#270) replaces actor-witness with **verification**: success-eval, test-recency, and completion-claim now believe a tamper-detecting `VERIFICATION_STARTED`/`RAN` spine **receipt** from the runner’s *in-process* result, never a hand-writable state file. **P4** (#271) fixes **gate scope + CI integrity** — `rule-5` scanned a nonexistent path (0 files → green) now scans the real tree with a lexically-aware banned-import matcher, SKIP-as-PASS is closed (reserved exit **77** + `--fail-on-skip`), warn-only “required” gates were repinned fail-capable (**66→52**), and **branch protection is ON** with a required aggregate `ci` check on `main`. Event contract **1.7.0**, **182** typed event types; verbs **72**; gates **74**. Each tier’s plan *and* diff adversarially reviewed by Codex before self-merge.',
+  },
+  {
     version: 'v1.97.0',
     id: 'v1-97-0',
     date: '2026-07-09',
@@ -1281,7 +1297,7 @@ function typeMeta(t: ReleaseType) {
       <div class="eyebrow-chain">
         <span class="eyebrow">Changelog</span>
         <span class="eyebrow-sep">·</span>
-        <span class="eyebrow-dim">v0.17.1 → v1.97.0</span>
+        <span class="eyebrow-dim">v0.17.1 → v1.99.0</span>
         <span class="eyebrow-sep">·</span>
         <span class="eyebrow-dim">{RELEASES.length} releases · ~6 weeks</span>
       </div>
