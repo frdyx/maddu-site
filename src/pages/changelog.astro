@@ -23,6 +23,54 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v1.105.0',
+    id: 'v1-105-0',
+    date: '2026-07-16',
+    type: 'feature',
+    headline: 'Usage-audit Tier 5 (final) — learn as a measured trial at the ritual boundary',
+    summary: 'The roadmap’s last tier — **the 2026-07-16 usage-audit roadmap is fully drained.** The audit found `maddu learn` self-dev-only: 11 accepted corrections in the framework repo, **0 across all 21 consumers** — the verbs exist; nothing surfaced them where the work happens. Now **`slice-stop` (and `session close`) run a READ-ONLY learn candidate detection pass** and preview what `maddu learn` would harvest — accept one-liners point at the existing verbs; **nothing is auto-written**, so no rule-#9 gauntlet entry. The **containment contract is proven through the real CLI**: post-append try/catch isolation (a deliberately-throwing detector still stops green), a bounded session window (500 lines / 256KB), and a 1500ms cooperative deadline (a slow detector never stalls the ritual). **No new heuristics** — detection reuses the existing deterministic learn-spine miners. And it ships as **a measured trial with a pre-authorized demotion**: adoption metric = accepted corrections, a 4-week window with a **12-week hard backstop** (a cohort that never forms IS the verdict); on failure a binding demotion PR removes the hook-in and reclassifies learn as expert/self-dev. The considered `LEARN_RETRIEVED` contract bump was **not** taken — recorded, not silent. Verbs **72**; gates **74**; no new event type.',
+  },
+  {
+    version: 'v1.104.0',
+    id: 'v1-104-0',
+    date: '2026-07-16',
+    type: 'feature',
+    headline: 'Usage-audit Tier 4b — minimal default catalog + the init --force data-loss fix',
+    summary: 'New installs stop prescribing a lane taxonomy: **a fresh `maddu init` seeds a single `general` lane** — the claim-anything fallback — and the catalog **grows from observed reality** via Tier 4a’s `lane suggest --adopt`. (A deliberate deviation from the audit’s “empty catalog”: one claimable lane must exist for the discipline/`claim --worktree` flows.) Existing installs untouched — **and the review made that actually true**: it caught that `init --force` had been unconditionally overwriting `catalog.json`, wiping `claims.json`, **and truncating the spine’s first event segment** — a long-standing, *pre-existing* data-loss path. All three fixed: `--force` re-installs framework files only, records the re-install through the canonical `spine.append`, and `spine verify` passes afterward. Compat evidence: a real end-to-end init → hooks → claim → slice-stop → release → ad-hoc-claim ritual passes on the minimal catalog (22-check suite). Verbs **72**; gates **74**; no new event type.',
+  },
+  {
+    version: 'v1.103.0',
+    id: 'v1-103-0',
+    date: '2026-07-16',
+    type: 'feature',
+    headline: 'Usage-audit Tier 4a — lane catalog: observed, not prescribed',
+    summary: 'The default 7-lane catalog measured **76% dead** fleet-wide (112/147 placements never claimed) while **64% of consumer claims were ad-hoc** — the catalog prescribes and reality routes around it. **`maddu lane suggest`** (a new subcommand on the existing verb) compares the catalog against lifetime observed claims: dead entries flagged, and **suggestions from claim counts ONLY** (≥3 lifetime claims of the same non-ephemeral ad-hoc id; `auto-`/numeric ids and imported backfill never count; repo-structure inference explicitly dropped). Suggestions only — the operator confirms. **`--adopt`** graduates a suggestion into the catalog and wakes the dormant `LANE_ADDED`; **`--prune`** removes a *never-claimed* entry (refusing anything ever claimed), waking `LANE_REMOVED`. The mandated schema verification found real drift: the bridge’s `LANE_REMOVED` emitter wrote `{}` against the documented `{ ok: boolean }` — both emitters now conform, the shape pinned by self-test. `lane list` marks never-claimed entries **`(unused)`**; **`insights lanes`** reproduces the audit’s dead-catalog table fleet-wide. **Two dormant event types wake; none added.** Verbs **72**; gates **74**.',
+  },
+  {
+    version: 'v1.102.0',
+    id: 'v1-102-0',
+    date: '2026-07-16',
+    type: 'feature',
+    headline: 'Usage-audit Tier 3 — activation funnel',
+    summary: 'The audit found 5/21 installs (**24%**) parked at “installed, never started the ritual” — thousands of passive events, zero sessions/claims/slice-stops — with nothing in the product saying so. The **activation funnel** is a read-only spine derivation of the lifetime furthest ritual stage — `installed → healthy → session → claimed → slice → repeating` (≥3 slice-stops) — **monotonic**, with passive gate/doctor/boot traffic and imported backfill explicitly **never counting as adoption**. **`maddu doctor` prints the stage + ONE next action** (the healthy→session action points at `maddu hooks install` — the proven activation lever). **`maddu fleet` gains a funnel column + a headline rollup** flagging parked installs; `upgrade` nudges when session discipline is unwired; `init` says an unhooked install stays parked. Live acceptance: the funnel matched the audit’s hand-derived segmentation for **all 22 workspaces**. Verbs **72**; gates **74**; no new event type.',
+  },
+  {
+    version: 'v1.101.0',
+    id: 'v1-101-0',
+    date: '2026-07-16',
+    type: 'feature',
+    headline: 'Usage-audit Tier 2 — execution telemetry (invocation receipts)',
+    summary: 'Record what actually *runs*, not what gets mentioned — the audit’s verb stats were transcript keyword mentions. **Every `maddu` entry now appends one CLI invocation receipt** (`ts/verb/sub/exit/ms/sessionId/workspace`) to a new dedicated corpus `.maddu/state/invocation-receipts.ndjson` — deliberately **NOT the spine** (telemetry isn’t a fact the record must witness), **fail-open at every step** (nothing ever blocks or noises a verb; p50 write <10ms), secret-scrubbed at the write boundary, and **device-local** (never chained, synced, or exported). **Honest incompleteness by contract**: receipts are an *observed-window* signal — every surface renders the retention window + dropped-line count, and none may present receipt counts as lifetime totals; declared by the new **`maddu log --window`**. **`insights verbs` is receipts-first**; the transcript scan is demoted to a labeled legacy mentions signal. **Gate outcome discrimination**: non-pass `GATE_RAN` states enumerated + a fleet Gate-outcomes rollup + a new `gate-fail-path` self-test proving failing gates land on the spine — the first fleet run showed the audit’s “0 fail” was the *collector* misreading the payload (real fleet: **68 warn + 50 fail**; the fail path was writing all along). No new event type, no contract bump. Verbs **72**; gates **74**.',
+  },
+  {
+    version: 'v1.100.0',
+    id: 'v1-100-0',
+    date: '2026-07-16',
+    type: 'hardening',
+    headline: 'Usage-audit Tier 1 — instrument truth',
+    summary: 'First tier of the **2026-07-16 fleet usage-audit roadmap** (a 22-workspace spine audit that caught the instruments lying): before changing what the instruments measure, make them honest. **Version SSOT** (`installed-version.mjs`): one resolver shared by `maddu fleet` AND `maddu insights` — the audit caught them disagreeing **1.15.0 vs 0.19.0 on the same repo**, because insights replayed the spine’s install-time version that upgrades never touch — both now agree **22/22** and print the source they resolved from. **Import/native segmentation keyed on `data.source`** (not event type): imported transcript backfill no longer moves activity/recency/volume (one repo drops from a misleading 55,225 events to its native 1,557); `--include-imported` restores merged totals with imported tallies reported apart. **Exhaustive taxonomy partition**: every one of the 182 event types lands in exactly one of fired / imported-only / dormant-by-design / plugin-owned / dead, and the buckets **must sum to 182** (self-tested). **Role segmentation**: `insights --role consumer|fixture|self`, so framework self-development can’t masquerade as fleet adoption. `SKILL_INJECTION_REFUSED` reclassified **dormant-by-design** (a security refusal witness whose silence is the good outcome) → fleet dead count **0**. Event contract **1.7.0 → 1.8.0** (MINOR: `INBOX_MESSAGE`/`SKILL_CREATED`/`SKILL_UPDATED` gain optional `source`). Verbs **72**; gates **74**.',
+  },
+  {
     version: 'v1.99.0',
     id: 'v1-99-0',
     date: '2026-07-10',
@@ -1297,7 +1345,7 @@ function typeMeta(t: ReleaseType) {
       <div class="eyebrow-chain">
         <span class="eyebrow">Changelog</span>
         <span class="eyebrow-sep">·</span>
-        <span class="eyebrow-dim">v0.17.1 → v1.99.0</span>
+        <span class="eyebrow-dim">v0.17.1 → v1.105.0</span>
         <span class="eyebrow-sep">·</span>
         <span class="eyebrow-dim">{RELEASES.length} releases · ~6 weeks</span>
       </div>

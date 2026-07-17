@@ -259,7 +259,7 @@
       "cliBlocks": [
         "$ maddu doctor [--verbose] [--all] [--gate <id>] [--severity <critical|safety|warn>]"
       ],
-      "cliNotes": "Reports PASS / WARN / FAIL per check. Appends a DOCTOR_REPORT event. Exits 1 on any FAIL. If a workspace registry exists at ~/.config/maddu/workspaces.json, doctor validates its shape unconditionally. By default per-rule checks run for the cwd repo. Pass --all to run every check for every registered workspace; check rows are prefixed with [<workspace-id>]. **Gate runner *(v0.16+)*.** Doctor is a fan-out runner over template/maddu/runtime/gates/builtin/*.mjs (framework) plus <repo>/.maddu/gates/*.mjs (operator). Each gate emits a GATE_RAN event. --gate <id> runs only one gate (e.g. --gate spine-integrity). --severity <level> filters by severity. Operator gates with the same id as a built-in override the built-in. See 20-governance.md.",
+      "cliNotes": "Reports PASS / WARN / FAIL per check. Appends a DOCTOR_REPORT event. Exits 1 on any FAIL. If a workspace registry exists at ~/.config/maddu/workspaces.json, doctor validates its shape unconditionally. By default per-rule checks run for the cwd repo. Pass --all to run every check for every registered workspace; check rows are prefixed with [<workspace-id>]. **Gate runner *(v0.16+)*.** Doctor is a fan-out runner over template/maddu/runtime/gates/builtin/*.mjs (framework) plus <repo>/.maddu/gates/*.mjs (operator). Each gate emits a GATE_RAN event. --gate <id> runs only one gate (e.g. --gate spine-integrity). --severity <level> filters by severity. Operator gates with the same id as a built-in override the built-in. See 20-governance.md. **Activation funnel *(v1.102.0)*.** After the summary, doctor prints the repo's activation stage — the lifetime furthest step reached on the ritual path installed → healthy → session → claimed → slice → repeating (≥3 slice-stops) — plus the ONE next action for any repo not yet repeating. Derived read-only from the spine; passive gate/doctor traffic and imported backfill never count as adoption; the funnel never decays. maddu fleet shows the same stage as a column across every registered workspace.",
       "deepDive": {
         "file": "06-hard-rules.md",
         "url": "https://github.com/frdyx/maddu/blob/main/docs/06-hard-rules.md"
@@ -541,7 +541,7 @@
       "since": null,
       "cliIntro": "Claim / release / list lanes.",
       "cliBlocks": [
-        "$ maddu lane list\n$ maddu lane claim --lane <id> --session <sid> [--focus \"<f>\"]\n$ maddu lane release --lane <id> --session <sid>"
+        "$ maddu lane list                              # (unused) marks never-claimed catalog entries (v1.103.0)\n$ maddu lane claim --lane <id> --session <sid> [--focus \"<f>\"]\n$ maddu lane release --lane <id> --session <sid>\n$ maddu lane suggest [--json]                  # catalog vs observed claims; adoptable ad-hoc ids (v1.103.0)\n$ maddu lane suggest --adopt <id>              # graduate a ≥3-claim ad-hoc lane into the catalog (LANE_ADDED)\n$ maddu lane suggest --prune <id>              # remove a never-claimed catalog entry (LANE_REMOVED)"
       ],
       "cliNotes": "claim exits 3 if the lane is already held by another session.",
       "deepDive": {
