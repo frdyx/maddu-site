@@ -23,6 +23,102 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v1.115.0',
+    id: 'v1-115-0',
+    date: '2026-08-05',
+    type: 'milestone',
+    headline: 'Memory-recall track — trust-gated recall: no unreviewed fact reaches an agent (+ Máddu as an MCP server)',
+    summary: 'The memory-recall track lands whole (diff **Codex-CLEAN after 10 review rounds** — 36 findings fixed: 7 blocker, 20 major, 9 minor; contract **1.11.0 → 1.13.0**). The defects were honest ones: CLI slice-stops ran hindsight but never the wiki (**462 of 726 live stops missing** at fix time), cross-corpus search was substring + timestamp so recency always beat relevance, and **726 of 935 facts were auto-promoted regex summaries** — feeding memory back to agents would have amplified unreviewed agent assertions. Now **one slice-stop materializer serves both transports** (idempotent wiki append — replays are byte-identical no-ops), and a new **`maddu wiki`** verb ships sync/drift/page/list/rebuild: the live backfill appended 462 missing blocks, drift → 0. Search gets **BM25 relevance** (golden suite Recall@5 **1.000**, MRR **0.96**, p95 **6ms**) with IDF computed over the full per-kind corpus so it stays honest. Fact trust is **event-sourced**: every fact starts `asserted` — searchable, **never injectable**; `memory approve` binds an approval to a sha256 of the WHOLE canonical fact (any field edit voids it); `revoke` requires a reason; trust survives rebuild (the spine wins). The **recall packet** is a single eligibility seam — approved-only, ranked, hard-capped at 8 items / 16KB with complete per-reason withheld accounting; `brief --for-agent` re-derives trust immediately before witnessing, records `MEMORY_INJECTED` with per-fact `{id, sha256, approvalEvent}` rows, and **FAILS CLOSED** on any error — fact text renders witnessed or not at all. A new **critical gate `memory-injection-bounded`** (gates **74 → 75**) folds the UNCAPPED history: bounds + approval-reference validation hard-fail; temporal anomalies a merged order cannot prove causal surface as named WARNs — detected, never silent. And **`maddu mcp serve`** (verbs **72 → 73**) makes Máddu an MCP server — hand-rolled JSON-RPC 2.0 over stdio, Node stdlib only: `memory_search`, `recall_packet` (inspection ≠ injection: no witness), `wiki_read`, `atlas_query`, `status`; a conformance fixture hash-proves spine + memory + wiki untouched by a full dialogue. Self-test **189/189**; ~250 new assertions across 9 suites.',
+  },
+  {
+    version: 'v1.114.0',
+    id: 'v1-114-0',
+    date: '2026-07-24',
+    type: 'hardening',
+    headline: 'Worktree two-resource recovery — a crash mid-detach can no longer strand a lane',
+    summary: 'PR-D of the session-lifecycle track (diff **Codex-CLEAN after 6 review rounds**; contract **1.10.0 → 1.11.0**). The defect: `detachLaneWorktree` removed the git checkout BEFORE appending the terminal `WORKTREE_DETACHED`, so a crash between **stranded the lane forever** — the attachment folds as LIVE (a pure spine fold, no fs check), release is blocked, a retry throws, and nothing self-heals; hard rule #2 forbids a rollback-atomic write across the two resources. Detach is now **intent-first**: a durable `WORKTREE_DETACHING` lands after dirty/ancestry authorization and before git removal, so a crash is recoverable from the intent — **never by inferring “gone” from filesystem absence** (a storage outage is indistinguishable). Every attach mints a per-worktree **instance token** into the checkout’s private git dir, so recovery removes only a token-matched PRESENT instance — a manually-replaced checkout is never deleted. Auto-finalize is **positive-removal-only** inside the janitor’s rule-#9 gauntlet; an absent instance is never auto-terminalized — it surfaces `needsOperator` with the exact `lane release --worktree --recover` command per case. Operator recovery authorizes via an active-owner-aware matrix (present+match → remove + terminalize; present+mismatch → orphaned leftover, **never removed**; **foreign origin → refuse + redirect** — a terminal synced back would close the source replica’s real attachment), recording both `recoveryActor` and `attachmentOwner`. A new atomic-publish lock serializes every worktree writer in disjoint namespaces; dead owners are stolen by atomic quarantine. New suites: worktree-lock **26**, recovery **42**, recovery-fold **17**, writer census **9**; self-test **185/185**.',
+  },
+  {
+    version: 'v1.113.0',
+    id: 'v1-113-0',
+    date: '2026-07-23',
+    type: 'hardening',
+    headline: 'Lane-writer serialization — and the bridge release authorization hole closed',
+    summary: 'PR-C of the session-lifecycle track (diff **Codex-CLEAN after 5 review rounds**; no new event types, `project()` output byte-identical, golden-tested). The headline fix: **`POST /bridge/lanes/release` previously appended `LANE_RELEASED` for ANY `sessionId` with no holder check** — in default mode a release clears the lane, so any caller could evict any lane’s real holder. Release now requires the actor to OWN the lane (**404** no-claim / **409** owned-by-another, holder intact), and worktree disposition authorizes by the **attachment owner**, not the claim holder, so a superseded owner can neither orphan its own live checkout nor be blocked from withdrawing. Every `LANE_CLAIMED` / `LANE_RELEASED` / `LANE_CLAIM_FORCED` mutation now **decides AND appends inside one transaction**, against a fresh strict snapshot taken under a new lane-claims lock — `spine.append` serializes only the physical write, never the decision window above it, **which is exactly the race this closes**. A lane-writer **census tripwire** fails if any raw ownership append reappears outside the helper. Claim requires an active REGISTERED session and refuses on any active rival owner; force is the sole evictor, stamping an import-stable `forceGroup` id on the whole bundle; the force-discipline gate reconstructs each bundle and hard-fails a forged prior — and in team-sync mode the reconstruction is **withheld as unsound** (a merged replica history can resurrect an earlier first-claimer), stated honestly rather than faked. Deliberate migrations: `lane claim` refuses an unregistered or closed session; the auto-claim fallback lane is now `auto/<full-session-id>`. Concurrency matrix **48/48**; self-test **181/181**.',
+  },
+  {
+    version: 'v1.112.0',
+    id: 'v1-112-0',
+    date: '2026-07-22',
+    type: 'hardening',
+    headline: 'Session-id validation at the chokepoints',
+    summary: 'PR-B of the session-lifecycle track (diff **Codex-CLEAN after 4 review rounds**) — the id-validation campaign the PR-A review surfaced, split out as a seeded follow-up. **One id grammar** (`id-grammar.mjs`), enforced at every ingress that turns caller input into a `sessionId` — the bridge body reader, CLI `--session` / `MADDU_SESSION_ID` resolution, register, heartbeat/close, and the lane-ownership entry points — so a malformed id is **refused at the boundary**, never interpolated into a projection key or an event. A **`sid-surface-census`** tripwire enumerates every place a `sessionId` crosses from untrusted input into the trusted core and asserts each one routes through the validator, so a new ingress can’t silently reintroduce the gap. A missing session file (ENOENT) stays honestly distinct from a malformed id (refused). No contract change beyond the stricter ingress validation.',
+  },
+  {
+    version: 'v1.111.0',
+    id: 'v1-111-0',
+    date: '2026-07-22',
+    type: 'hardening',
+    headline: 'Session-lifecycle serialization + honest dirty-age — six shipped bugs fixed',
+    summary: 'PR-A of the session-lifecycle track (plan v27, **Codex-SOUND after 27 review rounds**). Every lifecycle mutation now goes through **serialized, condition-checked primitives**: ONE conditional close shared by CLI/bridge/hooks/janitor (already-closed → no duplicate event; never-registered → no verify-invalid append; an in-lock precondition means the janitor can never close a just-heartbeated session) and atomic registration with duplicate rejection in ANY status — **a closed session can no longer be resurrected by a same-id re-register**. SessionEnd closes **its own** session, resolved via the SessionStart binding — an unbound end closes nothing. **Six pre-existing shipped bugs fixed** along the way: a renewed session stayed visibly stale forever; git rename records mis-parsed the source path as a bogus dirty path; the auto-close note was silently discarded; a hook bootstrap failure could **block an edit or compaction** (all four hooks now bootstrap inside fail-open containment); closing a missing id appended a verify-invalid event; a baseline-dirty path was excluded from dirty counting FOREVER even after going clean and re-dirtying. **Dirty-age got honest**: scratch-glob ignores, per-file first-seen clocks (age = the oldest still-dirty file; committing it drops the clock), staged-rename clock transfer, and failed observations suppress the commit gate and report `dirty=unknown` instead of a false clean. No contract change; new session-lifecycle suite (**55** asserts), discipline suite grown to **112**.',
+  },
+  {
+    version: 'v1.110.0',
+    id: 'v1-110-0',
+    date: '2026-07-21',
+    type: 'milestone',
+    headline: 'spine anchor --assess — the consume ritual; the assurance ladder is complete',
+    summary: 'PR 6a of the verification-witness track — **the shippable ladder is COMPLETE: actor-reported → replayed → anchored** (presence-attested stays deferred, and that is stated, not hidden). An interactive operator ceremony records `ASSURANCE_ASSESSED` as a **non-authoritative ledger note** — labeled that way by every consumer, `--json` carries `authoritative: false`. **The tool’s checks can only REFUSE, never grant the level**: payload↔receipt↔SHA binding with symlink-free containment, full anchor-chain verification (mid-history deletion, prev-chain breaks, forged `ANCHOR_*` events), `witness.maxAnchorAge` staleness, and a **TOCTOU recheck run AFTER the final confirm** — anything that moved during the operator’s verification window refuses with nothing recorded. The positive evidence is **the operator’s own external Bitcoin-backed `ots verify` run**, pasted verbatim (redacted BEFORE the 8 KiB cap so a token straddling the boundary can’t evade the scrubber) and confirmed explicitly (default No). No verifier is ever executed by the tool — **a runner the agent controls re-verifying its own evidence would be actor-as-witness**. Honest residuals on every surface: only the newest anchor’s proof digest is disk-checkable; suffix deletion of anchors still needs a retained operator checkpoint; **an anchor proves a receipt existed by a time — not that the work was good**. Threat model gains **scenario 13** (the ladder + its stated residuals); SECURITY.md’s witness claim updated — the “planned, not shipped” placeholder is gone. 75-assert kill-criteria suite; plan Codex-SOUND over 9 rounds, diff CLEAN in 3. Verbs **72**; gates **74**; no contract change.',
+  },
+  {
+    version: 'v1.109.0',
+    id: 'v1-109-0',
+    date: '2026-07-21',
+    type: 'feature',
+    headline: 'spine verify --replay — the receipt re-earned in a clean checkout, not re-asserted',
+    summary: 'PR 5 of the verification-witness track (plan **Codex-SOUND** after 5 rounds). The `replayed` rung gets its producer: **clone the repo at an EXACT commit and re-run the verification the repo ITSELF declares** — `maddu.json → replay:{install?, verify}`, read from the **git object store AT the subject SHA**, so a dirty worktree can never choose the commands for an older commit; a commit predating the declaration is honestly `unsupported` (exit 2, **no spine events**), and no lockfile/ecosystem inference exists anywhere in the module. **Strict receipt discipline**: setup refusals emit nothing; a STARTED append failure refuses pre-run (replay will not run unrecorded); a RAN append failure exits nonzero and **never claims `replayed`**. **Settlement-proof execution**: each declared command gets a fixed 10-minute timeout with whole-process-tree kill under a settlement deadline that starts at kill initiation — a stalled kill can never hang; a spawn error settles as a fail, never a dangling STARTED. **Fail-closed cleanup**: the clone is deleted BEFORE the receipt, and a cleanup failure forces fail + nonzero exit **even when the commands passed** — an incompletely executed replay protocol never reads as a successful `replayed` run. Honest scope, printed every run: clean-checkout reproducibility + dirty-worktree contamination detection; host env, credentials, caches, and services are NOT isolated. New docs/55; suite **41/41** including the Windows grandchild tree-kill. Verbs **72**; gates **74**; no contract change.',
+  },
+  {
+    version: 'v1.108.0',
+    id: 'v1-108-0',
+    date: '2026-07-21',
+    type: 'feature',
+    headline: 'spine anchor — the external witness (OpenTimestamps → Bitcoin)',
+    summary: 'PR 4 of the verification-witness track — **the first evidence that lives OUTSIDE the agent’s authority**. `maddu spine anchor` stamps a canonical payload committing to a verification receipt AND the broader history (receipt digest, spine position, chain head, prev-anchor hash, seq) **into Bitcoin** via the stock OpenTimestamps client — a declared ambient tool like git, **zero new package dependencies**, ~1s of anonymous HTTP, no accounts. `--upgrade` completes proofs after Bitcoin confirmation (dogfooded: **block 958943**); `--verify` is a read-only self-consistency diagnostic that is **never assurance evidence** — and Bitcoin-backed verification is deliberately an **OPERATOR action** (`ots verify`, local node or explorer mode with its reduced trust stated), not a maddu verb, because a runner the agent controls re-verifying its own evidence is actor-as-witness. Contract **1.9.0 → 1.10.0** (`ANCHOR_STAMPED`, `ANCHOR_UPGRADED`, `ASSURANCE_ASSESSED` + `validateAssuranceEvidence`). **No offline queue** — offline says so and exits nonzero with nothing recorded; concurrent invocations serialize under a funnel lock; **team-sync mode is refused fail-closed** (a singular chain head cannot cover a merged multi-replica spine). Adversarial `--verify` FAIL-flags mid-history renumbering/deletion, edited payloads, rewritten spine positions, and forged `ANCHOR_*` events — while restating every time that **suffix/all-history deletion is NOT detectable without a retained operator checkpoint**. An anchor proves the receipt EXISTED by a time, not that it is true — content honesty is replay + the ceremony. `.maddu/anchors/` is tracked, so anchors travel with the repo. Windows works with the stock client v0.7.2 (documented DLL shim). New docs/54; suite **36/36**.',
+  },
+  {
+    version: 'v1.107.0',
+    id: 'v1-107-0',
+    date: '2026-07-20',
+    type: 'hardening',
+    headline: 'Consumer permission guardrails ride hooks install',
+    summary: 'PR 3 of the verification-witness track. The guardrails that previously existed only as hand-authored settings on the maintainer workstation now **ship to every consumer by default**: `maddu hooks install` merges Edit-form deny rules over framework internals (`maddu/runtime/**`, `.maddu/config/**`, `.maddu/gates/**`, both settings files) into the consumer’s `.claude/settings.json`, plus `ask` rules generated from `maddu.json → guardrails.ask[]` — **declared by the project, never guessed**; `--no-guardrails` opts out. **Recorded ownership with preservation proven end-to-end**: the exact strings an install adds are recorded, uninstall strips exactly that set, and e2e drives the real CLI — install → **byte-identical** second install → uninstall leaves user-authored content intact. The honest framing ships in the CLI output itself: **bypassable harness friction covering the built-in file tools, NOT a security boundary** — Bash coverage is version-dependent, and subprocesses are never covered (bypass demonstrated and documented). Eight Codex review findings applied pre-merge across three hardening rounds: a lost ownership record can no longer turn uninstall into a silent no-op that leaves every guardrail behind; malformed permission shapes **refuse the install** (file untouched) instead of writing rules that vanish at serialize time or clobber user data; a user’s pre-existing empty arrays survive byte-identical. Unit **76/76**, e2e **35/35**. Verbs **72**; gates **74**; no contract change.',
+  },
+  {
+    version: 'v1.106.0',
+    id: 'v1-106-0',
+    date: '2026-07-20',
+    type: 'hardening',
+    headline: 'Verdict-machinery drift detection — the record tells you when the yardstick moved',
+    summary: 'PR 2 of the verification-witness track (PR 1 was the docs-honesty pass). The unshipped oracle-pin branch is **descoped to its PROVEN fixes and renamed to what it honestly is**: verdict-machinery drift detection — it watches the machinery that decides what a result MEANS; **test assertions ARE the oracle and are not covered**. Kept, Codex-verified: CRLF-normalizing content hashing (raw-byte hashing broke every Windows `autocrlf` checkout), binary raw-byte preservation, full-replacement projection semantics, and regression tests proven to fail on pre-fix code. The `tracked-source-drift` gate is **demoted `critical` → `warn`** and removed from the required set — a cooperative “the yardstick moved” signal, **deliberately NEVER an assurance input**: an actor who can edit the pinned files can re-pin them, so `critical` falsely lent it trust-boundary weight. **No reasonless re-pin**: `maddu sources rebuild` refuses an absent reason and a flag-shaped or whitespace-only one, and the `--force` waiver is gone — contract **1.8.0 → 1.9.0** lists `reason` + `by` on `SOURCE_HASH_RECOMPUTED`. An empty pin config is never green anywhere on the surface. Threat-model §12 rewritten + SECURITY.md aligned — **four false claims fixed**. Fresh clones go green with an honest “nothing pinned yet” WARN. Verbs **72**; gates **74**.',
+  },
+  {
+    version: 'v1.105.2',
+    id: 'v1-105-2',
+    date: '2026-07-19',
+    type: 'patch',
+    headline: 'ci-command test no longer clobbers the real ci.json',
+    summary: 'Test-isolation leak found while shipping v1.105.1: the ci-command test ran `maddu ci` against the **real repo root** and mutated `.maddu/config/ci.json` in place, restoring in a `finally` — so a harness kill on timeout, or a concurrent gate reading mid-run, leaked the clobbered single-gate state into the working tree, **dropping the 52-gate required set to 1**. A new `MADDU_CI_PROFILE` env seam (test/CI-only) redirects both reads and writes to an absolute override path; the override read is **fail-closed** — only ENOENT means unpinned, a corrupt or wrong-shaped override exits nonzero with a diagnostic, never a silent green. The test is now fully isolated and asserts the real `ci.json` is **byte-identical** (existence + bytes) before and after the run. ci-command **21/21**; no contract change.',
+  },
+  {
+    version: 'v1.105.1',
+    id: 'v1-105-1',
+    date: '2026-07-19',
+    type: 'patch',
+    headline: 'Atomic Claude→Máddu session binding — a consumer incident, root-caused',
+    summary: 'Surfaced by a consumer repo upgrading Máddu mid-session: the discipline gate blocked a legitimately-running session with *“no active session governs.”* The load-bearing bug: the claude→maddu binding write was an **unlocked read-modify-write** — two concurrent SessionStarts (the long-lived bridge + a CLI invocation) could clobber each other’s entries — and the handler re-read the SHARED active-session pointer for the sid to bind, so **both Claude ids could bind to ONE Máddu session**. Fixed: binding serializes under the existing per-repo advisory lock with a finite 2s wait (a stuck holder times out rather than hanging session start); `writeJson` is atomic temp+rename so a lock-free reader never sees a torn map; `maddu register` now **returns the session id it CREATED** and SessionStart binds that — never the shared pointer. The honest remedy is documented: an unbound running session cannot be healed by `maddu register` (the Claude `session_id` reaches Máddu only on the hook’s stdin) — **restart the session** so a fresh SessionStart binds it. Deliberately NOT done, Codex ruled it unsound over two rounds: auto-adopting an existing session at edit time — an unbound caller can’t be authenticated as the owner. Full self-test green.',
+  },
+  {
     version: 'v1.105.0',
     id: 'v1-105-0',
     date: '2026-07-16',
@@ -1345,9 +1441,9 @@ function typeMeta(t: ReleaseType) {
       <div class="eyebrow-chain">
         <span class="eyebrow">Changelog</span>
         <span class="eyebrow-sep">·</span>
-        <span class="eyebrow-dim">v0.17.1 → v1.105.0</span>
+        <span class="eyebrow-dim">v0.17.1 → v1.115.0</span>
         <span class="eyebrow-sep">·</span>
-        <span class="eyebrow-dim">{RELEASES.length} releases · ~6 weeks</span>
+        <span class="eyebrow-dim">{RELEASES.length} releases · ~11 weeks</span>
       </div>
       <h1>{RELEASES.length} releases. <span class="dim-h1">One charter held.</span></h1>
       <p class="lede">

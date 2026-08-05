@@ -10,7 +10,7 @@ export const AXES = [
   'Multi-agent coordination',
   'Approvals workflow',
   'Deterministic gates / CI',
-  'Tamper-evident audit record',
+  'Tamper-detecting audit record',
   'Vendor / runtime-agnostic',
   'Local-first (no cloud)',
   'Web UI / cockpit',

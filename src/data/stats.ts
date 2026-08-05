@@ -7,26 +7,26 @@
 import capabilities from './capabilities-detail.json';
 import { RELEASES } from './releases';
 
-export const VERSION = '1.105.0';
-export const VERSION_SHORT = 'v1.105';
+export const VERSION = '1.115.0';
+export const VERSION_SHORT = 'v1.115';
 
 /** Capability surface — derived from capabilities-detail.json (regenerated from the framework repo). */
-export const VERBS_TOTAL: number = capabilities.total; // 72 at v1.105.0
-export const VERBS_WITH_DEEP_DIVE: number = capabilities.withDeepDive; // 60 at v1.105.0
+export const VERBS_TOTAL: number = capabilities.total; // 73 at v1.115.0
+export const VERBS_WITH_DEEP_DIVE: number = capabilities.withDeepDive; // 61 at v1.115.0
 export const PURPOSE_AREAS = 8;
 export const VERBS_CORE = VERBS_TOTAL - 4; // orchestration layer is exactly 4 verbs
 export const VERBS_ORCHESTRATION = 4; // coordinator · loop · pipeline · team
 
-/** Enforcement surface — read from the framework repo at v1.105.0. */
+/** Enforcement surface — read from the framework repo at v1.115.0. */
 export const HARD_RULES = '8 + 1';
-export const DOCTOR_GATES = 74; // builtin gate budget, 74/74 at cap (v1.105.0)
+export const DOCTOR_GATES = 75; // builtin gate budget (v1.115.0 adds memory-injection-bounded)
 export const AUDIT_CHECKS = 16; // maddu audit self-checks
-export const EVENT_TYPES = 182; // schematized event types (contract x-contractVersion 1.8.0)
-export const CONTRACT_VERSION = '1.8.0'; // event-schema.json x-contractVersion
+export const EVENT_TYPES = 190; // schematized event types (contract x-contractVersion 1.13.0)
+export const CONTRACT_VERSION = '1.13.0'; // event-schema.json x-contractVersion
 export const STRESS_SCENARIOS = 15;
 
-/** Surfaces — read from the framework repo at v1.105.0. */
-export const SLASH_COMMANDS = 40; // maddu-* slash on-ramps installed per repo
+/** Surfaces — read from the framework repo at v1.115.0. */
+export const SLASH_COMMANDS = 40; // maddu-* slash on-ramps installed per repo (unchanged at v1.115.0)
 export const COCKPIT_ROUTES = 50;
 export const ARCHITECTURE_LAYERS = 14; // the site's ontology layering
 

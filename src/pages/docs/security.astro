@@ -51,6 +51,15 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   <p>A defense that fires silently is invisible to the person accountable for the agent. When an auto-injectable skill is <strong>withheld</strong> &mdash; for example the URL-swap guard refuses a skill that points its body at an off-box, unreviewed link (<code>SKILL_INJECTION_REFUSED</code>) &mdash; that refusal used to live in the record but surface nowhere. The <strong>oversight surface</strong> (<code>maddu spine oversight</code> and the cockpit <code>oversight</code> route) lists each skill the agent was <em>fed</em> and each one <em>withheld</em>, with a per-item plain-language reason, so a non-technical operator can see what the agent was and wasn't handed &mdash; on a record they can verify themselves.</p>
   <p>It is an accountability surface, not a safety proof. It reports what happened with the capabilities the agent was given; it does not certify the outcome was correct. Pair it with the gates and your own review.</p>
 
+  <h2>The assurance ladder &mdash; don't let the actor be the sole witness</h2>
+  <p>A verification receipt written by the process that did the work is testimony, not evidence. Since v1.110.0 the verification-witness track ships a complete, honest ladder of how much an outcome claim can be trusted:</p>
+  <ul>
+    <li><strong><code>actor-reported</code></strong> &mdash; the runner's own in-process receipt (<code>VERIFICATION_RAN</code>) on the tamper-detecting spine. Better than a hand-writable state file; still the actor's word.</li>
+    <li><strong><code>replayed</code></strong> &mdash; <code>maddu spine verify --replay &lt;sha&gt;</code> re-earns the receipt in a clean checkout: the commands the repo <em>itself</em> declares, read from the git object store at the subject commit &mdash; a dirty worktree can never choose the commands, and an undeclared repo is honestly <code>unsupported</code>, never inferred.</li>
+    <li><strong><code>anchored</code></strong> &mdash; <code>maddu spine anchor</code> stamps the receipt + chain head into Bitcoin via OpenTimestamps (stock client, zero new dependencies). Bitcoin-backed verification is deliberately an <em>operator</em> action (<code>ots verify</code>), never a maddu verb &mdash; a runner the agent controls re-verifying its own evidence would be actor-as-witness again. The consume ritual (<code>spine anchor --assess</code>) can only <em>refuse</em>; its record is a non-authoritative ledger note, labeled that way by every consumer.</li>
+  </ul>
+  <p>The residuals are stated, not hidden: an anchor proves a receipt <em>existed by a time</em>, not that the work was good; suffix deletion of anchors is undetectable without a retained operator note; <code>presence-attested</code> (a live external attestor) is deferred, and the docs say so. The framework threat model's scenario 13 enumerates the full ladder and every stated residual.</p>
+
   <h2>Forbidden patterns</h2>
   <p>Some patterns are named, refused, and structurally impossible inside the charter — not TODOs.</p>
   <ul>

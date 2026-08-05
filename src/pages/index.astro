@@ -121,7 +121,7 @@ maddu model promote models/promote.json
 # the approval ride — no auto-decide near production
 maddu model gates install
 # 12 ML-lifecycle gates in .maddu/gates/ — yours, ci-pinnable`,
-    caption: 'Every promotion above candidate waits for an explicit per-request decision — standing approval policies are deliberately inert near production. Rollback is strictly downward; re-promotion goes through the full ride, and the spine verifier holds the ladder tamper-evident on replay. The honesty line is structural: Máddu records what your tools declared and pins the bytes — it never trains, serves, evaluates, or decides a model is good.',
+    caption: 'Every promotion above candidate waits for an explicit per-request decision — standing approval policies are deliberately inert near production. Rollback is strictly downward; re-promotion goes through the full ride, and the spine verifier holds the ladder tamper-detecting on replay. The honesty line is structural: Máddu records what your tools declared and pins the bytes — it never trains, serves, evaluates, or decides a model is good.',
   },
 ];
 
@@ -181,7 +181,7 @@ const features = [
       <header class="section-head">
         <span class="eyebrow">The problem</span>
         <h2>&ldquo;Done ✅, tests pass.&rdquo; <span class="dim">Was it?</span></h2>
-        <p>Generation stopped being the bottleneck — verification is. An agent&rsquo;s chat summary is the actor grading its own work. Máddu makes the record the witness instead: an append-only, tamper-evident, independently-checkable log of what your agents actually did.</p>
+        <p>Generation stopped being the bottleneck — verification is. An agent&rsquo;s chat summary is the actor grading its own work. Máddu makes the record the witness instead: an append-only, tamper-detecting, independently-checkable log of what your agents actually did.</p>
       </header>
 
       <div class="split">
