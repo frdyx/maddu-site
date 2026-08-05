@@ -157,13 +157,15 @@ const {
     list-style: none;
     margin: 0;
     padding: 0;
+    /* full frame width — must beat reading-measure caps on article ol (DocsLayout) */
+    max-width: none;
     max-height: 360px;
     overflow-y: auto;
     background: var(--m-bg-0);
   }
   .es-row {
     display: grid;
-    grid-template-columns: 110px 200px 1fr 110px;
+    grid-template-columns: 110px max-content 1fr max-content;
     gap: 14px;
     align-items: baseline;
     padding: 5px 14px;

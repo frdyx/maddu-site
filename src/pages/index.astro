@@ -11,12 +11,35 @@ import { RELEASES } from '../data/releases';
 // the seven shapes of work. Reference material (architecture, governance,
 // verbs) lives in the dedicated docs section at /docs; this page sells there.
 
+// ── MADDU banner — pixel-grid render of the half-block wordmark, per-column
+// truecolor sweep. Mirrors egna_projekt/maddu-banner.sh exactly: same glyph
+// rows, same piecewise lime → midpoint → electric interpolation, ░ = hatch.
+const BANNER_ROWS = ['█▀▄▀█ ▄▀█ █▀▄ █▀▄ █░█', '█░▀░█ █▀█ █▄▀ █▄▀ █▄█'];
+const BANNER_COLS = 21;
+const bannerColor = (i: number): string => {
+  const A = [208, 255, 0], M = [147, 219, 127], B = [86, 184, 255];
+  const half = (BANNER_COLS - 1) / 2;
+  const [from, to, t] = i <= half ? [A, M, i / half] : [M, B, (i - half) / (BANNER_COLS - 1 - half)];
+  const c = from.map((v, j) => Math.round(v + (to[j] - v) * t));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+};
+const bannerCells: { x: number; y: number; hatch: boolean }[] = [];
+BANNER_ROWS.forEach((row, r) => {
+  [...row].forEach((ch, x) => {
+    const top = r * 2 + 1, bot = r * 2 + 2;
+    if (ch === '█') bannerCells.push({ x, y: top, hatch: false }, { x, y: bot, hatch: false });
+    else if (ch === '▀') bannerCells.push({ x, y: top, hatch: false });
+    else if (ch === '▄') bannerCells.push({ x, y: bot, hatch: false });
+    else if (ch === '░') bannerCells.push({ x, y: top, hatch: true }, { x, y: bot, hatch: true });
+  });
+});
+
 // The three-legged trust claim — the spine's identity.
 const contractLegs = [
   {
     n: '01',
     tone: 'accent-2',
-    title: 'Tamper-evident',
+    title: 'Tamper-detecting',
     lead: 'Append-only + hash-chained',
     body: 'Every event is one line on a log that only grows, each hashed over the last. Nothing already written can change unnoticed.',
   },
@@ -140,7 +163,15 @@ const features = [
 <Layout title="The verifiable record for AI coding agents" description="The external, verifiable record of what your AI coding agents did, so no agent is ever the sole witness to its own work. Local-first and files-only: agents work as an auditable team through lanes, approvals, and gates. Máddu never sits in the request path or touches your keys." pathname="/">
   <!-- ── HERO ─────────────────────────────────────────────────────── -->
   <section class="hero">
-    <div class="container">
+    <div class="container-wide">
+      <div class="hero-banner" aria-hidden="true">
+        {bannerCells.map((c) => (
+          <i
+            class:list={['hb', { 'hb-hatch': c.hatch }]}
+            style={`grid-area:${c.y}/${c.x + 1};--c:${bannerColor(c.x)}`}
+          ></i>
+        ))}
+      </div>
       <div class="eyebrow-chain">
         <span class="eyebrow">Local-first</span>
         <span class="eyebrow-sep">·</span>
@@ -468,7 +499,26 @@ const features = [
     letter-spacing: -0.02em;
     margin: 0 0 var(--m-space-6);
     color: var(--m-fg-0);
-    max-width: 24ch;
+  }
+  .hero-banner {
+    /* one banner column; half-block cells are square (terminal cell = 1:2) */
+    --hb: clamp(10px, 2.4vw, 28px);
+    display: grid;
+    grid-template-columns: repeat(21, var(--hb));
+    grid-template-rows: repeat(4, var(--hb));
+    margin: 0 0 var(--m-space-8);
+    user-select: none;
+    filter:
+      drop-shadow(0 0 26px rgba(208, 255, 0, 0.12))
+      drop-shadow(0 0 38px rgba(86, 184, 255, 0.14));
+  }
+  .hb { display: block; background: var(--c); }
+  .hb-hatch {
+    background: repeating-linear-gradient(
+      45deg,
+      var(--c) 0 calc(var(--hb) / 9),
+      transparent calc(var(--hb) / 9) calc(var(--hb) / 3)
+    );
   }
   .hero-title em {
     color: var(--m-accent);
@@ -479,7 +529,7 @@ const features = [
   .hero-lede {
     font-size: 17px;
     color: var(--m-fg-1);
-    max-width: min(66ch, 100%);
+    max-width: min(80ch, 100%);
     line-height: 1.55;
     margin-bottom: var(--m-space-4);
   }
