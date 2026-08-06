@@ -129,7 +129,7 @@ import { VERBS_TOTAL, PURPOSE_AREAS, RELEASE_COUNT, VERSION } from '../data/stat
     grid-template-columns: 1fr 1fr;
     gap: var(--m-space-2) var(--m-space-5);
   }
-  @media (max-width: 640px) { .nf-jumps { grid-template-columns: 1fr; } }
+  @media (max-width: 640px) { .nf-jumps { grid-template-columns: minmax(0, 1fr); } }
   .nf-jumps li { color: var(--m-fg-2); font-size: 13.5px; }
   .nf-jumps a { color: var(--m-fg-0); font-weight: 600; border-bottom: 1px dashed var(--m-line); }
   .nf-jumps a:hover { color: var(--m-accent); border-bottom-color: var(--m-accent); }

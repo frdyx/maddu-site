@@ -389,7 +389,7 @@ flowchart LR
     align-items: start;
   }
   @media (max-width: 920px) {
-    .tm-layout { grid-template-columns: 1fr; }
+    .tm-layout { grid-template-columns: minmax(0, 1fr); }
     .tm-layout > :global(.toc) { display: none; }
   }
   .tm-defenses { display: flex; flex-direction: column; gap: var(--m-space-6); min-width: 0; }
@@ -462,7 +462,7 @@ flowchart LR
     margin-bottom: var(--m-space-5);
   }
   @media (max-width: 760px) {
-    .tm-grid { grid-template-columns: 1fr; }
+    .tm-grid { grid-template-columns: minmax(0, 1fr); }
     .tm-n { font-size: 28px; }
     .tm-title { font-size: 22px; }
   }

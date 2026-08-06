@@ -765,7 +765,7 @@ const features = [
     .usecase-zoom { opacity: 1; }
   }
   .usecase-caption { margin: 0; color: var(--m-fg-2); font-size: 12.5px; line-height: 1.55; }
-  @media (max-width: 860px) { .usecases { grid-template-columns: 1fr; } }
+  @media (max-width: 860px) { .usecases { grid-template-columns: minmax(0, 1fr); } }
   .parts-grid { margin-bottom: var(--m-space-6); }
 
   /* Diagram lightbox */

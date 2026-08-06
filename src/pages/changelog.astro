@@ -1601,7 +1601,7 @@ function typeMeta(t: ReleaseType) {
     align-items: start;
   }
   @media (max-width: 920px) {
-    .cl-layout { grid-template-columns: 1fr; }
+    .cl-layout { grid-template-columns: minmax(0, 1fr); }
     .cl-layout > :global(.toc) { display: none; }
   }
   .cl-releases { display: flex; flex-direction: column; gap: var(--m-space-4); min-width: 0; }

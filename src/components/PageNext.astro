@@ -132,7 +132,7 @@ const { href, eyebrow, title, hint, tone = 'accent' } = Astro.props;
   .page-next--brand:hover { border-color: var(--m-brand); box-shadow: var(--m-glow-brand); }
 
   @media (max-width: 720px) {
-    .page-next { grid-template-columns: 1fr; gap: var(--m-space-4); }
+    .page-next { grid-template-columns: minmax(0, 1fr); gap: var(--m-space-4); }
     .page-next-cta { padding-left: 0; border-left: 0; padding-top: var(--m-space-3); border-top: 1px solid var(--m-line-soft); }
     .page-next-title { font-size: 18px; }
   }

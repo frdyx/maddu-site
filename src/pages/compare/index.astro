@@ -326,7 +326,7 @@ const categories = [
     text-transform: uppercase;
   }
   @media (max-width: 720px) {
-    .cat-row { grid-template-columns: 1fr; gap: var(--m-space-3); }
+    .cat-row { grid-template-columns: minmax(0, 1fr); gap: var(--m-space-3); }
   }
 
   .absent-like { background: linear-gradient(180deg, transparent, rgba(255, 94, 122, 0.04)); }

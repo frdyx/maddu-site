@@ -515,7 +515,7 @@ import SearchPalette from '../components/SearchPalette.astro';
     }
     @media (max-width: 560px) {
       .dx-search-kbd { display: none; }
-      .dx-pager { grid-template-columns: 1fr; }
+      .dx-pager { grid-template-columns: minmax(0, 1fr); }
     }
 
     @media (prefers-reduced-motion: reduce) {

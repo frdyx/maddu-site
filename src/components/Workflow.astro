@@ -192,6 +192,6 @@ const hasFoot = Astro.slots.has('foot');
   }
 
   @media (max-width: 640px) {
-    .wf-outcome { grid-template-columns: 1fr; gap: 4px; }
+    .wf-outcome { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   }
 </style>
