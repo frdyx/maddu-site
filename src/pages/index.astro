@@ -439,8 +439,9 @@ const features = [
   <div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Enlarged diagram">
     <button class="lightbox-close" id="lightboxClose" aria-label="Close">✕</button>
     <figure class="lightbox-fig">
-      <img id="lightboxImg" src="" alt="" />
+      <div class="lightbox-pan"><img id="lightboxImg" src="" alt="" /></div>
       <figcaption id="lightboxCap"></figcaption>
+      <span class="lightbox-hint" aria-hidden="true">⟲ rotate the phone — or drag the diagram sideways</span>
     </figure>
   </div>
 
@@ -759,6 +760,10 @@ const features = [
   }
   .usecase-figure:hover .usecase-zoom,
   .usecase-figure:focus-visible .usecase-zoom { opacity: 1; }
+  /* touch devices have no hover — the enlarge affordance must be visible */
+  @media (hover: none) {
+    .usecase-zoom { opacity: 1; }
+  }
   .usecase-caption { margin: 0; color: var(--m-fg-2); font-size: 12.5px; line-height: 1.55; }
   @media (max-width: 860px) { .usecases { grid-template-columns: 1fr; } }
   .parts-grid { margin-bottom: var(--m-space-6); }
@@ -772,9 +777,23 @@ const features = [
   }
   .lightbox.is-open { display: flex; }
   .lightbox-fig { margin: 0; max-width: 1480px; width: 100%; }
+  .lightbox-pan { border-radius: var(--m-radius-lg); }
   .lightbox-fig img {
     display: block; width: 100%; height: auto;
     border: 1px solid var(--m-line); border-radius: var(--m-radius-lg); box-shadow: var(--m-shadow-lg);
+  }
+  .lightbox-hint { display: none; }
+  /* Small portrait screens: fit-to-width makes the 1480px diagrams unreadable —
+     render at a readable width inside a pannable strip instead. */
+  @media (max-width: 720px) {
+    .lightbox { padding: 12px; }
+    .lightbox-pan { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .lightbox-fig img { width: auto; max-width: none; min-width: 920px; }
+    .lightbox-hint {
+      display: block; margin-top: 10px; text-align: center;
+      font-family: var(--m-font-mono); font-size: 11px; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--m-fg-3);
+    }
   }
   .lightbox-fig figcaption {
     margin-top: 12px; text-align: center; font-family: var(--m-font-mono);
