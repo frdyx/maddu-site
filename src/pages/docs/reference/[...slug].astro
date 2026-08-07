@@ -1,0 +1,126 @@
+---
+// One page per framework doc. Content comes from the `docs` collection, which
+// scripts/gen-docs.mjs generates from the framework repo's docs/ tree — this
+// file only renders it. Never hand-edit src/content/docs/*.md.
+import { getCollection, render } from 'astro:content';
+import DocsLayout from '../../../layouts/DocsLayout.astro';
+import manifest from '../../../data/docs-manifest.json';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('docs');
+  // Flat reading order across the whole mirror — drives prev/next.
+  const order = manifest.groups.flatMap((g) => g.items.map((i) => i.slug));
+  const sorted = [...entries].sort(
+    (a, b) => order.indexOf(a.data.slug) - order.indexOf(b.data.slug),
+  );
+  return sorted.map((entry, i) => ({
+    params: { slug: entry.data.slug },
+    props: {
+      entry,
+      prev: i > 0 ? sorted[i - 1] : null,
+      next: i < sorted.length - 1 ? sorted[i + 1] : null,
+    },
+  }));
+}
+
+const { entry, prev, next } = Astro.props;
+// Astro's markdown renderer slugs headings server-side, so DocsLayout's
+// existing client-side TOC builder picks them up unchanged.
+const { Content } = await render(entry);
+const d = entry.data;
+---
+
+<DocsLayout
+  title={d.title}
+  description={d.description}
+  pathname={`/docs/reference/${d.slug}`}
+  section={d.group}
+>
+  <h1>{d.title}</h1>
+
+  <div class="dx-source">
+    <span class="dx-source-label">Mirrored from the repo</span>
+    <a href={d.sourceUrl} target="_blank" rel="noopener"><code>docs/{d.sourceFile}</code> ↗</a>
+    {d.verb && (
+      <a class="dx-source-verb" href={`/capabilities/${d.verb}`}>
+        Command reference: <code>maddu {d.verb}</code> →
+      </a>
+    )}
+  </div>
+
+  <div class="dx-md">
+    <Content />
+  </div>
+
+  <nav class="dx-pager">
+    {prev ? (
+      <a class="dx-pager-link dx-pager-prev" href={`/docs/reference/${prev.data.slug}`}>
+        <span class="dx-pager-dir">← previous</span>
+        <span class="dx-pager-title">{prev.data.title}</span>
+      </a>
+    ) : <span />}
+    {next && (
+      <a class="dx-pager-link dx-pager-next" href={`/docs/reference/${next.data.slug}`}>
+        <span class="dx-pager-dir">next →</span>
+        <span class="dx-pager-title">{next.data.title}</span>
+      </a>
+    )}
+  </nav>
+</DocsLayout>
+
+<style>
+  .dx-source {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--m-space-3);
+    margin: 0 0 var(--m-space-7);
+    padding-bottom: var(--m-space-4);
+    border-bottom: 1px solid var(--m-line-soft);
+  }
+  .dx-source-label {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+  }
+  .dx-source a { color: var(--m-accent-2); text-decoration: none; font-size: 12.5px; }
+  .dx-source a:hover { text-decoration: underline; }
+  .dx-source code { font-family: var(--m-font-mono); background: none; padding: 0; }
+  /* Pushed to its own end of the row — it leaves the docs shell, so it should
+     not read as a sibling of the source-file link. */
+  .dx-source-verb { margin-left: auto; color: var(--m-accent) !important; }
+  .dx-source-verb code { color: inherit; }
+
+  .dx-pager {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--m-space-4);
+    margin-top: var(--m-space-10);
+    padding-top: var(--m-space-6);
+    border-top: 1px solid var(--m-line-soft);
+  }
+  .dx-pager-link {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    max-width: 48%;
+    padding: var(--m-space-3) var(--m-space-4);
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+    background: var(--m-bg-2);
+    text-decoration: none;
+  }
+  .dx-pager-link:hover { border-color: var(--m-accent); background: var(--m-bg-3); }
+  .dx-pager-next { text-align: right; margin-left: auto; }
+  .dx-pager-dir {
+    font-family: var(--m-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--m-fg-3);
+  }
+  .dx-pager-title { font-family: var(--m-font-cond); font-weight: 600; font-size: 15px; color: var(--m-fg-0); }
+</style>

@@ -10,7 +10,7 @@
 //
 //   Usage:  node scripts/gen-capabilities.mjs   (set MADDU_REPO to override path)
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 
@@ -137,18 +137,85 @@ const cliByVerb = {};
     cur = null;
   };
   for (const l of lines) {
-    const h = l.match(/^##\s+`maddu ([a-z-]+)[^`]*`(.*)$/);
+    // Verbs are documented at h2 (`## \`maddu lane\``) and, since v1.2.0, at
+    // h3 inside grouped release sections (`### \`maddu autonomy\` *(v1.92.0)*`).
+    // Matching only h2 silently dropped every newer verb's CLI surface.
+    const h = l.match(/^#{2,3}\s+`maddu ([a-z-]+)[^`]*`(.*)$/);
     if (h) {
       flush();
       const sinceMatch = (h[2] || '').match(/v\d+(?:\.\d+)*/);
       cur = { verb: h[1], since: sinceMatch ? sinceMatch[0] : null, body: [] };
-    } else if (l.match(/^#{1,2}\s+\S/) && cur) {
-      flush(); // a new top-level/section header ends the current verb block
+    } else if (l.match(/^#{1,3}\s+\S/) && cur) {
+      flush(); // a new header at any level ends the current verb block
     } else if (cur) {
       cur.body.push(l);
     }
   }
   flush();
+}
+
+// ── 2b. harvest per-verb commands from every code fence ──────────────────
+// The release-grouped sections ("## v1.1.0 commands", "## Experience &
+// evolution") document eight-plus verbs inside one shared code block, under a
+// heading that names no verb at all. Walking the fences and bucketing each
+// `$ maddu <verb> …` line by its verb recovers a real CLI surface for them.
+function harvestFences(md) {
+  const cmds = {};   // verb → command lines, in document order
+  const notes = {};  // verb → trailing `# …` comment on its first line
+  let inFence = false;
+  let pending = [];     // a comment run that heads the *next* command
+  let lastVerb = null;  // set while comment lines still trail a command
+  for (const l of md.split(/\r?\n/)) {
+    const t = l.trim();
+    if (t.startsWith('```')) { inFence = !inFence; pending = []; lastVerb = null; continue; }
+    if (!inFence) continue;
+    if (!t) { pending = []; lastVerb = null; continue; }
+
+    const m = t.match(/^\$?\s*maddu\s+([a-z-]+)\b/);
+    if (m) {
+      const verb = m[1];
+      (cmds[verb] ||= []).push(...pending, l);
+      pending = [];
+      lastVerb = verb;
+      const trailing = t.match(/\s#\s*(.+)$/);
+      if (trailing && !notes[verb]) notes[verb] = trailing[1].trim();
+    } else if (t.startsWith('#')) {
+      // A comment run touching the command above continues it; one that
+      // follows a blank line is a caption for the commands below.
+      if (lastVerb) cmds[lastVerb].push(l);
+      else pending.push(l);
+    } else {
+      pending = [];
+      lastVerb = null;
+    }
+  }
+  return { cmds, notes };
+}
+
+const { cmds: harvested, notes: harvestedNote } = harvestFences(cliMd);
+
+// ── 2c. corpus-wide fallback ─────────────────────────────────────────────
+// Some verbs (ci, fleet, orient, blueprint, …) are only shown running inside
+// their own deep-dive doc, never in the CLI reference. Scanning the whole
+// docs/ tree means a verb's page shows real commands wherever they live.
+const corpusHarvest = {}; // filename → { cmds, notes }
+for (const name of readdirSync(join(MADDU, 'docs'))) {
+  if (!name.endsWith('.md') || name === '03-cli-reference.md') continue;
+  corpusHarvest[name] = harvestFences(readFileSync(join(MADDU, 'docs', name), 'utf8'));
+}
+
+/** Best corpus source for a verb: its own deep-dive doc, else the doc that shows it most. */
+function corpusFallback(verb, docFile) {
+  const ranked = Object.entries(corpusHarvest)
+    .filter(([, h]) => h.cmds[verb]?.length)
+    .sort(([a, ha], [b, hb]) => {
+      if (a === docFile) return -1;
+      if (b === docFile) return 1;
+      return hb.cmds[verb].length - ha.cmds[verb].length;
+    });
+  if (!ranked.length) return null;
+  const [file, h] = ranked[0];
+  return { file, lines: h.cmds[verb], note: h.notes[verb] ?? null };
 }
 
 // ── 3. capability-docs.json → deep-dive link (the audited 62-verb set) ────
@@ -166,15 +233,62 @@ function firstSentence(s) {
 
 // ── compose + drift checks (mirror `maddu audit capability-docs`) ────────
 const warnings = [];
+// The mirrored corpus (scripts/gen-docs.mjs) hosts most deep-dive docs on the
+// site itself; anything it doesn't mirror still resolves on GitHub.
+const mirrorBySourceFile = new Map();
+const manifestPath = join(siteRoot, 'src', 'data', 'docs-manifest.json');
+if (existsSync(manifestPath)) {
+  const m = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  for (const g of m.groups) for (const item of g.items) mirrorBySourceFile.set(item.sourceFile, item.url);
+  // capability-docs.json can point at a pointer stub (`doctor` → 06-hard-rules.md,
+  // which is just "See hard-rules.md"). The mirror folded those into their
+  // canonical page — follow the same aliases so the link lands on real content.
+  for (const [from, to] of Object.entries(m.aliases ?? {})) {
+    const seen = new Set();
+    let target = to;
+    while (m.aliases?.[target] && !seen.has(target)) { seen.add(target); target = m.aliases[target]; }
+    if (mirrorBySourceFile.has(target)) mirrorBySourceFile.set(from, mirrorBySourceFile.get(target));
+  }
+} else {
+  warnings.push('docs-manifest.json missing — deep-dive links fall back to GitHub (run `npm run docs`)');
+}
+
 const verbs = verbKeys.map((verb) => {
   const ch = charterByVerb[verb] || null;
   if (!ch) warnings.push(`charter has no domain row for "${verb}"`);
   const cli = cliByVerb[verb] || null;
   const docFile = capDocs.verbs[verb];
   const deepDive = docFile
-    ? { file: docFile, url: `${DOCS_BASE_URL}/${capDocs.docsDir}/${docFile}` }
+    ? {
+        file: docFile,
+        url: mirrorBySourceFile.get(docFile) ?? `${DOCS_BASE_URL}/${capDocs.docsDir}/${docFile}`,
+        onSite: mirrorBySourceFile.has(docFile),
+        sourceUrl: `${DOCS_BASE_URL}/${capDocs.docsDir}/${docFile}`,
+      }
     : null;
-  const rawSummary = firstSentence(cli?.intro) || (ch ? ch.tagline : null);
+
+  // Three sources, most specific first: the verb's own `## maddu <verb>`
+  // section, then the release-grouped fences in the CLI reference, then the
+  // rest of the corpus (usually the verb's own deep-dive doc).
+  let blocks = cli?.blocks ?? [];
+  let cliSource = blocks.length ? 'cli-reference' : null;
+  let fallbackNote = null;
+  if (!blocks.length && harvested[verb]?.length) {
+    blocks = [harvested[verb].join('\n')];
+    cliSource = 'cli-reference-grouped';
+    fallbackNote = harvestedNote[verb] ?? null;
+  }
+  if (!blocks.length) {
+    const fb = corpusFallback(verb, docFile);
+    if (fb) {
+      blocks = [fb.lines.join('\n')];
+      cliSource = `docs/${fb.file}`;
+      fallbackNote = fb.note;
+    }
+  }
+  if (!blocks.length) warnings.push(`no CLI surface found anywhere for "${verb}"`);
+
+  const rawSummary = firstSentence(cli?.intro) || (ch ? ch.tagline : null) || fallbackNote || null;
   const summary = rawSummary ? rawSummary.charAt(0).toUpperCase() + rawSummary.slice(1) : null;
   return {
     verb,
@@ -184,7 +298,10 @@ const verbs = verbKeys.map((verb) => {
     summary,
     since: cli?.since ?? null,
     cliIntro: cli?.intro ?? null,
-    cliBlocks: cli?.blocks ?? [],
+    cliBlocks: blocks,
+    /** Which corpus file the commands came from — the page attributes it when
+     *  it isn't the CLI reference's own section for this verb. */
+    cliSource,
     cliNotes: cli?.notes ?? null,
     deepDive,
   };

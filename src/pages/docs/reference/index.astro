@@ -1,0 +1,78 @@
+---
+// The mirror's front door — every framework doc, grouped, with its one-line
+// description. Entirely driven by src/data/docs-manifest.json, so a new doc in
+// the framework repo appears here on the next `npm run docs`.
+import DocsLayout from '../../../layouts/DocsLayout.astro';
+import manifest from '../../../data/docs-manifest.json';
+---
+
+<DocsLayout
+  title="Framework reference"
+  description={`Every one of the ${manifest.total} Máddu framework docs, mirrored from the repo and rendered on-site.`}
+  pathname="/docs/reference"
+  section="Reference"
+>
+  <h1>Framework reference</h1>
+  <p class="dx-lede">
+    The complete docs corpus from the framework repo — all {manifest.total} documents, rendered here
+    rather than linked out. Every page carries a link back to its source file, so the site and the
+    repo can be diffed by anyone.
+  </p>
+
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p>
+      These pages are <strong>generated, never hand-written</strong>. The docs above them
+      (<a href="/docs">Introduction</a>, <a href="/docs/install">Install</a>,
+      <a href="/docs/how-it-works">How it works</a>) are the curated reading path; this is the
+      full source of truth underneath it.
+    </p>
+  </div>
+
+  {manifest.groups.map((group) => (
+    <section class="ref-group">
+      <h2 id={group.label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}>{group.label}</h2>
+      <ul class="ref-list">
+        {group.items.map((item) => (
+          <li class="ref-item">
+            <a class="ref-link" href={item.url}>{item.title}</a>
+            <p class="ref-desc">{item.description}</p>
+            <code class="ref-src">docs/{item.sourceFile}</code>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+</DocsLayout>
+
+<style>
+  .ref-group { margin-bottom: var(--m-space-10); }
+  .ref-list { list-style: none; margin: 0; padding: 0; }
+  .ref-item {
+    padding: var(--m-space-4) 0;
+    border-bottom: 1px solid var(--m-line-soft);
+  }
+  .ref-item:last-child { border-bottom: 0; }
+  .ref-link {
+    font-family: var(--m-font-cond);
+    font-weight: 600;
+    font-size: 15.5px;
+    color: var(--m-fg-0);
+    text-decoration: none;
+  }
+  .ref-link:hover { color: var(--m-accent); }
+  .ref-desc {
+    margin: 4px 0 6px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--m-fg-2);
+    max-width: min(72ch, 100%);
+  }
+  .ref-src {
+    font-family: var(--m-font-mono);
+    font-size: 11px;
+    color: var(--m-fg-3);
+    background: none;
+    padding: 0;
+  }
+</style>

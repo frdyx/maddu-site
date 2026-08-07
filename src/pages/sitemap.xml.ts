@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { RELEASES } from '../data/releases';
 import capDetail from '../data/capabilities-detail.json';
+import docsManifest from '../data/docs-manifest.json';
 
 const SITE = 'https://maddu.frdyx.com';
 
@@ -38,6 +39,16 @@ const DOCS_PATHS = [
 ];
 for (const d of DOCS_PATHS) {
   PAGES.push({ path: d, priority: 0.8, changefreq: 'monthly' });
+}
+
+// The mirrored framework corpus — every doc from the repo, rendered on-site.
+// Derived from the generated manifest, so a new doc upstream is discoverable
+// on the next `npm run docs` without touching this file.
+PAGES.push({ path: '/docs/reference', priority: 0.8, changefreq: 'weekly' });
+for (const group of docsManifest.groups) {
+  for (const item of group.items) {
+    PAGES.push({ path: item.url, priority: 0.6, changefreq: 'monthly' });
+  }
 }
 
 // Feature landing pages — the marketing layer over the capability docs.

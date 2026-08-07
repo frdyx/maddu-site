@@ -520,6 +520,14 @@ hr {
     --m-ok:        #1b6f3a;
     --m-warn:      #8a5d00;
     --m-danger:    #9a1c2f;
+    /* Code blocks are the one surface that stays black on screen (see
+       --m-bg-true-black). On paper that's a solid ink slab — flip it, and the
+       Shiki vars with it, so the mirrored docs print like the rest. */
+    --m-bg-true-black: #ffffff;
+    --astro-code-background:       #f6f4ee;
+    --astro-code-color-background: #f6f4ee;
+    --astro-code-foreground:       #000000;
+    --astro-code-color-text:       #000000;
   }
   html, body {
     background: #fff !important;
