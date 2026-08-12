@@ -141,7 +141,7 @@ $ maddu status --line     # one-line on-goal/drift + goal progress (v1.97.0) —
 Zero-keystroke session bootstrap. The agent's mandatory first command of every turn.
 
 ```bash
-$ maddu register [<label>] [--parent <sessionId>] [--role <role>] [--runtime <name>]
+$ maddu register [<label>] [--parent <sessionId>] [--role <role>]
 ```
 
 - Defaults: label from cwd-basename, role=`implementer`, focus=label.
@@ -376,13 +376,13 @@ $ maddu runtime list
 $ maddu runtime show <name>
 $ maddu runtime register --name <n> --binary <b> [--args a,b] [--detect "<cmd>"] \
                          [--display "<d>"] [--mcp] [--streaming] [--approval per-tool] \
-                         [--lanes a,b] [--notes "<n>"] [--auto-register]
+                         [--lanes a,b] [--notes "<n>"]
 $ maddu runtime detect [<name>]                     # no arg → detect-all
 $ maddu runtime spawn <name> [--session <sid>] [--lane <id>] [--args a,b]
 $ maddu runtime remove <name>
 ```
 
-**`--auto-register`** *(v0.17)* sets `kind: 'reviewer'`-style behavior: every `spawnWorker` call against this runtime first registers a fresh child session (linked to the caller via `parentSessionId`), then injects the new id into the child's `MADDU_SESSION_ID` env. Fan-out orchestration produces N distinct sessions in the tree instead of one shared session. Editable post-register by hand-editing `.maddu/runtimes/<name>.json` and setting `autoRegister: true`.
+**`autoRegister`** *(v0.17, descriptor field — there is no CLI flag)* sets `kind: 'reviewer'`-style behavior: every `spawnWorker` call against a runtime whose descriptor carries `autoRegister: true` first registers a fresh child session (linked to the caller via `parentSessionId`), then injects the new id into the child's `MADDU_SESSION_ID` env. Fan-out orchestration produces N distinct sessions in the tree instead of one shared session. Enable it by hand-editing `.maddu/runtimes/<name>.json` and setting `autoRegister: true`.
 
 ## [`maddu schedule`](/capabilities/schedule)
 
@@ -476,10 +476,22 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`, `cancelled`. Completing a ta
 Declare the agent's current objective. Latest `GOAL_DECLARED` wins in the projection and surfaces in [`maddu brief`](/capabilities/brief) / `#orientation`.
 
 ```bash
-$ maddu goal set "<obj>" [--constraint "<c>" --constraint "<c>" …]
+$ maddu goal set "<obj>" [--constraint "<c>" --constraint "<c>" …] \
+                         [--success "<cmd>::<text>" …] \
+                         [--oracle "<glob>" …] [--impl "<glob>" …]
 #   (`--objective "<obj>"` is accepted as an alias for the positional objective)
 $ maddu goal show
 ```
+
+`--oracle` / `--impl` *(v1.120.0)* declare the goal's **acceptance sets** — the
+files that must stay frozen and the files that must move for a success
+condition's command to earn a RED→GREEN proof. Both are repeatable and both
+must be present for a goal to be acceptance-active; declaring neither leaves a
+legacy goal that still evaluates its conditions but records no acceptance
+receipts. Shape is validated at declaration (non-blank strings, ≤256 patterns,
+≤1024 chars each — exit 2 otherwise); containment, symlink and zero-match
+refusals are decided at observation time. `goal show` renders both sets. Full
+semantics: [56-acceptance-proof.md](/docs/reference/acceptance-proof).
 
 ## [`maddu phase`](/capabilities/phase) *(v0.16; per-phase strictness v1.91.0)*
 
@@ -757,12 +769,26 @@ $ maddu plan kanban
 # signature twice → halts with reason=stuck-detection; exceeding --max-iter
 # → halts with reason=max-iter-reached. Regression-tested in the synthetic
 # stress harness scenario `ralph-always-fail-halts`.
-$ maddu loop ralph --goal "..." --verify "<cmd>" [--iterate "<cmd>"]
+$ maddu loop ralph --goal "..." --verify "<cmd>" --oracle "<glob>" --impl "<glob>" [--iterate "<cmd>"]
+$ maddu loop ralph --from-goal [--iterate "<cmd>"]
 $ maddu loop plan  --plan <id> [--max-iter N]
 $ maddu loop status / cancel
 
 # Ralph + adaptive project tests
-$ maddu loop ralph --goal "fix tests until green" --verify "maddu test --profile quick --bail"
+$ maddu loop ralph --goal "fix tests until green" \
+    --verify "maddu test --profile quick --bail" --oracle "test/**" --impl "src/**"
+#
+# v1.120.0 — ralph is acceptance-declared and refuses at the door rather than
+# iterating toward something it could never prove:
+#   --from-goal            adopt the ACTIVE goal's verifiable conditions + sets
+#                          (label comes from the objective; never inferred)
+#   --from-goal + --verify → exit 2 (two answers to one question)
+#   neither flag           → exit 2 (nothing to verify)
+#   --verify without both --oracle and --impl → exit 2
+#   --from-goal with no goal / a closed goal / no verifiable condition /
+#     no declared sets → exit 3
+# BREAKING: a bare `ralph --verify "<cmd>"` (no sets) now exits 2 instead of
+# burning every iteration to the cap on `no-verify-supplied`.
 
 # Coordinator (Phase 7)
 $ maddu coordinator <plan-id> [--dry-run | --synthetic-cmd "..." | --runtime <n>]

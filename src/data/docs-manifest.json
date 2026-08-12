@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "route": "/docs/reference",
   "ghBase": "https://github.com/frdyx/maddu/blob/main/docs",
-  "total": 77,
+  "total": 78,
   "excluded": [
     "00-index.md",
     "17-validation-checklist.md",
@@ -672,6 +672,19 @@
           "description": "The original master-plan deliverable (Slice 9): \"maddu init into a brand-new empty git repo on the operator's machine; walk through a full operator flow.\"",
           "sourceFile": "releases/v0.3.2-integration-smoke.md",
           "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/releases/v0.3.2-integration-smoke.md"
+        }
+      ]
+    },
+    {
+      "label": "More reference",
+      "items": [
+        {
+          "slug": "acceptance-proof",
+          "url": "/docs/reference/acceptance-proof",
+          "title": "56. Acceptance proofs — RED → GREEN against a frozen oracle",
+          "description": "A green test suite tells you the suite passes now. It does not tell you the suite ever failed — and a test that has never failed has never demonstrated that it can. The oldest way…",
+          "sourceFile": "56-acceptance-proof.md",
+          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/56-acceptance-proof.md"
         }
       ]
     }

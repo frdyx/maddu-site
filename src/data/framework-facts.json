@@ -1,7 +1,7 @@
 {
-  "version": "1.118.0",
-  "released": "2026-08-06",
-  "phase": "buzz-steals-s4-cost-provenance",
-  "contractVersion": "1.16.0",
+  "version": "1.122.0",
+  "released": "2026-08-12",
+  "phase": "strict-flags-default",
+  "contractVersion": "1.19.0",
   "eventTypes": 193
 }

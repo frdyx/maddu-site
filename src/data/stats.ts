@@ -30,19 +30,22 @@ export const DOCS_MIRRORED: number = docsManifest.total;
 export const EVENT_TYPES: number = facts.eventTypes;
 export const CONTRACT_VERSION: string = facts.contractVersion;
 
-/** Enforcement surface — hand-read from the framework repo at v1.118.0.
+/** Enforcement surface — hand-read from the framework repo at v1.122.0.
  *  These are NOT derivable: the corpus states them only in prose, and where a
  *  doc does carry a count it lags reality (22-slash-commands.md lists 34 of
  *  the 40 commands actually installed). A dated hand value beats a wrong
  *  derived one — re-read these when the numbers matter. */
 export const HARD_RULES = '8 + 1';
-export const DOCTOR_GATES = 75;    // v1.115.0 added memory-injection-bounded; v1.116.0 "cap stays 75"
-export const AUDIT_CHECKS = 16;    // maddu audit self-checks — 16/16 in CHANGELOG
+export const DOCTOR_GATES = 76;    // v1.121.0 added acceptance-proven (75 → 76); counted from runtime/gates/builtin/
+export const AUDIT_CHECKS = 17;    // maddu audit subcommands — v1.121.0 added `audit acceptance` (16 → 17)
 export const STRESS_SCENARIOS = 17; // counted from scripts/test/stress-harness.mjs SCENARIOS
+
+/** Self-test suite total — quick profile, green on ubuntu CI at v1.121.0. */
+export const SELF_TEST_ASSERTS = 215;
 
 /** Surfaces. */
 export const SLASH_COMMANDS = 40;  // counted from .claude/commands/maddu-*.md
-/** NOT re-verified at v1.118.0 — carries an older hand read. The cockpit
+/** NOT re-verified at v1.122.0 — carries an older hand read. The cockpit
  *  registers routes dynamically, so there is nothing static to count; confirm
  *  against a running cockpit before quoting this anywhere new. */
 export const COCKPIT_ROUTES = 50;

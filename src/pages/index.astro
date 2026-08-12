@@ -149,6 +149,7 @@ maddu model gates install
 ];
 
 const features = [
+  { tone: 'ok',       glyph: '⇄', title: 'Acceptance proofs',  body: 'A goal condition can carry a derived proof that its command was seen to exit nonzero before it exited zero — while the oracle stayed frozen. New in v1.121.', href: '/features/acceptance' },
   { tone: 'accent',   glyph: '⌗', title: 'Session discipline', body: 'Hooks auto-register every session, checkpoint before every compaction, and — since v1.97 — block a mutating edit when the ritual is stale. Never build unrecorded.', href: '/features/discipline' },
   { tone: 'accent-2', glyph: '⑂', title: 'Worktree lanes',     body: 'Each lane claims its own isolated git worktree — parallel agents never share a checkout, every event lands on one spine.', href: '/features/worktrees' },
   { tone: 'warn',     glyph: '⟁', title: 'Earned autonomy',    body: 'A deterministic trust ladder over verified outcomes recommends relaxing a lane’s governance — never applies it.', href: '/features/autonomy' },
@@ -262,6 +263,78 @@ const features = [
           Validate your governance record against its own published contract with <code>ajv</code>, <code>check-jsonschema</code>, or any validator — the witness is a contract a third party can verify, not a log you&rsquo;re asked to trust. And it&rsquo;s safe to hand over: every event&rsquo;s payload is redacted at the write boundary, so the record you share can&rsquo;t leak a pasted secret.
         </p>
       </div>
+    </div>
+  </section>
+
+  <!-- ── ACCEPTANCE PROOFS (v1.121) ──────────────────────────────── -->
+  <section class="section proof-section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">New in v1.121 &middot; acceptance proofs</span>
+        <h2>A check that has never rejected anything <span class="dim">has never shown that it can.</span></h2>
+        <p>A green suite tells you it passes <em>now</em>. It doesn&rsquo;t tell you it ever failed — and the oldest way to weaken verification without touching production code is to write a check that passes no matter what, then truthfully report green. An acceptance proof is the narrow answer to exactly that, and it is derived from the record every time somebody looks, never stored.</p>
+      </header>
+
+      <div class="proof-claim">
+        <span class="proof-claim-label">What a proof claims — all of it</span>
+        <p>One declared command <b>exited nonzero</b> and later <b>exited zero</b>, while the declared <b>oracle</b> bytes stayed identical and the declared <b>implementation</b> bytes moved.</p>
+      </div>
+
+      <div class="proof-readouts">
+        <article class="proof-readout proof-readout--live">
+          <span class="proof-state">live</span>
+          <pre class="proof-line"><code>✓ met — proof: RED→GREEN · oracle 12 files frozen</code></pre>
+          <p>The strongest thing a checkmark here can say: this command was <em>seen</em> to exit nonzero before it exited zero, and the thing judging it did not change in between.</p>
+        </article>
+        <article class="proof-readout proof-readout--none">
+          <span class="proof-state">unproven</span>
+          <pre class="proof-line"><code>proof: none — this command has never been
+observed to exit nonzero.</code></pre>
+          <p>And this line is the actual product. Nothing-declared never renders like declared-and-clean; a suite that has only ever been green says so, in those words, instead of borrowing credit it never earned.</p>
+        </article>
+      </div>
+
+      <div class="proof-body">
+        <div class="proof-how">
+          <h3>Declare it on the goal, observe it on purpose</h3>
+          <pre class="usecase-code"><code>{[
+            'maddu goal set "ship the retry backoff" \\',
+            '  --success "npm test -- retry::backs off exponentially" \\',
+            '  --oracle  "test/retry.test.js" \\',
+            '  --impl    "src/retry.js"',
+            '',
+            '# orient records the RED before the fix, the GREEN after',
+            'maddu orient',
+            '',
+            '# or let ralph record the baseline, then iterate toward it',
+            'maddu loop ralph --from-goal --iterate "<agent turn>"',
+          ].map((line) => (
+            <span class:list={['ucode-line', /^\s*#/.test(line) && 'is-comment']}>{line + '\n'}</span>
+          ))}</code></pre>
+          <p>Observation belongs to the two commands you invoke on purpose — the <code>acceptance-proven</code> gate renders the state wherever gates run but <b>executes nothing</b>, because a gate that ran declared commands would turn <code>maddu doctor</code> into an arbitrary-command runner any goal declaration could aim.</p>
+        </div>
+
+        <aside class="proof-limits panel">
+          <div class="panel-head"><span class="panel-title">Honest limits</span><span class="panel-aside">exported, not summarized</span></div>
+          <ul>
+            <li><b>Process-level, not assertion-level.</b> A RED means the command exited nonzero — a missing module or an unresolvable interpreter counts too.</li>
+            <li><b>A weak oracle proven RED→GREEN is still a weak oracle.</b> An assertion checking almost nothing yields an entirely honest, entirely worthless proof.</li>
+            <li><b>Endpoint equality, not continuous immutability.</b> A run that mutates the oracle and restores it before the post-hash is not detected.</li>
+            <li><b>Only the declared sets are bound.</b> Not the environment, not the revision, not files nobody declared.</li>
+            <li><b>A receipt is a cooperative actor&rsquo;s assertion.</b> The chain is unkeyed SHA-256; deriving a proof removes the minting verb, not the forgery.</li>
+          </ul>
+          <p class="proof-limits-foot">The full list ships from the code as <code>ACCEPTANCE_HONEST_LIMITS</code>, reproduced verbatim beside every readout — so no surface can quietly narrow it.</p>
+        </aside>
+      </div>
+
+      <p class="proof-nobaseline">
+        <b>There is no re-baseline verb.</b> Editing the oracle between the RED and the GREEN means no qualifying pair ever forms; re-declaring the goal leaves the new declaration visibly unproven rather than green. The only route back is to observe the new RED and then the new GREEN — which is the work you were avoiding.
+      </p>
+
+      <p class="loop-more">
+        <a class="btn" href="/docs/reference/acceptance-proof">Acceptance proofs, in full <span aria-hidden="true">→</span></a>
+        <a class="btn btn-ghost" href="/threat-model">What it closes, and what it doesn&rsquo;t <span aria-hidden="true">→</span></a>
+      </p>
     </div>
   </section>
 
@@ -726,6 +799,72 @@ const features = [
     padding: 8px 14px; margin-bottom: var(--m-space-3); max-width: 100%; overflow-x: auto;
   }
   .contract-artifact p { max-width: min(74ch, 100%); color: var(--m-fg-1); font-size: 14px; line-height: 1.6; }
+
+  /* Acceptance proofs — the claim, the two readouts, how + limits */
+  .proof-claim {
+    padding: var(--m-space-5); margin-bottom: var(--m-space-5);
+    background: radial-gradient(120% 90% at 0% 0%, var(--m-accent-glow-bg), transparent 60%), var(--m-bg-2);
+    border: 1px solid var(--m-line); border-left: 2px solid var(--m-accent);
+    border-radius: var(--m-radius-lg);
+  }
+  .proof-claim-label {
+    display: block; font-family: var(--m-font-mono); font-size: 10.5px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--m-accent);
+    margin-bottom: 8px;
+  }
+  .proof-claim p { margin: 0; color: var(--m-fg-0); font-size: 16px; line-height: 1.6; }
+  .proof-claim b { color: var(--m-fg-0); font-weight: 600; }
+
+  .proof-readouts {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--m-space-4); margin-bottom: var(--m-space-6);
+  }
+  .proof-readout {
+    padding: var(--m-space-5); background: var(--m-bg-2);
+    border: 1px solid var(--m-line); border-radius: var(--m-radius-lg);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .proof-readout--live { border-top: 1px solid var(--m-ok); }
+  .proof-readout--none { border-top: 1px solid var(--m-fg-4); }
+  .proof-state {
+    font-family: var(--m-font-mono); font-size: 10.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--m-fg-4);
+  }
+  .proof-readout--live .proof-state { color: var(--m-ok); }
+  .proof-line {
+    margin: 0; padding: 12px 14px; background: var(--m-bg-true-black);
+    border: 1px solid var(--m-line); border-radius: var(--m-radius); overflow-x: auto;
+  }
+  .proof-line code {
+    font-family: var(--m-font-mono); font-size: 12px; line-height: 1.65;
+    color: var(--m-fg-1); background: none; border: 0; padding: 0; white-space: pre;
+  }
+  .proof-readout--live .proof-line code { color: var(--m-ok); }
+  .proof-readout p { margin: 0; color: var(--m-fg-2); font-size: 13.5px; line-height: 1.55; }
+
+  .proof-body {
+    display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: var(--m-space-4); align-items: start; margin-bottom: var(--m-space-5);
+  }
+  .proof-how h3 {
+    margin: 0 0 var(--m-space-3); font-family: var(--m-font-cond);
+    font-weight: 600; font-size: 19px; color: var(--m-fg-0);
+  }
+  .proof-how p { margin: var(--m-space-3) 0 0; color: var(--m-fg-1); font-size: 14px; line-height: 1.6; }
+  .proof-limits ul { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 9px; }
+  .proof-limits li { color: var(--m-fg-2); font-size: 13px; line-height: 1.55; }
+  .proof-limits li b { color: var(--m-fg-1); font-weight: 600; }
+  .proof-limits-foot { margin: var(--m-space-4) 0 0; color: var(--m-fg-3); font-size: 12.5px; line-height: 1.55; }
+  .proof-nobaseline {
+    margin: 0 0 var(--m-space-5); padding: var(--m-space-4) var(--m-space-5);
+    color: var(--m-fg-1); font-size: 14px; line-height: 1.6;
+    background: var(--m-bg-1); border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent-2); border-radius: var(--m-radius);
+  }
+  .proof-nobaseline b { color: var(--m-fg-0); font-weight: 600; }
+  @media (max-width: 860px) {
+    .proof-body { grid-template-columns: minmax(0, 1fr); }
+  }
 
   /* Seven use cases — 2 columns, richer copy, click-to-enlarge diagram */
   .usecases { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--m-space-4); }

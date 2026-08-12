@@ -141,6 +141,24 @@ const defenses: Defense[] = [
     ],
     doesNotCover: 'The gauntlet stops auto-fires. It does not stop an operator who manually approves every refusal in a panic. The point is to make confidently-wrong propagation visible and intentional, not to physically prevent the operator from authoring damage.',
   },
+  {
+    n: '08',
+    id: 'verdict-machinery',
+    tone: 'brand',
+    title: 'Verdict machinery — an agent weakening its own verification',
+    attack: 'The artifacts that decide pass/fail are ordinary files in the repo. An agent that has completed the ritual can edit an assertion, mark tests skipped, narrow the runner\'s scope, drop a gate from the required set, or edit the verifier itself — and then truthfully report "the suite is green". The purest form of actor-is-witness: the actor moves the yardstick, then reads it. The other half is quieter still — write a check that passes no matter what, and green means nothing.',
+    defense: 'Two cooperative signals, both narrow and both honest about it. Verdict-machinery drift detection pins an operator-declared set of decision-making files and reports four drift classes — changed, missing, unpinned, removed — so deleting a test and dropping it from the pin set does not read clean. Acceptance proofs (v1.121.0) cover the other half: with an oracle set and an implementation set declared on the goal, a condition carries a proof only when its command was observed to exit nonzero and later exit zero while the oracle bytes held and the implementation bytes moved.',
+    spineEvent: 'VERIFICATION_RAN',
+    spineEventTone: 'framework',
+    rows: [
+      { action: 'goal set --oracle --impl', effect: 'declares what must freeze and what must move', provenance: 'GOAL_DECLARED',           provTone: 'session' },
+      { action: 'orient / loop ralph',      effect: 'observes the command; records exit + digests',  provenance: 'VERIFICATION_RAN',        provTone: 'framework' },
+      { action: 'edit the test mid-flight', effect: 'oracle digest moved — no pair ever forms',      provenance: 'VERIFICATION_RAN',        provTone: 'danger' },
+      { action: 'sources rebuild --reason', effect: 'a re-pin is permitted, but never silent',       provenance: 'SOURCE_HASH_RECOMPUTED',  provTone: 'warn' },
+      { action: 'doctor / audit / ci',      effect: 'renders N/M live — warn severity, advisory',    provenance: 'GATE_RAN',                provTone: 'ok' },
+    ],
+    doesNotCover: 'More than it covers, and that has to be said in the same breath. Re-baselining the pin set is permitted — bounded by visibility, not by construction. Acceptance has no such verb, but an actor can re-declare the goal, which simply leaves the new declaration visibly unproven. A weak oracle proven RED→GREEN is still a weak oracle. The guarantee is endpoint equality, not continuous immutability — mutating a declared file and restoring it before the post-hash is undetected. Only declared sets are bound: every test outside one, and every test on a repo with no acceptance-active goal, is covered by nothing. Receipts are a cooperative actor\'s assertion — the chain is unkeyed SHA-256, so fabricated receipts carrying a correct prev_hash verify — and nothing binds a proof to a reviewable commit. Team-sync gets no acceptance coverage at all: derivation is refused, not degraded. And CI executes PR-controlled code, so an agent that edits the verifier can change the verdict in the same PR; closing that needs the required check to run from a protected base branch. Not solved here.',
+  },
 ];
 ---
 
@@ -150,7 +168,7 @@ const defenses: Defense[] = [
       <div class="eyebrow-chain">
         <span class="eyebrow">Threat model</span>
         <span class="eyebrow-sep">·</span>
-        <span class="eyebrow-dim">7 defenses · what each one covers</span>
+        <span class="eyebrow-dim">8 defenses · what each one covers</span>
         <span class="eyebrow-sep">·</span>
         <span class="eyebrow-dim">and what it doesn't</span>
       </div>
@@ -160,7 +178,7 @@ const defenses: Defense[] = [
       </p>
 
       <dl class="tm-stats">
-        <div><dt>Structural defenses</dt><dd>7</dd></div>
+        <div><dt>Structural defenses</dt><dd>8</dd></div>
         <div><dt>Rules they enforce</dt><dd>4 · 5 · 6 · 9</dd></div>
         <div><dt>Spine event types</dt><dd>~45</dd></div>
         <div><dt>Auto-repair</dt><dd>0</dd></div>
@@ -227,9 +245,9 @@ flowchart LR
   <section class="section">
     <div class="container-wide">
       <header class="section-head">
-        <span class="eyebrow">§ 02 · The seven defenses</span>
+        <span class="eyebrow">§ 02 · The eight defenses</span>
         <h2>Each one named, sourced, and bounded.</h2>
-        <p>Same shape across all seven: the attack, the defense, the implementation, the spine event that proves it ran, and what the defense <em>doesn't</em> cover. Read each as a contract, not a guarantee. The right rail tracks where you are.</p>
+        <p>Same shape across all eight: the attack, the defense, the implementation, the spine event that proves it ran, and what the defense <em>doesn't</em> cover. Read each as a contract, not a guarantee. The right rail tracks where you are.</p>
       </header>
 
       <div class="tm-layout">
@@ -267,7 +285,7 @@ flowchart LR
           ))}
         </div>
         <TocIndex
-          eyebrow="Defenses · 7"
+          eyebrow="Defenses · 8"
           items={defenses.map((d) => ({
             n: d.n,
             id: d.id,

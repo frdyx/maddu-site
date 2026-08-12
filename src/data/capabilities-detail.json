@@ -498,7 +498,7 @@
       "since": "v0.16",
       "cliIntro": "Declare the agent's current objective. Latest GOAL_DECLARED wins in the projection and surfaces in maddu brief / #orientation.",
       "cliBlocks": [
-        "$ maddu goal set \"<obj>\" [--constraint \"<c>\" --constraint \"<c>\" …]\n#   (`--objective \"<obj>\"` is accepted as an alias for the positional objective)\n$ maddu goal show"
+        "$ maddu goal set \"<obj>\" [--constraint \"<c>\" --constraint \"<c>\" …] \\\n#   (`--objective \"<obj>\"` is accepted as an alias for the positional objective)\n$ maddu goal show"
       ],
       "cliSource": "cli-reference-grouped",
       "cliNotes": null,
@@ -739,7 +739,7 @@
       "since": null,
       "cliIntro": null,
       "cliBlocks": [
-        "# Loops (Phase 6)\n# v1.1.1: verify exit=0 → completes; non-zero → iterates; identical fail\n# signature twice → halts with reason=stuck-detection; exceeding --max-iter\n# → halts with reason=max-iter-reached. Regression-tested in the synthetic\n# stress harness scenario `ralph-always-fail-halts`.\n$ maddu loop ralph --goal \"...\" --verify \"<cmd>\" [--iterate \"<cmd>\"]\n$ maddu loop plan  --plan <id> [--max-iter N]\n$ maddu loop status / cancel\n# Ralph + adaptive project tests\n$ maddu loop ralph --goal \"fix tests until green\" --verify \"maddu test --profile quick --bail\""
+        "# Loops (Phase 6)\n# v1.1.1: verify exit=0 → completes; non-zero → iterates; identical fail\n# signature twice → halts with reason=stuck-detection; exceeding --max-iter\n# → halts with reason=max-iter-reached. Regression-tested in the synthetic\n# stress harness scenario `ralph-always-fail-halts`.\n$ maddu loop ralph --goal \"...\" --verify \"<cmd>\" --oracle \"<glob>\" --impl \"<glob>\" [--iterate \"<cmd>\"]\n$ maddu loop ralph --from-goal [--iterate \"<cmd>\"]\n$ maddu loop plan  --plan <id> [--max-iter N]\n$ maddu loop status / cancel\n# Ralph + adaptive project tests\n$ maddu loop ralph --goal \"fix tests until green\" \\"
       ],
       "cliSource": "cli-reference-grouped",
       "cliNotes": null,
@@ -932,7 +932,7 @@
       "since": "v0.17",
       "cliIntro": "Zero-keystroke session bootstrap. The agent's mandatory first command of every turn.",
       "cliBlocks": [
-        "$ maddu register [<label>] [--parent <sessionId>] [--role <role>] [--runtime <name>]"
+        "$ maddu register [<label>] [--parent <sessionId>] [--role <role>]"
       ],
       "cliSource": "cli-reference",
       "cliNotes": "- Defaults: label from cwd-basename, role=implementer, focus=label. - Idempotent: if MADDU_SESSION_ID is set in env AND that session is still open in the projection, returns the cached id with (already registered) — no duplicate event. - Stale env (closed session) → registers a fresh session anyway. - Emits SESSION_AUTO_REGISTERED with source: 'cli'. - Writes the new id to .maddu/state/session.active.json (same cache as session start). - Prints an export MADDU_SESSION_ID=<id> hint on first registration; agents that source the hint get free idempotency on later calls. For deeper init flows (multi-role, explicit focus, runtime binding) use maddu session register below.",
@@ -967,10 +967,10 @@
       "since": "v0.17",
       "cliIntro": "Pluggable subprocess runtimes.",
       "cliBlocks": [
-        "$ maddu runtime list\n$ maddu runtime show <name>\n$ maddu runtime register --name <n> --binary <b> [--args a,b] [--detect \"<cmd>\"] \\\n                         [--display \"<d>\"] [--mcp] [--streaming] [--approval per-tool] \\\n                         [--lanes a,b] [--notes \"<n>\"] [--auto-register]\n$ maddu runtime detect [<name>]                     # no arg → detect-all\n$ maddu runtime spawn <name> [--session <sid>] [--lane <id>] [--args a,b]\n$ maddu runtime remove <name>"
+        "$ maddu runtime list\n$ maddu runtime show <name>\n$ maddu runtime register --name <n> --binary <b> [--args a,b] [--detect \"<cmd>\"] \\\n                         [--display \"<d>\"] [--mcp] [--streaming] [--approval per-tool] \\\n                         [--lanes a,b] [--notes \"<n>\"]\n$ maddu runtime detect [<name>]                     # no arg → detect-all\n$ maddu runtime spawn <name> [--session <sid>] [--lane <id>] [--args a,b]\n$ maddu runtime remove <name>"
       ],
       "cliSource": "cli-reference",
-      "cliNotes": "--auto-register *(v0.17)* sets kind: 'reviewer'-style behavior: every spawnWorker call against this runtime first registers a fresh child session (linked to the caller via parentSessionId), then injects the new id into the child's MADDU_SESSION_ID env. Fan-out orchestration produces N distinct sessions in the tree instead of one shared session. Editable post-register by hand-editing .maddu/runtimes/<name>.json and setting autoRegister: true.",
+      "cliNotes": "autoRegister *(v0.17, descriptor field — there is no CLI flag)* sets kind: 'reviewer'-style behavior: every spawnWorker call against a runtime whose descriptor carries autoRegister: true first registers a fresh child session (linked to the caller via parentSessionId), then injects the new id into the child's MADDU_SESSION_ID env. Fan-out orchestration produces N distinct sessions in the tree instead of one shared session. Enable it by hand-editing .maddu/runtimes/<name>.json and setting autoRegister: true.",
       "deepDive": {
         "file": "11-runtimes-and-mcp.md",
         "url": "/docs/reference/runtimes-and-mcp",
