@@ -2,7 +2,7 @@
 title: "SLM governance — maddu model"
 slug: "slm-governance"
 group: "Governance & trust"
-order: 8
+order: 9
 description: "Teams building domain-specific small language models run a factory: curate data, fine-tune (SFT / DPO / GRPO, usually LoRA/QLoRA), benchmark, and promote checkpoints toward…"
 sourceFile: "51-slm-governance.md"
 sourceUrl: "https://github.com/frdyx/maddu/blob/main/docs/51-slm-governance.md"

@@ -2,7 +2,7 @@
 title: "Auth and imports"
 slug: "auth-and-imports"
 group: "Governance & trust"
-order: 10
+order: 11
 description: "Two surfaces with overlapping security guarantees:"
 sourceFile: "12-auth-and-imports.md"
 sourceUrl: "https://github.com/frdyx/maddu/blob/main/docs/12-auth-and-imports.md"

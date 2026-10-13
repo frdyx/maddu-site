@@ -94,10 +94,10 @@ v1.111.0 serializes all of it:
   stale detection).
 - **Malformed spines refuse mutations.** Lifecycle writers gate on parse
   accounting: garbled/truncated lines → close/stale-mark refuse and the
-  janitor skips the round (with a note pointing at `maddu verify`);
+  janitor skips the round (with a note pointing at `maddu spine verify`);
   registration of *generated* ids still works. This targets ACCIDENTAL
   corruption only — a parseable adversarial edit passes parse accounting
-  and is the verification layer's domain (`maddu verify`'s hash chain,
+  and is the verification layer's domain (`maddu spine verify`'s hash chain,
   threat model §13), not the lifecycle helpers'.
 
 **Concurrent-session residual (documented, not fixed):** with two live
@@ -164,7 +164,7 @@ but still `400` a **present** malformed value.
 must both parse and name an *ever-registered* session (closed parents stay
 valid — the ever-registered set, not just live sessions); a dangling or
 malformed parent link is dropped rather than written as a reference that
-`maddu verify` would later FAIL.
+`maddu spine verify` would later FAIL.
 
 **Binding maps are prototype-safe.** The Claude→Máddu binding uses a
 null-prototype write copy and `Object.hasOwn` reads, so a grammar-valid but
@@ -210,7 +210,8 @@ session, declare a plan, slice-stop, or commit. The `PreToolUse` gate does: befo
 every **mutating** tool call it evaluates the session's rituals and, per the
 governance tier, **allows, nudges, or denies** the edit.
 
-- **What's gated.** The edit tools (`Edit`/`Write`/`MultiEdit`/`NotebookEdit`) always,
+- **What's gated.** The edit tools (`Edit`/`Write`/`MultiEdit`/`NotebookEdit`) whenever
+  the file is inside the repo (see the target rule below),
   and `Bash` **only when the command is a recognized write** (`>`/`>>` redirects,
   `sed -i`, `tee`, `mv`/`cp`/`rm`/`dd`/`truncate`, PowerShell `Set-Content`/`Out-File`/…).
   Reads (`ls`, `cat`) and the **remedy commands** — `maddu register`/`lane claim`/
@@ -218,8 +219,63 @@ governance tier, **allows, nudges, or denies** the edit.
   never gated, so the command that fixes a block is always allowed (no deadlock).
   Write detection ignores tokens inside quoted arguments, so a commit trailer or a
   slice-stop message that merely *mentions* `>` is not mistaken for a redirect.
+- **Gated by target, not just by shape (v1.133.0).** A write is only this repo's
+  business when it lands **inside** a governed root (the work root or the repo root).
+  A `Write` to a scratchpad outside the repo, a quoted-delimiter heredoc into a temp
+  dir, or `echo … > /abs/elsewhere` is classified *external*: allowed, not counted
+  toward the slice-stop clock, not witnessed, and no lane is auto-claimed for it —
+  it leaves the same footprint in `.maddu/` as a read-only `ls` does.
+  The rule is a **short allowlist**: a Bash command is external only when every
+  segment (split on `&&`, `||`, `;`, `|`, newline) is a producer writing solely
+  through a redirect (`echo`, `printf`, `cat`, `head`, `tail`, `grep`, `wc`, `cut`,
+  `tr`, `ls`, `date`, `pwd`, `true`, with listed options), or `tee`, or a
+  quoted-delimiter heredoc into `cat` — with plain tokens, and every location the
+  classifier can name resolving outside every root (an edit tool's `file_path`
+  likewise). Every other verb (`cp`, `mv`, `rm`, `mkdir`, `sed`, `node`, `npm`,
+  `git`, `bash -c`, `sudo`, `find`, PowerShell, …) and anything the allowlist does
+  not understand — a leading `VAR=value`, a `$VAR`, a glob, a subshell, a
+  here-string, an escape, a comment, a `cd`, an unknown option — keeps the
+  command from being external: it is *inside* when another segment names an
+  inside location, otherwise *unknown*, and either way gated exactly as before,
+  even beside a resolvable outside redirect. Containment considers both a path's
+  referent and its directory entry, follows symlinks and junctions component by
+  component, and treats a target containing a root as inside; short of inside,
+  `.`/`..` components in a Bash target, hard-linked files, MSYS mounts it cannot map, descriptor
+  aliases (`/dev/stdout`, `/proc/self/fd/N`), or any filesystem error other than
+  a path not existing yet are unknown; a root the hook could not resolve makes
+  the verdict unknown. One assumption is stated, not checked: the hooked shell's
+  inherited stdout/stderr are the harness's pipes. Before
+  v1.133.0 the gate never read the target at all, and the remedy it named had
+  nothing to do with the file being written.
 - **Ordered blockers.** session → lane → governing goal/plan → slice-stop freshness →
   uncommitted pileup. The deny names the first stale ritual and its exact remedy.
+- **An unplaceable target is context, never the blocker (v1.134.0).** The gate
+  classifies where a write lands: `outside` the governed roots is waved through,
+  `inside` is gated, and `unknown` — a target it could place neither way — is
+  gated as if it were inside. That last case used to be invisible, so the
+  message named a ritual for a file the gate could not locate. The deny now
+  ADDS one line saying the target could not be placed; it never replaces the
+  blocker or the remedy, because an unplaceable target is not a rung of the
+  ladder and has no remedy of its own. Only a plain edit/write earns the
+  `outside` exemption — a self-disable or an ambiguous command is gated
+  wherever it points, and its scope is recorded but kept out of the message.
+- **A block leaves a record (v1.134.0).** Each blocked decision appends one
+  `DISCIPLINE_DENIED` carrying `{tool, blocker, kind, targetScope}` —
+  `DISCIPLINE_SKIPPED`'s opposite number: that one witnesses a check that did
+  not run, this one a check that bit. It is appended inside its own try/catch
+  BEFORE the deny is written, so an unwritable spine costs the record and never
+  the block: the blocker, the remedy and the exit code are unchanged. It
+  touches no counter — being denied is not an edit.
+- **The deny names its own trigger and its own session (v1.128.0).** The
+  slice-stop gate fires on the edit count **or** the slice age, and the message
+  says which — both, when both tripped. And because the gate reads exactly one
+  session's counter (only that session's *own* slice-stop resets it, so a busy
+  fleet can never clear a counter its owner never sliced), the remedy pins that
+  session: [`maddu slice-stop --session <id> "SLICE STOP: ..."`](/capabilities/slice-stop). When several
+  Máddu sessions are alive at once — a closed hook-bound one, a hand-registered
+  one, an auto-created one — the bare form resolves *the active session*, which
+  may not be the one the gate is reading, and the block survives a slice-stop
+  that looked correct. Follow the pinned remedy verbatim and it always clears.
 - **Liveness-aware identity + the recovery mint (v1.120.0).** The gate resolves
   *which* session a caller acts as by **liveness**, not grammar alone: a live
   `$MADDU_SESSION_ID` wins, else the caller's own **live** SessionStart binding —

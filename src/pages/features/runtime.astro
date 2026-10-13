@@ -1,0 +1,251 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import EventStream from '../../components/EventStream.astro';
+import PageNext from '../../components/PageNext.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+---
+
+<Layout title="Embedded runtime — evidence inside an AI-powered product" pathname="/features/runtime">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Feature</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">import … from 'maddu/runtime'</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">since v1.147.0 · opt-in</span>
+      </div>
+      <h1>Embedded runtime. <span class="dim-h1">The second way in: Máddu inside the product, not just around the build.</span></h1>
+      <p class="lede">
+        <code>maddu/runtime</code> is a small, <strong>dependency-free</strong> evidence runtime your product calls. It records what an AI agent did, runs registered checks against <em>exactly</em> what the model produced, turns those checks into a bound decision, and holds the protected side effect behind a handle only your policy service can sign. What it leaves behind is a per-run, hash-chained event stream and a portable receipt an independent verifier can re-check offline.
+      </p>
+      <pre class="feat-cli"><code>$ npm install maddu
+
+import &#123; createRuntime, GateRegistry, MemoryStore, freezePolicy, hmacSigner,
+         decide, release, exportReceipt, verifyReceipt &#125; from 'maddu/runtime';</code></pre>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · Two ways in</span>
+        <h2>The same discipline, at two altitudes.</h2>
+        <p>
+          The CLI, the cockpit and the bridge govern <em>agent development</em>: lanes, slice-stops, gates, and the spine. The runtime carries the same idea into the thing you ship. When your product lets a model draft, decide or act, the runtime keeps the record of what was checked, what was decided, and what was released. It is a separate tree: nothing under <code>runtime/</code> imports the harness, the harness does not import the runtime, and the <code>architecture-contract</code> gate enforces that boundary.
+        </p>
+      </header>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Use Máddu while building software</span><span class="panel-aside">the CLI</span></div>
+          <p>The slash commands, the cockpit and the bridge: lanes, slice-stops, approvals, gates and the hash-chained spine that governs how your agents build.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Embed Máddu in an AI-powered product</span><span class="panel-aside">opt-in</span></div>
+          <p>One subpath export inside the existing <code>maddu</code> package, with no separate package name. Node ≥ 20, ESM only, stdlib only. Importing it reads no repo, no global config and no environment variable, and creates no files.</p>
+        </div>
+      </div>
+
+      <Callout tone="accent" title="What it is not" tag="host-owns-the-request-path">
+        <p>
+          Not a model client, not a sandbox, not an authentication system, not a compliance certificate, not a hosted service. Your application keeps the model calls, the credentials, the database, the business policy and the final authorization. The runtime holds no key of its own and spawns nothing. Same charter as the CLI: <em>the host calls Máddu; Máddu never sits in the request path and never touches your keys.</em>
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · The lifecycle</span>
+        <h2>Context, call, checks, decision, boundary, receipt.</h2>
+        <p>The synthetic pilot ships as the reference integration. Its shape, with the host's own pieces marked:</p>
+      </header>
+
+      <pre class="feat-cli"><code>// 1 · trusted host context first: the model never picks its tenant or policy
+const gates = new GateRegistry();
+gates.register(&#123; id: 'schema', version: '1.0', evidenceClass: 'deterministic', check &#125;);
+gates.freeze();
+const policy = freezePolicy(&#123; version: 'pol-7', boundaries: &#123;
+  draft:   &#123; enforced: false &#125;,                                  // shadow: measured, never blocks
+  release: &#123; enforced: true, requireApproval: true, ttlMs: 300_000 &#125;,
+&#125;&#125;);
+const signer = hmacSigner(&#123; id: 'policy-svc', key: process.env.POLICY_KEY &#125;); // host-owned key
+
+// 2 · same idempotency key → same run, never a second RUN_STARTED
+const run = await runtime.startRun(&#123; context, idempotencyKey, requiredGates: ['schema'], policyVersion: 'pol-7' &#125;);
+
+// 3 · observe the call: references and digests only, no bodies
+const call = await observeModelCall(run, &#123; metadata, invoke: () =&gt; model.draft(doc) &#125;);
+
+// 4 · gates run against exactly that draft
+const evaluation = await run.evaluate(&#123; subject: call.output &#125;);
+
+// 5 · decide; 6 · the boundary re-binds the handle to what is presented NOW
+const d = await decide(run, &#123; signer, policy, boundary: 'release', subjectDigest: evaluation.subjectDigest, … &#125;);
+if (d.decision === 'allow') await release(run, &#123; handle: d.handle, signer, subject: call.output, authorize, deliver, … &#125;);
+
+// 7 · terminal, receipt
+await run.complete();
+const receipt = exportReceipt(&#123; events: (await run.read()).events, manifest: evaluation.manifest, policy, … &#125;);</code></pre>
+
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Non-pass never reads as pass</span><span class="panel-aside">gates</span></div>
+          <p>A gate that returns <code>fail</code>, throws, times out, answers <code>unknown</code>, or is simply missing withholds the decision. An approval never overrides a failing required gate.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Bound to the exact artifact</span><span class="panel-aside">decisions</span></div>
+          <p>The single-use handle is HMAC-signed by your signer and re-bound at the boundary to run, tenant, principal, policy, gate set, parameters, resource version, artifact and expiry. Change the output after the gate and you get a binding mismatch.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Crashes are reconciled</span><span class="panel-aside">side effects</span></div>
+          <p>A crash before or after the effect leaves it known or unknown. It is reconciled against your idempotency state and never blindly retried. Your <code>authorize()</code> hook stays authoritative.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 03 · On the record</span>
+        <h2>One run, one hash-chained stream.</h2>
+      </header>
+      <EventStream
+        eyebrow="Synthetic pilot · scenario A, happy path"
+        source="evidence/run-7f3e….ndjson"
+        entries={[
+          { time: '14:02:11.004', type: 'RUN_STARTED',             tone: 'session',   payload: 'requiredGates=schema · policy=pol-7 · idempotency=ord-4411', actor: 'host' },
+          { time: '14:02:11.019', type: 'CONTEXT_REFERENCED',      tone: 'framework', payload: 'document · digest=sha256:3a9c… · reference only, no body',  actor: 'host' },
+          { time: '14:02:11.022', type: 'MODEL_CALL_STARTED',      tone: 'framework', payload: 'provider · model',                                       actor: 'host' },
+          { time: '14:02:12.870', type: 'MODEL_CALL_FINISHED',     tone: 'framework', payload: 'output digest=sha256:e81d…',                             actor: 'host' },
+          { time: '14:02:12.903', type: 'CHECK_FINISHED',          tone: 'ok',        payload: 'schema@1.0 · deterministic · pass',                      actor: 'runtime' },
+          { time: '14:02:12.911', type: 'OUTPUT_DECIDED',          tone: 'approval',  payload: 'boundary=release · escalate',                            actor: 'runtime' },
+          { time: '14:02:12.915', type: 'APPROVAL_REQUESTED',      tone: 'approval',  payload: 'one per operation · expiring · ttl=300s',                actor: 'runtime' },
+          { time: '14:02:40.230', type: 'APPROVAL_DECIDED',        tone: 'approval',  payload: 'allowed · single use · bound to action digest',          actor: 'operator' },
+          { time: '14:02:40.552', type: 'OUTPUT_DELIVERY_OBSERVED', tone: 'ok',       payload: 'handle consumed once · artifact digest matched',         actor: 'host' },
+          { time: '14:02:40.560', type: 'RUN_COMPLETED',           tone: 'session',   payload: 'terminal · stream closed',                               actor: 'runtime' },
+        ]}
+      />
+      <p class="feat-note">
+        Payloads above are abbreviated. The envelope contract is <code>maddu.runtime.v1</code>, encoding and digests are pinned by <code>maddu.canonical.v1</code> test vectors, and the same events always reduce to a byte-identical state and head. Tamper, reorder, splice, gap and replay each surface as a <strong>named failure, never a repair</strong>.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 04 · Supported modes</span>
+        <h2>What is supported, what is experimental, what is absent.</h2>
+      </header>
+
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">MemoryStore</span><span class="panel-aside">supported</span></div>
+          <p>Ack level <code>buffered</code>; the full store contract is tested against it.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">FileStore</span><span class="panel-aside">experimental</span></div>
+          <p>One NDJSON file per run, ack <code>durable</code> after <code>fdatasync</code>. Torn tails and corrupt lines are reported, never repaired, and appends are refused on damage.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Your own BaseStore</span><span class="panel-aside">supported contract</span></div>
+          <p>Compare-and-swap append on the expected head, one operation key per run, terminal closes the run. Multi-process fencing and tenant isolation belong to the adapter.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Shadow boundary</span><span class="panel-aside">supported</span></div>
+          <p><code>enforced: false</code> records what the policy <em>would</em> have decided and why, and blocks nothing. <code>measureRun()</code> counts would-blocks, so you can measure a policy before you trust it.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Receipts</span><span class="panel-aside">supported · unsigned</span></div>
+          <p>A portable bundle with its omissions stated. Every verification reports <code>authority: 'unsigned'</code>. Producer keys, external witness and signatures report <code>not_supplied</code>.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Economy / settlement</span><span class="panel-aside">not present</span></div>
+          <p>No code exists for it. No latency, accuracy, cost or savings figure is claimed, because none has been measured.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 05 · Honest limits</span>
+        <h2>An in-process integration is a cooperation boundary, not an isolation boundary.</h2>
+        <p>
+          Every guarantee on the reference page maps to a named test under <code>scripts/test/runtime-*</code> or is marked as a limitation. A test also reads the docs and the README, and exits nonzero if either claims a mode the supported-modes table marks absent.
+        </p>
+      </header>
+
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">The host can present anything</span><span class="panel-aside">digest binding</span></div>
+          <p>The digest binds what the host presents to the boundary. An in-process host that controls the process, the credentials and the store is outside what the runtime can defend against.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Unsigned receipts</span><span class="panel-aside">non-authoritative</span></div>
+          <p>Whoever holds the store can replace an unsigned bundle wholesale. The chain is tamper-detecting inside the bundle, and the verifier says <code>unsigned</code> rather than implying a trusted issuer.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Shape-based minimization</span><span class="panel-aside">not a privacy boundary</span></div>
+          <p>Secret and PII redaction in errors and exports is shape-based. <code>MINIMIZE_LIMITS</code> states it is never a complete privacy boundary.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Checks are not sandboxed</span><span class="panel-aside">gate implementations</span></div>
+          <p>The implementation digest catches a changed check under the same id. It does not contain a check that spawns its own side effects.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Key custody is yours</span><span class="panel-aside">HMAC</span></div>
+          <p>Handle strength is your signer key's strength. The runtime holds no key and cannot enforce a route it is not on.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Single process</span><span class="panel-aside">concurrency</span></div>
+          <p>Concurrent appends, stale writers and torn writes are tested in one process. Distributed stores must bring compare-and-swap and crash recovery themselves.</p>
+        </div>
+      </div>
+
+      <p class="feat-note">
+        Design and decisions: <a href="/docs/reference/product-runtime-rfc">the product-runtime RFC</a> · adoption surface, tested guarantees and compatibility policy: <a href="/docs/reference/embedded-runtime">Embedding Máddu in a product</a>.
+      </p>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="Next feature"
+    title="Acceptance proofs — RED→GREEN against a frozen oracle"
+    hint="A check that never rejected anything never showed it can."
+    href="/features/acceptance"
+    tone="ok"
+  />
+  <CtaBlock />
+</Layout>
+
+<style>
+  .feat-cli {
+    margin: var(--m-space-5) 0 0;
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent);
+    border-radius: var(--m-radius);
+    font-family: var(--m-font-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--m-fg-1);
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .feat-note {
+    margin-top: var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+    line-height: 1.6;
+  }
+  .feat-note code { font-size: 12px; }
+  .grid-3 { margin-top: var(--m-space-6); }
+</style>

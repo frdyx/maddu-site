@@ -1,7 +1,7 @@
 {
-  "version": "1.122.0",
-  "released": "2026-08-12",
-  "phase": "strict-flags-default",
-  "contractVersion": "1.19.0",
-  "eventTypes": 193
+  "version": "1.152.0",
+  "released": "2026-09-21",
+  "phase": "deliverable-upgrades",
+  "contractVersion": "1.21.0",
+  "eventTypes": 195
 }

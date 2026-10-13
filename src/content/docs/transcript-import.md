@@ -126,4 +126,4 @@ session UUIDs alongside Máddu session ids.
   serves the same projection over HTTP.
 - [`10-skills-and-hindsight.md`](/docs/reference/skills-and-hindsight) — how
   skill injection events differ from token usage events.
-- [`docs/cost.md`](/docs/reference/cli-reference#cost) — the rollup itself.
+- [`03-cli-reference.md#cost`](/docs/reference/cli-reference#cost) — the rollup itself.

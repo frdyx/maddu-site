@@ -2,7 +2,7 @@
 title: "47. Earned autonomy (maddu autonomy)"
 slug: "earned-autonomy"
 group: "Governance & trust"
-order: 7
+order: 8
 description: "maddu autonomy grades each lane's earned trust from the verified record — a deterministic Wilson lower bound over witnessed-clean vs witnessed-dirty slice outcomes, mapped to a…"
 sourceFile: "47-earned-autonomy.md"
 sourceUrl: "https://github.com/frdyx/maddu/blob/main/docs/47-earned-autonomy.md"

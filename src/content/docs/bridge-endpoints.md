@@ -63,7 +63,7 @@ instead of fishing fields out of `/bridge/status`.
 | GET | `/bridge/test-status` | — | `{stress, upgradeMatrix}` — reads `.maddu/state/{stress,upgrade-matrix}-last-run.json` |
 | GET | `/bridge/oversight` | — | `{skills:{fed[],withheld[]}, onGoal, recordIntact}` — the [oversight](/docs/reference/oversight) readout (`buildOversight`) |
 | GET | `/bridge/digest` | — | `{digest}` — "while you were away" ([Operator Plane](/docs/reference/operator-plane)) |
-| GET | `/bridge/project` | — | `{project}` — single-project cockpit projection |
+| GET | `/bridge/project-cockpit` | — | `{project}` — single-project cockpit projection |
 | GET | `/bridge/decisions` | — | `{decisions[]}` — the decision ledger; each row's `sha` ties to the tamper chain |
 | GET | `/bridge/_all/portfolio` | — | `{workspaces[], needsHuman[]}` — cross-workspace portfolio wall (fan-out over every registered workspace) |
 
@@ -100,7 +100,7 @@ instead of fishing fields out of `/bridge/status`.
 >   manufactured an immediately-orphaned claim). **Migration:** register the
 >   session (`POST /bridge/sessions/register`) before claiming.
 > - Shared failure surfacing: **503** lane lock busy · **409** spine malformed
->   (run `maddu verify`) · **500** `{partial:true, stage}` if an append failed
+>   (run [`maddu spine verify`](/capabilities/spine)) · **500** `{partial:true, stage}` if an append failed
 >   after an earlier one landed (append-only — re-run to complete).
 
 ## Slice-stop
@@ -123,7 +123,7 @@ instead of fishing fields out of `/bridge/status`.
 | GET | `/bridge/approvals` | — | `{open[], ledger[], policies[]}` |
 | GET | `/bridge/approvals/<id>` | — | `{status: 'open'|'decided', ...}` |
 | POST | `/bridge/approvals/request` | `{tool, sessionId?, lane?, action?, summary?, payload?}` | `{approvalId, status, decision?, autoDecided, autoDecideSource?, open?}` |
-| POST | `/bridge/approvals/respond` | `{approvalId, decision, actor?, lane?, reason?, tool?}` | `{ok, event}` |
+| POST | `/bridge/approvals/respond` | `{approvalId, decision, actor?, reason?}` | `{ok, event}` · `404` unknown id · `409` already decided (lane/tool are taken from the request, not the body — v1.145.0) |
 | POST | `/bridge/approvals/policies` | `{tool, decision, actor?, lane?}` | `{ok, event}` |
 
 `decision` is one of `allow-once`, `allow-always`, `deny`, `deny-always` (request/respond) or `allow-always`, `deny`, `clear` (policies).
@@ -430,6 +430,45 @@ The SLM-factory registry (SLM) — pure read-time `deriveModels` over the spine 
   "rollbacks":   [ { "checkpointKey": "sha256:…", "reverted_to": "candidate" } ]
 }
 ```
+
+## Read-model and agent endpoints (v1.139.0 catalogue)
+
+Every route below is registered by an exact-path guard in `maddu/runtime/server.js`. Until v1.139.0 none of them appeared in this reference (audit register D3); the `residual-closure` self-test row now derives the exact-route set from the server at row time and fails when a route is missing here. All are workspace-scoped (`X-Maddu-Workspace` applies) and read-only unless marked `POST`.
+
+### Agent context
+
+- `GET /bridge/agent-context` — a terse turn-start context for agents: `{ lastEventId, goal, phase, activeSession, activeSessions, openFollowups, laneClaims, recentSliceStops (last 5), sessionsTreeSummary, janitor }`; `?text=1` renders it as plain text. It is the JSON half of what [`maddu brief --for-agent`](/capabilities/brief) prints — the CLI can add skill and recall content the HTTP form does not carry. The cockpit's Orientation route reads `GET /bridge/orientation` and `GET /bridge/projection` instead; this one is for agents and their runtimes, which the `MADDU.md` brief points here.
+- `GET /bridge/handoff` — the curated "▶ RESUME HERE" handoff note fused with live goal, focus and fleet context at display time.
+- `GET /bridge/goal` — the active goal as declared (objective, constraints, success conditions). Success conditions are **not** evaluated here — running operator verify commands on an HTTP GET would be unsafe; that lives in [`maddu orient`](/capabilities/orient).
+- `GET /bridge/governance` — `{ mode, overrides, source }`: the configured governance tier, its per-rule overrides and where the config was read from (v1.1.0).
+- `GET /bridge/focus` — Focus Director readout: the trajectory slot, the goal objective for the TARGET label, and whether the operator has opted in.
+
+### Boards and readouts
+
+- `GET /bridge/conductor` — the signal-of-record for "what is safe next?" that the Conductor route renders.
+- `GET /bridge/claims` — lane claims with session, lease and heartbeat detail (the extended view behind the Claims board).
+- `GET /bridge/queue` — the scheduler / queue / dispatch / preflight board.
+- `GET /bridge/plans` — `{ plans, kanban }`: every plan with its phases, plus the derived kanban columns (v1.1.0).
+- `GET /bridge/loops` — ralph / plan loops, one row per `LOOP_STARTED` hydrated from its own start event (an orphaned halt never conjures a phantom loop) (v1.1.0).
+- `GET /bridge/learning?q=&kind=&lane=&limit=` — memory-fact search behind the Learning route: `q` full-text, `kind` and `lane` filters, `limit` default 500.
+- `GET /bridge/plugins` — plugins discovered for this workspace (`name, enabled, trusted, source, error, description`); the cockpit gates plugin-owned panels on `enabled`.
+- `GET /bridge/tools` — `{ defaults, mcp, health, recent }`: the five default tools (`git`, `test`, `format`, `lint`, `install`), **every** registered MCP server (disabled ones included — the `enabled` flag is on each row), the last MCP health snapshot, and the 20 most recent `TOOL_INVOKED` / `TOOL_COMPLETED` / `TOOL_REFUSED` events, newest first.
+- `GET /bridge/events/recent?limit=N` — `{ events, total }`: the N most recent events (default 200, max 5000) with no cursor, for charts and sparklines; the cursor-driven feed is under *Events* above.
+
+### Trust
+
+- `GET /bridge/trust` and `GET /bridge/trust/snapshot` — the same handler: the trust config (pins), the last `TRUST_AUDIT_RAN` event, the 20 most recent `TRUST_VIOLATION_DETECTED` and `SECRET_DETECTED_IN_ARGV` events and the 10 most recent `WORKER_ENV_FILTERED` events (arrays, newest first — not counts), the worker-env policy summary, MCP provenance counts (`verified` / `mismatch`) and the skill provenance distribution.
+- `POST /bridge/trust/audit` — run the supply-chain audit ([`maddu trust audit`](/capabilities/trust)) from the cockpit. Body `{ fresh?, cve? }`: without `fresh: true` a cached result within the audit's freshness window is served; a real audit (not a refusal) appends `TRUST_AUDIT_RAN` exactly as the CLI does. Token-gated like every POST.
+
+### Enforcer
+
+- `POST /bridge/enforcer/check` — deterministic proposal check against the enforcer rules; never mutates state and never appends to the spine.
+- `GET /bridge/enforcer/rules` — the enforcer rule set the check evaluates.
+
+### Recall and wiki
+
+- `GET /bridge/recall?q=…` — inspect what a bounded recall packet **would** inject for a query; `recall.mjs` is the single eligibility seam and this route never emits an event — inspection is not injection.
+- `GET /bridge/wiki` — the per-lane slice-stop wiki index; `GET /bridge/wiki/page?page=<name>` — one page as `{ page, body }` (400 without `page`, 404 when absent); `POST /bridge/wiki/rebuild` — re-render every derived page (`lane-*.md` and `general.md`) from the spine's slice-stops, **overwriting hand edits to those pages**; returns `{ ok, pagesWritten }`. Use [`maddu wiki sync`](/capabilities/wiki) for the non-destructive backfill (see `maddu wiki`).
 
 ## Auth and CORS
 

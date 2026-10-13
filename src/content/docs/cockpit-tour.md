@@ -44,7 +44,7 @@ The page itself never scrolls — only the rail and the route body do. The compo
 
 ### `#orientation` *(v0.16, Sessions panel v0.17)*
 
-Turn-start digest. Goal, phase, active session, last slice, counters, open follow-ups, plus the rendered handoff markdown from the most recent slice-stop. **v0.17** adds a **Sessions panel** showing the live `sessionsTree` projection — parent sessions and their auto-registered children inline, with stale/closed indicators driven by the inline janitor. Top of the **Decide** group. Reads `GET /bridge/orientation` + (for v0.17) `GET /bridge/agent-context`; both are pure projections from the spine, deterministic across restarts. Pair with the CLI: [`maddu brief`](/capabilities/brief) prints the orientation digest, [`maddu session tree`](/capabilities/session) prints the same tree the panel renders. Set goal/phase with [`maddu goal set`](/capabilities/goal) / [`maddu phase set`](/capabilities/phase). See [20-governance.md](/docs/reference/governance#turn-start-orientation) and [21-agent-onboarding.md](/docs/reference/agent-onboarding).
+Turn-start digest. Goal, phase, active session, last slice, counters, open follow-ups, plus the rendered handoff markdown from the most recent slice-stop. **v0.17** adds a **Sessions panel** showing the live `sessionsTree` projection — parent sessions and their auto-registered children inline, with stale/closed indicators driven by the inline janitor. Top of the **Decide** group. Reads `GET /bridge/orientation` for the digest and the rendered handoff, and `GET /bridge/projection` for the Sessions panel (the `sessionsTree` and janitor activity live on the projection, not on the orientation response); both are pure projections from the spine, deterministic across restarts. Agents read a terser twin through [`maddu brief --for-agent`](/capabilities/brief) (and its bridge form, listed under *Agent context* in [05-bridge-endpoints.md](/docs/reference/bridge-endpoints)); the cockpit does not fetch that one. Pair with the CLI: `maddu brief` prints the orientation digest, [`maddu session tree`](/capabilities/session) prints the same tree the panel renders. Set goal/phase with [`maddu goal set`](/capabilities/goal) / [`maddu phase set`](/capabilities/phase). See [20-governance.md](/docs/reference/governance#turn-start-orientation) and [21-agent-onboarding.md](/docs/reference/agent-onboarding).
 
 ### `#gates` *(v0.16)*
 
@@ -60,7 +60,7 @@ Five read-only routes for the operator on the hook — the person who may not re
 
 - **`#oversight`** — what a skill was **fed vs withheld**, with a plain-language *why* per item; on-goal drift; record-intact. Reads `GET /bridge/oversight`; mirror of [`maddu spine oversight`](/capabilities/spine).
 - **`#digest`** — "while you were away": what changed since you last looked (slices landed, gates failing, goal state). Reads `GET /bridge/digest`; mirror of [`maddu orient --digest`](/capabilities/orient).
-- **`#project`** — a single project's state, focused, for the one-repo operator. Reads `GET /bridge/project`.
+- **`#project`** — a single project's state, focused, for the one-repo operator. Reads `GET /bridge/project-cockpit`.
 - **`#decisions`** — the decision/approval ledger, each row's `sha` tied to the tamper chain (a decision you can prove wasn't back-dated). Reads `GET /bridge/decisions`.
 - **`#portfolio`** — the cross-workspace wall: every registered workspace at once and **which need a human**. Reads `GET /bridge/_all/portfolio` (fans out over all workspaces).
 

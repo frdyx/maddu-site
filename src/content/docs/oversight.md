@@ -2,7 +2,7 @@
 title: "Oversight — what the agent did, for the person who can't read the code"
 slug: "oversight"
 group: "Governance & trust"
-order: 9
+order: 10
 description: "The spine records everything, but in event types. The operator on the hook for an agent's work is often non-technical — they can't read the diff to know whether the agent stayed…"
 sourceFile: "52-oversight.md"
 sourceUrl: "https://github.com/frdyx/maddu/blob/main/docs/52-oversight.md"

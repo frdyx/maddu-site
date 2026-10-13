@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "route": "/docs/reference",
   "ghBase": "https://github.com/frdyx/maddu/blob/main/docs",
-  "total": 78,
+  "total": 65,
   "excluded": [
     "00-index.md",
     "17-validation-checklist.md",
@@ -265,6 +265,14 @@
           "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/36-trust-audit.md"
         },
         {
+          "slug": "acceptance-proof",
+          "url": "/docs/reference/acceptance-proof",
+          "title": "56. Acceptance proofs — RED → GREEN against a frozen oracle",
+          "description": "A green test suite tells you the suite passes now. It does not tell you the suite ever failed — and a test that has never failed has never demonstrated that it can. The oldest way…",
+          "sourceFile": "56-acceptance-proof.md",
+          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/56-acceptance-proof.md"
+        },
+        {
           "slug": "threat-model",
           "url": "/docs/reference/threat-model",
           "title": "34. Threat model",
@@ -406,7 +414,7 @@
           "slug": "model-routing",
           "url": "/docs/reference/model-routing",
           "title": "25. Model routing hints",
-          "description": "v0.19 adds a way to express model preferences without breaking hard rule 5. A lane can prefer Claude Sonnet for plan stages and Haiku for exec. A specific pipeline stage can…",
+          "description": "v0.19 adds a way to express model preferences without breaking hard rule 5. A lane or a pipeline stage can declare a preference (Claude Sonnet for plan, Haiku for exec); today…",
           "sourceFile": "25-model-routing.md",
           "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/25-model-routing.md"
         }
@@ -506,6 +514,27 @@
       ]
     },
     {
+      "label": "Embedded runtime",
+      "items": [
+        {
+          "slug": "embedded-runtime",
+          "url": "/docs/reference/embedded-runtime",
+          "title": "58 · Embedding Máddu in an AI-powered product — maddu/runtime",
+          "description": "Scope of this page. It describes what the opt-in runtime does, the modes that are tested, and the limits that are stated rather than assumed. Every claim below maps to a test…",
+          "sourceFile": "58-embedded-runtime.md",
+          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/58-embedded-runtime.md"
+        },
+        {
+          "slug": "product-runtime-rfc",
+          "url": "/docs/reference/product-runtime-rfc",
+          "title": "Product runtime and agent economy: RFC and trust boundaries",
+          "description": "Status: proposed design record. Nothing in this page is implemented at the pinned baseline (227c69d3b0606ebfe9a4f441483dfa46512f655f, v1.139.0) unless a row is explicitly marked…",
+          "sourceFile": "57-product-runtime-rfc.md",
+          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/57-product-runtime-rfc.md"
+        }
+      ]
+    },
+    {
       "label": "Recipes",
       "items": [
         {
@@ -547,144 +576,6 @@
           "description": "Copy this file to .maddu/skills/review-lane-skill.md to give agents a stable recipe for wiring a post-stop reviewer.",
           "sourceFile": "skills/review-lane-skill.md",
           "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/skills/review-lane-skill.md"
-        }
-      ]
-    },
-    {
-      "label": "Working notes",
-      "items": [
-        {
-          "slug": "audit/2026-06-03-adr-worker-model",
-          "url": "/docs/reference/audit/2026-06-03-adr-worker-model",
-          "title": "ADR 2026-06-03 — Direct-session is the primary execution model; bridge-spawned workers are legacy/optional",
-          "description": "Status: Proposed (needs operator ratification — this is an identity decision, not cleanup). Upstream of: comms→plugin extraction, cockpit consolidation, the skills/review wire-in,…",
-          "sourceFile": "audit/2026-06-03-ADR-worker-model.md",
-          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/audit/2026-06-03-ADR-worker-model.md"
-        },
-        {
-          "slug": "audit/2026-06-03-adr-plugin-system",
-          "url": "/docs/reference/audit/2026-06-03-adr-plugin-system",
-          "title": "ADR 2026-06-03 — Plugin system (foundational; comms is the first consumer)",
-          "description": "Status: Proposed → implementing (loader core this PR; comms code-move next PR). Why: The usage audit showed whole subsystems (comms, and candidates beyond) that no real project…",
-          "sourceFile": "audit/2026-06-03-ADR-plugin-system.md",
-          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/audit/2026-06-03-ADR-plugin-system.md"
-        },
-        {
-          "slug": "audit/ledger",
-          "url": "/docs/reference/audit/ledger",
-          "title": "Audit ledger",
-          "description": "A running, append-only record of audit findings and their disposition so repeated audits don't re-test faults already settled. When a cross-project or framework audit runs, it…",
-          "sourceFile": "audit/LEDGER.md",
-          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/audit/LEDGER.md"
-        },
-        {
-          "slug": "audit/2026-06-30-cross-project-audit",
-          "url": "/docs/reference/audit/2026-06-30-cross-project-audit",
-          "title": "Cross-project audit — 2026-06-30",
-          "description": "Scope: how Máddu is doing across the real install base, now that it's been run in many fresh repos. Looks for dead domains, consumer-facing bugs, and features worth wiring,…",
-          "sourceFile": "audit/2026-06-30-cross-project-audit.md",
-          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/audit/2026-06-30-cross-project-audit.md"
-        },
-        {
-          "slug": "audit/fleet-usage-audit-2026-07-16",
-          "url": "/docs/reference/audit/fleet-usage-audit-2026-07-16",
-          "title": "Fleet usage audit — 2026-07-16 (Codex analysis)",
-          "description": "Method: all 22 registered workspaces' spines parsed directly (lanes catalog vs claims, event types, gates, learn corrections, sessions/slice-stops) + maddu insights / maddu fleet…",
-          "sourceFile": "audit/fleet-usage-audit-2026-07-16.md",
-          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/audit/fleet-usage-audit-2026-07-16.md"
-        },
-        {
-          "slug": "audit/2026-06-30-improvement-roadmap",
-          "url": "/docs/reference/audit/2026-06-30-improvement-roadmap",
-          "title": "Improvement roadmap — 2026-06-30",
-          "description": "Output of a Ralph-loop ideation workflow (32 agents: 7 diverse-lens generators → 3 critic→refiner rounds → adversarial feasibility judges under the 8+1 rules → synthesis).…",
-          "sourceFile": "audit/2026-06-30-improvement-roadmap.md",
-          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/audit/2026-06-30-improvement-roadmap.md"
-        },
-        {
-          "slug": "audit/2026-06-03-kill-staging",
-          "url": "/docs/reference/audit/2026-06-03-kill-staging",
-          "title": "Kill-staging decision record — 2026-06-03",
-          "description": "Companion to 2026-06-03-usage-audit.md. The audit found 90 of 142 defined event types never fired across 7 registered workspaces. This record stages what to do about them. Nothing…",
-          "sourceFile": "audit/2026-06-03-kill-staging.md",
-          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/audit/2026-06-03-kill-staging.md"
-        },
-        {
-          "slug": "audit/charter",
-          "url": "/docs/reference/audit/charter",
-          "title": "Máddu charter — the north star",
-          "description": "Reconstructed from primary sources (README, hard-rules, concepts, architecture) during the 2026-05-24 audit. This is the single reference for \"what Máddu is, what it is meant to…",
-          "sourceFile": "audit/CHARTER.md",
-          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/audit/CHARTER.md"
-        },
-        {
-          "slug": "audit/2026-06-03-usage-audit",
-          "url": "/docs/reference/audit/2026-06-03-usage-audit",
-          "title": "Máddu empirical usage audit — 2026-06-03",
-          "description": "First data-driven audit (vs the 2026-05-24 static/structural audit). Joins three layers of truth across 8 real consumer projects + 125 Claude Code session transcripts:",
-          "sourceFile": "audit/2026-06-03-usage-audit.md",
-          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/audit/2026-06-03-usage-audit.md"
-        },
-        {
-          "slug": "audit/fleet-usage-audit-2026-07-16-stats",
-          "url": "/docs/reference/audit/fleet-usage-audit-2026-07-16-stats",
-          "title": "Máddu fleet usage audit — raw stats (2026-07-16)",
-          "description": "Scope: 22 registered workspaces (21 with spines + 1 new), all spine events parsed directly; plus maddu insights cross-project dataset (defined 182 event types) and transcript…",
-          "sourceFile": "audit/fleet-usage-audit-2026-07-16-stats.md",
-          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/audit/fleet-usage-audit-2026-07-16-stats.md"
-        },
-        {
-          "slug": "audit/2026-05-24-framework-audit",
-          "url": "/docs/reference/audit/2026-05-24-framework-audit",
-          "title": "Máddu framework audit — 2026-05-24",
-          "description": "Read-only audit run against main @ 4cc6ee9 (v1.2.3), driven by 5 parallel sub-agents (charter, event taxonomy, docs/gates, dead-code/duplication, command + cockpit + pipeline…",
-          "sourceFile": "audit/2026-05-24-framework-audit.md",
-          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/audit/2026-05-24-framework-audit.md"
-        },
-        {
-          "slug": "releases/v0.3.2",
-          "url": "/docs/reference/releases/v0.3.2",
-          "title": "Máddu v0.3.2 — Roadmap complete",
-          "description": "Released: 2026-05-14",
-          "sourceFile": "releases/v0.3.2.md",
-          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/releases/v0.3.2.md"
-        },
-        {
-          "slug": "audit/2026-06-04-plan-orchestration-handoff",
-          "url": "/docs/reference/audit/2026-06-04-plan-orchestration-handoff",
-          "title": "Plan — v1.6 orchestration handoff & goal-progress briefing",
-          "description": "Status: Proposed (full plan; awaiting operator approval to implement). Origin: Operator runs Máddu across many sessions on big projects and uses posto's /orch:status system…",
-          "sourceFile": "audit/2026-06-04-PLAN-orchestration-handoff.md",
-          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/audit/2026-06-04-PLAN-orchestration-handoff.md"
-        },
-        {
-          "slug": "sessions/2026-05-14-omc-design-port",
-          "url": "/docs/reference/sessions/2026-05-14-omc-design-port",
-          "title": "Session 2026-05-14 — OMC design language port",
-          "description": "Picks up immediately after v0.3.2 (Phase A+B+C+D2 complete). This session was pure cockpit/CSS evolution — no bridge, route, or schema changes. Goal: take Máddu's…",
-          "sourceFile": "sessions/2026-05-14-omc-design-port.md",
-          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/sessions/2026-05-14-omc-design-port.md"
-        },
-        {
-          "slug": "releases/v0.3.2-integration-smoke",
-          "url": "/docs/reference/releases/v0.3.2-integration-smoke",
-          "title": "v0.3.2 — Fresh-repo integration smoke",
-          "description": "The original master-plan deliverable (Slice 9): \"maddu init into a brand-new empty git repo on the operator's machine; walk through a full operator flow.\"",
-          "sourceFile": "releases/v0.3.2-integration-smoke.md",
-          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/releases/v0.3.2-integration-smoke.md"
-        }
-      ]
-    },
-    {
-      "label": "More reference",
-      "items": [
-        {
-          "slug": "acceptance-proof",
-          "url": "/docs/reference/acceptance-proof",
-          "title": "56. Acceptance proofs — RED → GREEN against a frozen oracle",
-          "description": "A green test suite tells you the suite passes now. It does not tell you the suite ever failed — and a test that has never failed has never demonstrated that it can. The oldest way…",
-          "sourceFile": "56-acceptance-proof.md",
-          "sourceUrl": "https://github.com/frdyx/maddu/blob/main/docs/56-acceptance-proof.md"
         }
       ]
     }

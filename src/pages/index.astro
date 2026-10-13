@@ -338,6 +338,39 @@ observed to exit nonzero.</code></pre>
     </div>
   </section>
 
+  <!-- ── TWO WAYS IN (v1.147–v1.151 embedded runtime) ────────────── -->
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">New in v1.151 &middot; two ways in</span>
+        <h2>Govern the agents that build it. <span class="dim">Or embed the record in what you ship.</span></h2>
+        <p>The CLI governs <em>agent development</em>. The opt-in <code>maddu/runtime</code> export carries the same discipline into an AI-powered product: a dependency-free module your app calls to record what the model did, check exactly what it produced, and release a side effect only behind a handle your own policy service signed.</p>
+      </header>
+
+      <div class="grid-2">
+        <article class="panel">
+          <div class="panel-head"><span class="panel-title">Use Máddu while building software</span><span class="panel-aside">the CLI</span></div>
+          <p>Lanes, slice-stops, approvals, gates and the hash-chained spine, through the slash commands, the cockpit and the bridge.</p>
+          <pre class="usecase-code"><code>npx github:frdyx/maddu init</code></pre>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><span class="panel-title">Embed Máddu in an AI-powered product</span><span class="panel-aside">opt-in</span></div>
+          <p>Per-run hash-chained evidence. Checks whose <code>error</code>, <code>timeout</code> and <code>unknown</code> never read as <code>pass</code>. Decisions bound to the exact artifact. A portable receipt that says <b>unsigned</b> because it is.</p>
+          <pre class="usecase-code"><code>import &#123; decide &#125; from 'maddu/runtime'</code></pre>
+        </article>
+      </div>
+
+      <p class="proof-nobaseline">
+        <b>Stated, not assumed.</b> The in-memory store is supported and the file store is experimental. There is no economy and no performance claim. A test reads the docs and the README and exits nonzero if either claims a mode the code doesn&rsquo;t have.
+      </p>
+
+      <p class="loop-more">
+        <a class="btn" href="/features/runtime">The embedded runtime <span aria-hidden="true">→</span></a>
+        <a class="btn btn-ghost" href="/docs/reference/embedded-runtime">Tested guarantees and their limits <span aria-hidden="true">→</span></a>
+      </p>
+    </div>
+  </section>
+
   <!-- ── SEVEN WAYS PEOPLE RUN IT ────────────────────────────────── -->
   <section class="section">
     <div class="container">

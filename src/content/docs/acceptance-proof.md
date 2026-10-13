@@ -1,8 +1,8 @@
 ---
 title: "56. Acceptance proofs — RED → GREEN against a frozen oracle"
 slug: "acceptance-proof"
-group: "More reference"
-order: 500
+group: "Governance & trust"
+order: 6
 description: "A green test suite tells you the suite passes now. It does not tell you the suite ever failed — and a test that has never failed has never demonstrated that it can. The oldest way…"
 sourceFile: "56-acceptance-proof.md"
 sourceUrl: "https://github.com/frdyx/maddu/blob/main/docs/56-acceptance-proof.md"

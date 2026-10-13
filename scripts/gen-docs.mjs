@@ -62,10 +62,11 @@ const GROUPS = [
   ['Getting started', ['01-getting-started.md', 'installation.md', '18-first-slice.md', '21-agent-onboarding.md', 'upgrade-policy.md', '13-troubleshooting.md']],
   ['Concepts', ['charter.md', '02-concepts.md', '45-category.md', '15-architecture.md', '07-lanes-and-sessions.md', 'lanes.md', '08-slice-stop-ritual.md', '54-spine-anchor.md', 'event-schema.md']],
   ['CLI & surfaces', ['03-cli-reference.md', '22-slash-commands.md', '23-natural-language-routing.md', '28-default-tools.md', '04-cockpit-tour.md', '16-widget-kit.md', '05-bridge-endpoints.md', '53-operator-plane.md']],
-  ['Governance & trust', ['hard-rules.md', '20-governance.md', '30-governance-tiers.md', '09-approvals-and-permissions.md', '39-rule-gate-traceability.md', '36-trust-audit.md', '34-threat-model.md', '47-earned-autonomy.md', '51-slm-governance.md', '52-oversight.md', '12-auth-and-imports.md']],
+  ['Governance & trust', ['hard-rules.md', '20-governance.md', '30-governance-tiers.md', '09-approvals-and-permissions.md', '39-rule-gate-traceability.md', '36-trust-audit.md', '56-acceptance-proof.md', '34-threat-model.md', '47-earned-autonomy.md', '51-slm-governance.md', '52-oversight.md', '12-auth-and-imports.md']],
   ['Autonomy & orchestration', ['32-kanban-and-plans.md', '33-loops-and-coordinator.md', '43-focus-director.md', '49-team-sync.md', '19-multi-workspace.md', '42-agents-global-install.md']],
   ['Memory & learning', ['10-skills-and-hindsight.md', '24-skills-auto-inject.md', '37-failure-learning.md', '27-transcript-import.md', '50-experience-evolve.md', '25-model-routing.md']],
   ['Operations', ['46-ci.md', '44-session-hooks.md', '31-operations-log.md', '40-architecture-drift.md', '41-debt.md', '48-otel-export.md', '55-verify-replay.md', '38-blueprint.md', '11-runtimes-and-mcp.md', '29-mcp-templates.md', '35-hermes-adapter.md']],
+  ['Embedded runtime', ['58-embedded-runtime.md', '57-product-runtime-rfc.md']],
   ['Recipes', []],        // skills/
   ['Working notes', []],  // audit/ + sessions/ + releases/
   ['Research', []],       // research/
