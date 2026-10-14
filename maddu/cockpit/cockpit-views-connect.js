@@ -1,4 +1,4 @@
-// M�ddu cockpit  connect-cluster route views (settings + trust posture).
+// Maddu cockpit - connect-cluster route views (settings + trust posture).
 //
 // Extracted from cockpit.js across v1.55.0–v1.58.0 — the complete "connect"
 // cluster (settings, trust, auth, imports, schedule, mcp, runtimes). renderTrust
@@ -288,7 +288,7 @@ export function renderSettings(ctx) {
             const defRead = el('div', { class: 'lanes-cell lanes-cell-defaults' });
             const summary = def.runtime || def.model || def.provider
               ? `${def.runtime || '—'}  ·  ${def.model || '—'}` + (def.provider ? `  ·  ${def.provider}` : '')
-              : el('span', { style: 'color:var(--m-fg-3)' }, 'inherit global default');
+              : el('span', { style: 'color:var(--m-fg-3)' }, 'no lane default set');
             const summarySpan = typeof summary === 'string' ? el('span', { class: 'lanes-defaults-summary' }, summary) : summary;
             const editBtn = el('button', { class: 'lanes-edit-btn' }, def.runtime || def.model ? 'Edit' : 'Bind');
             defRead.appendChild(summarySpan);
@@ -439,14 +439,18 @@ export function renderSettings(ctx) {
           for (const p of providers) {
             const keys = p.keys || [];
             const active = keys.find((k) => k.active);
-            const dot = keys.length > 0 ? '<span class="signal live"></span>' : '<span class="signal"></span>';
-            kv.appendChild(el('dt', { html: `${dot}${p.name}` }));
-            kv.appendChild(el('dd', { html:
-              keys.length === 0 ? '<span style="color:var(--m-fg-3)">no keys</span>'
-                : `${keys.length} key${keys.length === 1 ? '' : 's'}` +
-                  (active ? ` · active …${(active.last4 || '????')}` : '') +
-                  (p.rateLimited ? ' · <span style="color:var(--m-warn)">rate-limited</span>' : '')
-            }));
+            kv.appendChild(el('dt', {}, [
+              el('span', { class: keys.length > 0 ? 'signal live' : 'signal' }),
+              p.name
+            ]));
+            // active.last4 comes from /bridge/auth — render as a text node, not html.
+            kv.appendChild(el('dd', {}, keys.length === 0
+              ? [el('span', { style: 'color:var(--m-fg-3)' }, 'no keys')]
+              : [
+                  `${keys.length} key${keys.length === 1 ? '' : 's'}`,
+                  active ? ` · active …${active.last4 || '????'}` : null,
+                  p.rateLimited ? el('span', { style: 'color:var(--m-warn)' }, ' · rate-limited') : null,
+                ]));
           }
           authMount.appendChild(kv);
         }
@@ -536,8 +540,10 @@ export function renderSettings(ctx) {
           const kv = el('dl', { class: 'kv' });
           for (const r of rts) {
             const h = (d.health || {})[r.name];
-            const dot = h?.ok ? '<span class="signal live"></span>' : '<span class="signal"></span>';
-            kv.appendChild(el('dt', { html: `${dot}${r.displayName || r.name}` }));
+            kv.appendChild(el('dt', {}, [
+              el('span', { class: h?.ok ? 'signal live' : 'signal' }),
+              r.displayName || r.name
+            ]));
             kv.appendChild(el('dd', {}, h?.ok ? (h.version || 'detected') : (h?.error || 'not detected')));
           }
           rtMount.appendChild(kv);
@@ -553,7 +559,7 @@ export function renderSettings(ctx) {
   return root;
 }
 
-//     Auth route (provider keys, rate-limit state)                          
+// ---- Auth route (provider keys, rate-limit state) ----
 // Stream-coupled connect view: re-runs on AUTH_KEY_* spine events via the
 // ctx.onSpineEvent seam (route-local teardown). fetchAuth/fetchAuthProvider are
 // module-private (renderAuth is their only caller).
@@ -569,7 +575,7 @@ export function renderAuth(ctx) {
   root.appendChild(el('h2', {}, 'Auth'));
   root.appendChild(el('p', {}, ROUTE_META.auth.description));
 
-  const note = el('div', { class: 'panel', style: 'border-left:3px solid var(--m-accent-warm);' }, [
+  const note = el('div', { class: 'panel', style: '--m-tone:var(--m-accent-warm);' }, [
     el('div', { class: 'panel-title', style: 'color:var(--m-accent-warm);' }, 'TOKEN BOUNDARY'),
     el('div', { class: 'event-actor', style: 'margin-top:6px;color:var(--m-fg-2);' }, [
       'Raw key values are never returned by /bridge/auth. The cockpit only sees label + last-4 chars. ',
@@ -702,7 +708,7 @@ export function renderAuth(ctx) {
   return root;
 }
 
-//     Imports route (guarded payload intake  skill/memory/lane/brief/inbox)   
+// ---- Imports route (guarded payload intake - skill/memory/lane/brief/inbox) ----
 // Stream-coupled connect view: re-runs on IMPORT_* spine events via
 // ctx.onSpineEvent. Submit stamps `by: ctx.currentSession()`. fetchImports is
 // module-private (renderImports is its only caller).
@@ -715,7 +721,7 @@ export function renderImports(ctx) {
   root.appendChild(el('h2', {}, 'Imports'));
   root.appendChild(el('p', {}, ROUTE_META.imports.description));
 
-  root.appendChild(el('div', { class: 'panel', style: 'border-left:3px solid var(--m-accent-warm);' }, [
+  root.appendChild(el('div', { class: 'panel', style: '--m-tone:var(--m-accent-warm);' }, [
     el('div', { class: 'panel-title', style: 'color:var(--m-accent-warm);' }, 'TOKEN BOUNDARY'),
     el('div', { class: 'event-actor', style: 'margin-top:6px;color:var(--m-fg-2);' },
       'Any payload containing a key-shaped string is rejected entirely. The rejection log records the JSON path and pattern name only — never the value.'
@@ -844,7 +850,7 @@ export function renderImports(ctx) {
   return root;
 }
 
-//    connect-cluster infra views (v1.58.0): schedule + mcp + runtimes   
+// ---- connect-cluster infra views (v1.58.0): schedule + mcp + runtimes ----
 // The remaining three connect route views, extracted as mechanical ctx-swap
 // moves now that every seam they need exists. All three are stream-coupled
 // (SCHEDULE_/MCP_/RUNTIME_+WORKER_) via ctx.onSpineEvent and stamp `by:` /
@@ -1117,16 +1123,18 @@ export function renderMcp(ctx) {
       for (const r of d.mcp) {
         const h = (d.health || {})[r.name];
         const enabled = r.enabled;
-        const status = h?.ok ? `<span class="signal live"></span>${h.status || h.note || 'ok'}` :
-                       h ? `<span class="signal"></span>${h.error || ('status ' + h.status)}` :
-                       `<span class="signal"></span>${enabled ? 'untested' : 'disabled'}`;
+        // h.status/note/error is foreign MCP-server output — render as a text
+        // node, never html. The signal dot is the only markup.
+        const status = h?.ok ? [el('span', { class: 'signal live' }), `${h.status || h.note || 'ok'}`] :
+                       h ? [el('span', { class: 'signal' }), `${h.error || ('status ' + h.status)}`] :
+                       [el('span', { class: 'signal' }), enabled ? 'untested' : 'disabled'];
         const detailLine = r.transport === 'stdio'
           ? `${r.stdio?.command || '—'}  ${(r.stdio?.args || []).join(' ')}`
           : `${r[r.transport]?.url || '—'}`;
         const card = el('div', { class: 'panel', 'data-focus': r.name, style: enabled ? '' : 'opacity:0.55;' }, [
           el('div', { class: 'panel-head' }, [
             el('span', { class: 'panel-title' }, r.displayName || r.name),
-            el('span', { class: 'panel-aside', html: status })
+            el('span', { class: 'panel-aside' }, status)
           ]),
           el('dl', { class: 'kv' }, [
             el('dt', {}, 'name'),      el('dd', {}, r.name),
@@ -1260,13 +1268,14 @@ export function renderRuntimes(ctx) {
 
       for (const r of d.runtimes) {
         const h = (d.health || {})[r.name];
-        const status = h?.ok ? `<span class="signal live"></span>${h.version || 'detected'}` :
-                       h ? `<span class="signal"></span>${h.error || 'exit ' + h.exitCode}` :
-                       `<span class="signal"></span>not detected`;
+        // h.version/error is foreign runtime-detection output — text node only.
+        const status = h?.ok ? [el('span', { class: 'signal live' }), `${h.version || 'detected'}`] :
+                       h ? [el('span', { class: 'signal' }), `${h.error || 'exit ' + h.exitCode}`] :
+                       [el('span', { class: 'signal' }), 'not detected'];
         const card = el('div', { class: 'panel', 'data-focus': r.name }, [
           el('div', { class: 'panel-head' }, [
             el('span', { class: 'panel-title' }, r.displayName || r.name),
-            el('span', { class: 'panel-aside', html: status })
+            el('span', { class: 'panel-aside' }, status)
           ]),
           el('dl', { class: 'kv' }, [
             el('dt', {}, 'name'),         el('dd', {}, r.name),

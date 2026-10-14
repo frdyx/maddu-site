@@ -126,7 +126,7 @@ const { rows, columns = ['Action', 'Effect', 'Provenance'] } = Astro.props;
   .annot-prov--ok        .annot-prov-glyph { color: var(--m-ok); }
 
   @media (max-width: 760px) {
-    .annot { grid-template-columns: 1fr; }
+    .annot { grid-template-columns: minmax(0, 1fr); }
     .annot-head { display: none; }
     .annot-row > * { border-bottom: 0; padding: 4px 14px; }
     .annot-row > *:first-child { padding-top: 12px; }

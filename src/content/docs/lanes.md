@@ -1,0 +1,92 @@
+---
+title: "Lanes"
+slug: "lanes"
+group: "Concepts"
+order: 5
+description: "A lane is the unit of mutually-exclusive work in Máddu. Before an agent edits files, it claims a lane. While the lane is claimed, no other agent may edit the same area.…"
+sourceFile: "lanes.md"
+sourceUrl: "https://github.com/frdyx/maddu/blob/main/docs/lanes.md"
+---
+A **lane** is the unit of mutually-exclusive work in Máddu. Before an agent edits files, it claims a lane. While the lane is claimed, no other agent may edit the same area. Coordination across lanes happens through the mailbox bus, never through shared mutation.
+
+## Default lanes (v1.104.0: `general` only)
+
+Installed on [`maddu init`](/capabilities/init). Listed in `.maddu/lanes/catalog.json`. Each lane has an id and a one-line scope description.
+
+| Lane id | Scope |
+|---|---|
+| `general` | The claim-anything fallback. Work here until patterns emerge, then let [`maddu lane suggest`](/capabilities/lane) graduate the ad-hoc lane ids you actually repeat into the catalog. |
+
+**Why so small?** The 2026-07-16 fleet usage audit measured the previous
+generic 7-lane seed at **76% dead** (112/147 placements never claimed) while
+64% of real claims were ad-hoc ids invented at claim time — work is
+feature-shaped, not directory-shaped, so a prescribed taxonomy just sits
+there. The catalog now **grows from observed reality** instead:
+
+- claim any ad-hoc lane id freely (`maddu lane claim payments-flow …`);
+- once an id earns ≥3 lifetime claims, `maddu lane suggest` proposes it and
+  `--adopt` graduates it into the catalog (emitting `LANE_ADDED`);
+- `maddu lane list` marks never-claimed catalog entries `(unused)`, and
+  `maddu lane suggest --prune` removes them.
+
+`general` is kept (rather than an empty catalog) because a claimable catalog
+lane must exist for the discipline/claim flows — `lane claim --worktree`
+asserts catalog membership, and a fresh agent needs one obvious lane to
+start the ritual on.
+
+You can still edit `.maddu/lanes/catalog.json` directly to add, remove, or
+rename lanes. [`maddu upgrade`](/capabilities/upgrade) never touches operator-edited catalogs (only
+the seed at first `maddu init`) — **existing installs keep their catalogs
+unchanged**.
+
+## Claiming a lane
+
+```bash
+# Conceptual — actual CLI lands in Slice 3.
+maddu lane claim <lane-id> --session <session-id> --focus "<one-line>"
+```
+
+A claim writes to `.maddu/lanes/claims.json`:
+
+```json
+{
+  "schemaVersion": 1,
+  "claims": [
+    {
+      "lane": "cockpit-shell",
+      "session": "ses_2026...01",
+      "focus": "Implement /approvals route",
+      "claimedAt": "2026-05-14T12:34:56Z"
+    }
+  ]
+}
+```
+
+[`maddu doctor`](/capabilities/doctor) and the bridge both refuse to start a new session on an already-claimed lane unless the prior claim is closed.
+
+## Releasing a lane
+
+A lane is released with `maddu lane release <lane-id> --session <session-id>` (or the `--lane` flag form). Releasing a lane with no active claim is a no-op; trying to release another session's active claim is refused. [`maddu spine verify`](/capabilities/spine) treats a release with no historical claim as a failure and a duplicate release after a valid claim as a warning.
+
+## Cross-lane coordination
+
+If lane A needs lane B to do work, lane A appends a message to `.maddu/lanes/B/mailbox.ndjson`:
+
+```json
+{ "schemaVersion": 1, "from": "A", "to": "B", "type": "request", "subject": "...", "body": "...", "at": "2026-05-14T12:35:00Z" }
+```
+
+When the lane B owner picks up the message, it acknowledges by appending a `mailbox_read` event. There is no shared-file workaround — that would violate Rule #8.
+
+## Adding a project-specific lane
+
+The whole catalog is **operator-owned** from the moment `maddu init` seeds
+it — there is no Máddu-owned tier of lanes. Add lanes by:
+
+- claiming an ad-hoc id and letting it graduate: `maddu lane suggest --adopt <id>`
+  once it has earned ≥3 lifetime claims (the observed-reality path), or
+- editing `.maddu/lanes/catalog.json` directly.
+
+`maddu upgrade` never rewrites the catalog, and `maddu init` (including
+`--force`) preserves an existing one — the seed is written on first install
+only.

@@ -2,7 +2,7 @@ import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
-export const PROJECT_TEST_PROFILES = new Set(['smoke', 'quick', 'full']);
+const PROJECT_TEST_PROFILES = new Set(['smoke', 'quick', 'full']);
 
 const ADAPTIVE_FLAGS = new Set([
   'profile',
@@ -146,7 +146,7 @@ function requiredValue(argv, index, flag) {
   return value;
 }
 
-export function hasLegacyRunnerConflict(argv) {
+function hasLegacyRunnerConflict(argv) {
   return isAdaptiveProjectTestArgs(argv) && argv.some((arg) => {
     if (!arg.startsWith('--')) return false;
     const name = arg.slice(2).split('=')[0];
@@ -556,6 +556,9 @@ export async function runProjectTest(options = {}) {
   }
   const durationMs = Date.now() - started;
   const counts = countResults(results, plan.tasks.length, bailed);
+  // audit P3 — a run narrowed by --only/--skip/--changed is NOT a full quick/full
+  // profile and must not qualify as recency (the VERIFICATION_RAN carries this).
+  const complete = !(splitIds(options.only).length || splitIds(options.skip).length || options.changed);
   const report = {
     schemaVersion: 1,
     ts: new Date().toISOString(),
@@ -568,10 +571,11 @@ export async function runProjectTest(options = {}) {
   };
   if (plan.changedFiles.length) report.changedFiles = plan.changedFiles;
   if (options.report !== false) report.reportPaths = await writeReports(plan.repoRoot, report);
-  return {
+  const out = {
     ok: counts.fail === 0,
     exitCode: counts.fail === 0 ? 0 : 1,
     profile: plan.profile,
+    complete,
     durationMs,
     repo: plan.repoRoot,
     counts,
@@ -580,6 +584,23 @@ export async function runProjectTest(options = {}) {
     reportPaths: report.reportPaths || null,
     changedFiles: plan.changedFiles,
   };
+  // The SELECTED plan, independent of what executed. `results` is not a
+  // substitute: a --bail run stops at the first failure (above), so two plans
+  // sharing a first failing task but differing later would be indistinguishable
+  // if identity were derived from results.
+  //
+  // NON-ENUMERABLE on purpose. resultJson() is a bare JSON.stringify(result), so
+  // a plain property would widen `maddu test --json` — an existing public output
+  // — and would print raw commands for tasks that never ran. This is receipt
+  // identity for in-process callers, not part of the CLI contract. Frozen so a
+  // caller cannot reshape it after the fact.
+  Object.defineProperty(out, 'selectedTasks', {
+    value: Object.freeze(plan.tasks.map((t) => Object.freeze({
+      id: t.id, command: t.command, cwd: t.cwd,
+    }))),
+    enumerable: false, writable: false, configurable: false,
+  });
+  return out;
 }
 
 export function listText(plan) {
@@ -653,6 +674,7 @@ export async function runProjectTestCli(argv, options = {}) {
       return 0;
     }
     const result = await runProjectTest({ ...parsed, repoRoot });
+    if (typeof options.onResult === 'function') { try { options.onResult(result); } catch {} }
     console.log(parsed.json ? resultJson(result) : resultText(result));
     return result.exitCode;
   } catch (err) {

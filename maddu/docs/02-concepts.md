@@ -199,7 +199,7 @@ A **gate** is a single check with one of three severities (`critical`, `safety`,
 
 ### Tracked sources
 
-A list of single-source-of-truth files (docs, schemas, manifests) pinned in `.maddu/config/tracked-sources.json`. `maddu sources rebuild` snapshots their SHA-256 hashes onto the spine via `SOURCE_HASH_RECOMPUTED`. The `tracked-source-drift` gate fails when any pinned file diverges from the recorded hash — kills silent doc rot.
+A list of single-source-of-truth files (docs, schemas, manifests) pinned in `.maddu/config/tracked-sources.json`. `maddu sources rebuild --reason "…"` snapshots their SHA-256 hashes onto the spine via `SOURCE_HASH_RECOMPUTED` (a reasonless rebuild is refused — re-baselining is an explicit, reasoned act, attributed to the active session when one exists). The `warn`-severity `tracked-source-drift` gate reports when any pinned file diverges from the recorded hash — surfacing silent doc rot instead of letting it pass unnoticed.
 
 ### Slice scope-lock *(opt-in)*
 
@@ -258,7 +258,7 @@ See [21-agent-onboarding.md](21-agent-onboarding.md).
 
 Everything above is the **substrate**: register a session, claim a lane, do a slice, slice-stop, release, close. The no-learning-curve UX shell is not a second, competing flow — it is the *same* loop viewed from higher up, where the operator speaks in goals and the agent walks the substrate underneath. The canonical flow is stated once, for the whole framework, in [charter.md](charter.md).
 
-There is **one default execution path** the agent reaches for first: a pipeline. `maddu pipeline run ship-a-feature "<goal>"` walks orient → plan → coordinate → slice → test → review → land → account, and each stage is a literal `maddu` invocation against the substrate above. Two sibling pipelines cover the other common shapes — `fix-a-bug` and `plan-and-delegate` (fan-out across disjoint lanes). For genuinely one-off changes the agent falls back to an ad-hoc `/maddu-autopilot` run with no pipeline.
+There is **one default execution path** the agent reaches for first: a pipeline. `maddu pipeline run ship-a-feature "<goal>"` walks orient → plan → coordinate → slice → test → review → land → account. The runner is a bookkeeper: it records which stage was entered, in order, and leaves the work of each stage to the agent — it does not invoke anything itself. Two sibling pipelines cover the other common shapes — `fix-a-bug` and `plan-and-delegate` (fan-out across disjoint lanes). For genuinely one-off changes the agent falls back to an ad-hoc `/maddu-autopilot` run with no pipeline.
 
 ### Speaking to the flow: slash commands + natural language
 

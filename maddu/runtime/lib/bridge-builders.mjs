@@ -6,19 +6,51 @@
 // mutable state, so they live in runtime-libs (bridge -> runtime-libs is an
 // allowed edge) and are unit-testable without booting the server.
 
-import { join, resolve, dirname } from 'node:path';
+import { join, resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFile, stat } from 'node:fs/promises';
 import { project } from './projections.mjs';
+import { readSince, readAll, readAllStrict, hashLine } from './spine.mjs';
 import { listSchedules } from './schedule.mjs';
 import { totalUnread as mailboxTotalUnread } from './mailbox.mjs';
 import { readAttachments } from './worktrees.mjs';
+import { verifySpine } from './verify.mjs';
+import {
+  resolveSuccessView, latestSuccessReceipt,
+  latestIntegrityVerdict, resolveGetIntegrity, integrityCoversReceipt,
+} from './success-eval.mjs';
+import { plainRefused, EMPTY_STATE } from './oversight-copy.mjs';
 
 // The runtime root (template/maddu/runtime in source, maddu/runtime when
 // installed) — this module lives in runtime/lib, so go up one level. server.js
 // computes the same value as its __dirname; buildBacklinks resolves the docs
 // dir relative to it.
 const runtimeRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+
+// audit P3 — the GET-side success readout. NEVER spawns (hard invariant) and
+// never re-hashes: a STRICT read (counts a malformed line the tolerant read
+// would skip) + the last spine-integrity verdict already on the spine give a
+// three-state integrity, and resolveSuccessView refuses to render "met" from a
+// stale / goal-mismatched / unverified receipt. Returns the same `goal`-shaped
+// object the builders emitted before, plus `stale`/`integrity`/`lastKnown`.
+async function successForGet(repoRoot, projGoal) {
+  let events = [];
+  let parseErrors = null;
+  try {
+    const strict = await readAllStrict(repoRoot);
+    events = strict.events;
+    parseErrors = strict.parseErrors;
+  } catch { events = []; parseErrors = null; }
+  const receipt = latestSuccessReceipt(events);
+  const verdict = latestIntegrityVerdict(events);
+  const integrity = resolveGetIntegrity({
+    parseErrors,
+    integrityVerdict: verdict,
+    covers: integrityCoversReceipt(events, verdict, receipt),
+  });
+  const view = resolveSuccessView(events, { goal: projGoal, nowMs: Date.now(), integrity });
+  return view;
+}
 
 export async function buildConductor(repoRoot) {
   const proj = await project(repoRoot);
@@ -402,6 +434,411 @@ export async function readDoc(slug) {
   } catch {
     return null;
   }
+}
+
+// The published, versioned event contract — the third verification leg's
+// "independently checkable" anchor. Read at display time from the docs tree.
+async function readContractVersion() {
+  const dir = await resolveDocsDir();
+  if (!dir) return null;
+  try {
+    const j = JSON.parse(await readFile(join(dir, 'event-schema.json'), 'utf8'));
+    return j['x-contractVersion'] || null;
+  } catch { return null; }
+}
+
+// Oversight surface — the non-coder readout. Fuses three legs a vibe coder can
+// act on WITHOUT reading a skill's code: what was fed vs WITHHELD (and why, in
+// plain language), whether the agent stayed on-goal, and whether the record is
+// intact + independently checkable. Read-only; "how long ago" is computed here
+// at request time (never in the projection), and the reason→plain map is the
+// single source of truth in oversight-copy.mjs. Accountability, not a safety proof.
+export async function buildOversight(repoRoot) {
+  const proj = await project(repoRoot);
+  const now = Date.now();
+  const ageMs = (ts) => { const t = new Date(ts || 0).getTime(); return t ? now - t : null; };
+
+  // ── LEG 1 — skills fed & WITHHELD (the hero) ──
+  const injected = (proj.skillInjections || []).slice().reverse()
+    .map((r) => ({ ...r, ageMs: ageMs(r.ts) }));
+  const refused = (proj.skillRefusals || []).slice().reverse().map((r) => ({
+    ts: r.ts,
+    sessionId: r.sessionId,
+    reason: r.reason,
+    refused: plainRefused(r.refused), // per-item → { id, provenance, reason, plain }
+    ageMs: ageMs(r.ts),
+  }));
+  const withheldCount = refused.reduce((n, r) => n + (r.refused?.length || 0), 0);
+
+  // ── LEG 2 — did it stay on your goal? (Focus Director, already computed) ──
+  const f = proj.focus || {};
+  const focus = {
+    lastTag: f.lastTag || null,
+    openFlag: f.openFlag
+      ? { reason: f.openFlag.reason || null, menu: f.openFlag.menu || ['swap', 'revert', 'continue'] }
+      : null,
+    goal: proj.goal ? proj.goal.objective : null,
+    updatedAt: f.updatedAt || null,
+  };
+
+  // ── LEG 3 — is the record intact + independently checkable? ──
+  // Uncapped: a hash chain must be verified from genesis forward, and capping
+  // would leave the RECENT events (the ones that matter) unchecked. ~3k sha256
+  // hashes is single-digit-to-tens of ms — cheap enough for a page load.
+  const v = await verifySpine(repoRoot);
+  const chainIntact = !v.issues.some((i) => i.kind === 'chain_broken' || i.kind === 'chain_stripped' || i.kind === 'torn_trailing_line' || i.kind === 'ws_mismatch' || i.kind === 'ws_anchor_conflict' || i.kind === 'ws_identity_unverifiable');
+  const verify = {
+    events: v.events,
+    chainIntact,
+    counts: v.counts,
+    contractVersion: await readContractVersion(),
+  };
+
+  return {
+    skills: {
+      injected,
+      refused,
+      withheldCount,
+      emptyState: withheldCount === 0 ? EMPTY_STATE : null,
+    },
+    focus,
+    verify,
+  };
+}
+
+// One-line summary cleaner (mirrors orient's) — collapse whitespace, trim
+// quotes, cap length. Local so bridge-builders stays free of a CLI import.
+function cleanDigestSummary(s) {
+  return String(s || '—').replace(/\s+/g, ' ').replace(/^["'\s]+/, '').trim().slice(0, 120) || '—';
+}
+
+// Slice-stop text for surfaces that render it through the client prose formatter
+// (cockpit-prose.js): collapse whitespace but keep the full labeled structure
+// (Action:/Targets:/Gates:/Learnings:/Next:/Reason:) so it can be parsed into a
+// scannable lead + sections instead of a truncated clump. Capped generously.
+function cleanSliceText(s) {
+  return String(s || '—').replace(/\s+/g, ' ').replace(/^["'\s]+/, '').trim().slice(0, 800) || '—';
+}
+
+// A 2-sentence plain-language headline for the digest. Pure + exported so a
+// fixture can lock the copy. Sentence 1 = what happened in the window; sentence
+// 2 = what (if anything) needs the operator now.
+export function digestHeadline({ sliceStopCount, driftCount, gates, needsYou, goal }) {
+  const did = [];
+  if (sliceStopCount) did.push(`${sliceStopCount} slice${sliceStopCount > 1 ? 's' : ''} landed`);
+  if (gates.failed) did.push(`${gates.failed} gate${gates.failed > 1 ? 's' : ''} failing`);
+  else if (gates.ran) did.push('gates green');
+  if (driftCount) did.push('drift flagged');
+  const first = did.length ? `While you were away: ${did.join(', ')}.` : 'Nothing new since you last looked.';
+
+  const now = [];
+  if (needsYou.length) now.push(`${needsYou.length} approval${needsYou.length > 1 ? 's' : ''} need${needsYou.length > 1 ? '' : 's'} you`);
+  if (goal.allMet) now.push('goal conditions all met — consider closing or releasing');
+  else if (goal.metCount != null && goal.total) now.push(`goal ${goal.metCount}/${goal.total} met`);
+  const second = now.length ? `${now.join('; ')}.` : '';
+  return second ? `${first} ${second}` : first;
+}
+
+// Digest — "while you were away". Fuses the DELTA since a cursor event (new
+// slice-stops, drift flags, gate runs) with CURRENT state that needs the
+// operator (open approvals, goal + cached success ✓/○/?, focus tail). Read-only;
+// the success state comes from the cache (no verify spawn on a GET), and every
+// "how long ago" is computed here at request time. `sinceId` null → whole spine.
+export async function buildDigest(repoRoot, { sinceId = null } = {}) {
+  const proj = await project(repoRoot);
+  const now = Date.now();
+  const ageMs = (ts) => { const t = new Date(ts || 0).getTime(); return t ? now - t : null; };
+  const since = await readSince(repoRoot, sinceId);
+
+  // ── DELTA — new milestones in the window (newest first) ──
+  // Caps keep a whole-spine first run (sinceId=null over thousands of events)
+  // from returning an unbounded payload; `*Count` carries the true totals.
+  const SLICE_CAP = 12, DRIFT_CAP = 8;
+  const sliceRows = since.filter((e) => e.type === 'SLICE_STOP')
+    .map((e) => ({ ts: e.ts, lane: e.lane || null, summary: cleanSliceText(e.data?.summary), ageMs: ageMs(e.ts) }))
+    .reverse();
+  const driftRows = since.filter((e) => e.type === 'DRIFT_FLAGGED' && !e.data?.cleared)
+    .map((e) => ({ ts: e.ts, reason: e.data?.reason || null, runs: typeof e.data?.runs === 'number' ? e.data.runs : null, ageMs: ageMs(e.ts) }))
+    .reverse();
+  const sliceStops = sliceRows.slice(0, SLICE_CAP);
+  const sliceStopCount = sliceRows.length;
+  const drift = driftRows.slice(0, DRIFT_CAP);
+  const driftCount = driftRows.length;
+  const gateRuns = since.filter((e) => e.type === 'GATE_RAN');
+  const gateFails = gateRuns.filter((e) => e.data && e.data.ok === false)
+    .map((e) => ({ gateId: e.data.gateId || null, severity: e.data.severity || null, ts: e.ts }));
+  const gates = { ran: gateRuns.length, failed: gateFails.length, failing: gateFails.slice(-8).reverse() };
+
+  // ── CURRENT — what needs the operator now ──
+  const needsYou = (proj.approvals?.open || []).map((a) => ({
+    approvalId: a.approvalId, tool: a.tool || null, action: a.action || null,
+    summary: a.summary || null, ageMs: ageMs(a.ts),
+  }));
+
+  // ── goal + success from the tamper-detecting spine receipt (no spawn) ──
+  const sv = await successForGet(repoRoot, proj.goal);
+  const goal = {
+    objective: sv.objective,
+    metCount: sv.metCount,
+    total: sv.total,
+    allMet: sv.allMet,
+    evaluatedAt: sv.evaluatedAt,
+    stale: sv.stale,
+    staleReasons: sv.staleReasons,
+    integrity: sv.integrity,
+    lastKnown: sv.lastKnown,
+  };
+
+  // ── focus tail ──
+  const f = proj.focus || {};
+  const focus = {
+    lastTag: f.lastTag || null,
+    openFlag: f.openFlag ? { reason: f.openFlag.reason || null, runs: typeof f.openFlag.runs === 'number' ? f.openFlag.runs : null } : null,
+  };
+
+  const range = { sinceId, lastEventId: proj.lastEventId || null, newEventCount: since.length };
+  const headline = digestHeadline({ sliceStopCount, driftCount, gates, needsYou, goal });
+  return { range, headline, sliceStops, sliceStopCount, drift, driftCount, gates, needsYou, goal, focus, empty: since.length === 0 };
+}
+
+// Single-project cockpit — the one-screen "where does this project stand?"
+// readout. Fuses what already ships: goal + % to done (from the cached success
+// eval — no spawn), the Focus Director trajectory, the worker fleet, who is
+// steering, and the recent slice trail. Read-only; every age is display-time.
+export async function buildProjectCockpit(repoRoot) {
+  const proj = await project(repoRoot);
+  const now = Date.now();
+  const ageMs = (ts) => { const t = new Date(ts || 0).getTime(); return t ? now - t : null; };
+  const round2 = (x) => Math.round(x * 100) / 100;
+
+  // ── goal + % to done — from the tamper-detecting spine receipt (no spawn) ──
+  const sv = await successForGet(repoRoot, proj.goal);
+  const conditions = sv.stale
+    ? ((sv.lastKnown && sv.lastKnown.conditions) || (proj.goal?.success || []).map((c) => ({ text: c.text || null, verify: c.verify || null, state: 'unknown' })))
+    : (sv.conditions || []);
+  const total = sv.total || conditions.length;
+  const met = typeof sv.metCount === 'number' ? sv.metCount : null;
+  const goal = {
+    objective: sv.objective,
+    metCount: sv.metCount,
+    verifiable: sv.verifiable,
+    total,
+    // percent is a "done" signal, so assert it ONLY when integrity is 'ok' (same
+    // gate as allMet). Under 'unknown'/'broken' the raw metCount/total still show
+    // (labelled unverified/stale), but the headline 100%/percent is withheld so a
+    // cockpit can't read an uncorroborated receipt as authoritatively complete.
+    percent: (met != null && total && sv.integrity === 'ok' && !sv.stale) ? Math.round((met / total) * 100) : null,
+    allMet: sv.allMet,
+    evaluatedAt: sv.evaluatedAt,
+    stale: sv.stale,
+    staleReasons: sv.staleReasons,
+    integrity: sv.integrity,
+    conditions,
+    lastKnown: sv.lastKnown,
+  };
+
+  // ── Focus trajectory + current on-goal ──
+  const window = Array.isArray(proj.focus?.window) ? proj.focus.window : [];
+  const trajectory = window.slice(-24).map((w) => ({
+    tag: w.tag || null,
+    onGoal: typeof w.distanceScore === 'number' ? round2(1 - w.distanceScore) : null,
+    ts: w.ts,
+  }));
+  const last = window.length ? window[window.length - 1] : null;
+  const f = proj.focus || {};
+  const focus = {
+    lastTag: f.lastTag || null,
+    onGoal: last && typeof last.distanceScore === 'number' ? round2(1 - last.distanceScore) : null,
+    openFlag: f.openFlag ? { reason: f.openFlag.reason || null, runs: typeof f.openFlag.runs === 'number' ? f.openFlag.runs : null } : null,
+    trajectory,
+  };
+
+  // ── worker fleet ──
+  const workers = Array.isArray(proj.workers) ? proj.workers : [];
+  const byStatus = {};
+  for (const w of workers) { const s = w.status || 'unknown'; byStatus[s] = (byStatus[s] || 0) + 1; }
+  const active = workers.filter((w) => w.status === 'running' || w.status === 'stuck')
+    .map((w) => ({ id: w.id, lane: w.lane || null, status: w.status, ageMs: ageMs(w.lastHeartbeat) }));
+  const fleet = { total: workers.length, running: byStatus.running || 0, stuck: byStatus.stuck || 0, byStatus, active: active.slice(0, 12) };
+
+  // ── who is steering (active sessions) ──
+  const steeredBy = (proj.activeSessions || []).map((s) => ({
+    id: s.id, role: s.role || null, label: s.label || null, focus: s.focus || null,
+    source: s.source || null, sinceMs: ageMs(s.registeredAt), beatMs: ageMs(s.lastHeartbeatAt),
+  }));
+
+  // ── recent slice trail ──
+  const recentSlices = (Array.isArray(proj.sliceStops) ? proj.sliceStops : []).slice(-6).reverse()
+    .map((s) => ({ summary: cleanSliceText(s.summary), lane: s.lane || null, ageMs: ageMs(s.ts) }));
+
+  return {
+    project: basename(repoRoot),
+    phase: proj.phase ? (proj.phase.name || proj.phase) : null,
+    goal, focus, fleet, steeredBy, recentSlices,
+    lastEventId: proj.lastEventId || null,
+  };
+}
+
+// Decision-grade event classification for the decision ledger. Only moments
+// where intent was set, a choice was made, or an outcome was reached — NOT the
+// routine spine traffic. GATE_RAN is included only when it FAILED (a red gate is
+// a decision point; greens are routine); TRIGGER_FIRED only for drift-related
+// auto-decisions (auto-claims etc. are plumbing, not decisions).
+const DECISION_CLASS = {
+  GOAL_DECLARED:     { category: 'intent',   label: 'goal set' },
+  GOAL_COMPLETED:    { category: 'outcome',  label: 'goal completed' },
+  APPROVAL_DECIDED:  { category: 'decision', label: 'approval decided' },
+  LANE_CLAIM_FORCED: { category: 'decision', label: 'lane claim forced' },
+  TRIGGER_FIRED:     { category: 'decision', label: 'trigger fired' },
+  GATE_RAN:          { category: 'gate',     label: 'gate' },
+};
+
+// Is this event decision-grade (passes the class-specific filter)?
+function isDecisionEvent(ev) {
+  if (!ev || !DECISION_CLASS[ev.type]) return false;
+  if (ev.type === 'GATE_RAN') return ev.data && ev.data.ok === false;      // failing only
+  if (ev.type === 'TRIGGER_FIRED') {
+    const t = `${ev.data?.trigger || ''} ${ev.data?.triggered_by || ev.triggered_by || ''}`.toLowerCase();
+    return /drift|focus/.test(t);                                          // drift-related only
+  }
+  return true;
+}
+
+function decisionSummary(ev) {
+  const d = ev.data || {};
+  switch (ev.type) {
+    case 'GOAL_DECLARED': return cleanDigestSummary(d.objective || 'goal declared');
+    case 'GOAL_COMPLETED': return cleanDigestSummary(d.objective || d.reason || 'goal completed');
+    case 'APPROVAL_DECIDED': return cleanDigestSummary(`${d.decision || 'decided'}${d.tool ? ' · ' + d.tool : ''}${d.reason ? ' — ' + d.reason : ''}`);
+    case 'LANE_CLAIM_FORCED': return cleanDigestSummary(`lane ${d.lane || '?'} forced${d.reason ? ' — ' + d.reason : ''}`);
+    case 'TRIGGER_FIRED': return cleanDigestSummary(d.trigger || d.triggered_by || 'trigger fired');
+    case 'GATE_RAN': return cleanDigestSummary(`${d.gateId || 'gate'} ${d.status || 'fail'}${d.severity ? ' (' + d.severity + ')' : ''}`);
+    default: return cleanDigestSummary(ev.type);
+  }
+}
+
+// Decision ledger — a curated, high-signal log of the spine's decision-grade
+// events (intent / decision / gate / outcome), each with actor, provenance
+// (human vs which auto-trigger), and its tamper-detecting stored-line SHA. The
+// header carries the real verifySpine badge (chain intact · N events). The
+// per-row sha IS the chain fingerprint: hashLine(storedLine) = the next event's
+// prev_hash, so a row can be tied back to the verified chain. Read-only.
+export async function buildDecisions(repoRoot, { limit = 100 } = {}) {
+  const events = await readAll(repoRoot);
+  const now = Date.now();
+  const ageMs = (ts) => { const t = new Date(ts || 0).getTime(); return t ? now - t : null; };
+
+  const rows = [];
+  for (const ev of events) {
+    if (!isDecisionEvent(ev)) continue;
+    const cls = DECISION_CLASS[ev.type];
+    const triggeredBy = ev.data?.triggered_by || ev.triggered_by || null;
+    let sha = null;
+    try { sha = hashLine(JSON.stringify(ev)).slice(0, 12); } catch {}
+    rows.push({
+      ts: ev.ts,
+      id: ev.id,
+      type: ev.type,
+      category: cls.category,
+      label: cls.label,
+      actor: ev.actor || null,
+      lane: ev.lane || null,
+      provenance: triggeredBy ? `auto:${triggeredBy}` : (ev.actor || 'system'),
+      auto: !!triggeredBy,
+      summary: decisionSummary(ev),
+      sha,
+      ageMs: ageMs(ev.ts),
+    });
+  }
+  const total = rows.length;
+  const recent = rows.slice(-limit).reverse(); // newest first, capped
+
+  const byCategory = {};
+  for (const r of rows) byCategory[r.category] = (byCategory[r.category] || 0) + 1;
+
+  // Header — the real tamper-detection: uncapped chain verify + published contract.
+  const v = await verifySpine(repoRoot);
+  const chainIntact = !v.issues.some((i) => i.kind === 'chain_broken' || i.kind === 'chain_stripped' || i.kind === 'torn_trailing_line' || i.kind === 'ws_mismatch' || i.kind === 'ws_anchor_conflict' || i.kind === 'ws_identity_unverifiable');
+  const verify = {
+    events: v.events,
+    chainIntact,
+    tampered: chainIntact ? 0 : v.issues.filter((i) => i.kind === 'chain_broken' || i.kind === 'chain_stripped' || i.kind === 'torn_trailing_line' || i.kind === 'ws_mismatch' || i.kind === 'ws_anchor_conflict' || i.kind === 'ws_identity_unverifiable').length,
+    contractVersion: await readContractVersion(),
+  };
+
+  return { decisions: recent, total, shown: recent.length, byCategory, verify };
+}
+
+// Enriched handoff — display-time fusion of the curated HANDOFF_SET note (the
+// operator/agent's "RESUME HERE" narrative) with the live projection: carried
+// goal + cached success %, inherited focus trajectory, fleet, who's steering,
+// recent slices, and how many approvals need the human. NO schema change — the
+// note stays a plain {body} event; everything else is derived here at show time.
+export async function buildHandoff(repoRoot) {
+  const proj = await project(repoRoot);
+  const now = Date.now();
+  const ageMs = (ts) => { const t = new Date(ts || 0).getTime(); return t ? now - t : null; };
+  const cockpit = await buildProjectCockpit(repoRoot);
+  const h = (proj.handoff && proj.handoff.body)
+    ? { body: proj.handoff.body, by: proj.handoff.by || null, setAt: proj.handoff.setAt || null, ageMs: ageMs(proj.handoff.setAt) }
+    : null;
+  const needsYou = (proj.approvals?.open || []).length;
+  return {
+    handoff: h,
+    needsYou,
+    project: cockpit.project,
+    phase: cockpit.phase,
+    goal: cockpit.goal,
+    focus: cockpit.focus,
+    fleet: cockpit.fleet,
+    steeredBy: cockpit.steeredBy,
+    recentSlices: cockpit.recentSlices,
+  };
+}
+
+// Portfolio entry — a single project's one-card summary for the cross-workspace
+// wall. Read-only; cached success (no spawn). Deliberately compact: enough to
+// triage which project needs attention, not the full project cockpit.
+export async function buildPortfolioEntry(repoRoot) {
+  const proj = await project(repoRoot);
+  const now = Date.now();
+  const ageMs = (ts) => { const t = new Date(ts || 0).getTime(); return t ? now - t : null; };
+  const round2 = (x) => Math.round(x * 100) / 100;
+  const sv = await successForGet(repoRoot, proj.goal);
+
+  const total = sv.total || 0;
+  const met = typeof sv.metCount === 'number' ? sv.metCount : null;
+  const window = Array.isArray(proj.focus?.window) ? proj.focus.window : [];
+  const last = window.length ? window[window.length - 1] : null;
+  const workers = Array.isArray(proj.workers) ? proj.workers : [];
+  const running = workers.filter((w) => w.status === 'running').length;
+  const stuck = workers.filter((w) => w.status === 'stuck').length;
+  const lastSlice = (Array.isArray(proj.sliceStops) && proj.sliceStops.length) ? proj.sliceStops[proj.sliceStops.length - 1] : null;
+  const f = proj.focus || {};
+
+  return {
+    project: basename(repoRoot),
+    goal: proj.goal ? proj.goal.objective : null,
+    // Withhold the authoritative percent unless integrity 'ok' && !stale (same
+    // gate as allMet), so the portfolio wall can't show a green 100% from an
+    // unverified/stale receipt. Raw metCount/total still render.
+    percent: (met != null && total && sv.integrity === 'ok' && !sv.stale) ? Math.round((met / total) * 100) : null,
+    metCount: sv.metCount,
+    total,
+    allMet: sv.allMet,
+    stale: sv.stale,
+    integrity: sv.integrity,
+    onGoal: last && typeof last.distanceScore === 'number' ? round2(1 - last.distanceScore) : null,
+    lastTag: f.lastTag || null,
+    driftFlag: f.openFlag ? { reason: f.openFlag.reason || null, runs: typeof f.openFlag.runs === 'number' ? f.openFlag.runs : null } : null,
+    openApprovals: (proj.approvals?.open || []).length,
+    running,
+    stuck,
+    activeSessions: (proj.activeSessions || []).length,
+    lastSliceAgeMs: lastSlice ? ageMs(lastSlice.ts) : null,
+    lastSliceSummary: lastSlice ? cleanDigestSummary(lastSlice.summary) : null,
+    hasHandoff: !!(proj.handoff && proj.handoff.body),
+  };
 }
 
 // Scan every doc body for [text](other.md[#anchor]) cross-refs and return

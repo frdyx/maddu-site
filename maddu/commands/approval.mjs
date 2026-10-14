@@ -10,7 +10,7 @@
 
 import { createServer } from 'node:http';
 import { parseFlags, requireFlag } from './_args.mjs';
-import { loadSpineLib, resolveRepoRoot } from './_spine.mjs';
+import { loadSpineLib, resolveRepoRoot, explicitSessionFlag } from './_spine.mjs';
 
 const ANSI = { dim: '\x1b[2m', bold: '\x1b[1m', warn: '\x1b[33m', pass: '\x1b[32m', fail: '\x1b[31m', reset: '\x1b[0m' };
 
@@ -109,7 +109,7 @@ export default async function approval(argv) {
   if (sub === 'request') {
     const { flags } = parseFlags(rest);
     const tool = requireFlag(flags, 'tool');
-    const sessionId = flags.session || null;
+    const sessionId = await explicitSessionFlag(flags);
     const ev = await spine.append(repoRoot, {
       type: spine.EVENT_TYPES.APPROVAL_REQUESTED,
       actor: sessionId,
@@ -203,6 +203,10 @@ export default async function approval(argv) {
     console.log(`Scanning spine: ${events.length} events`);
     console.log(`Found ${candidates.length} APPROVAL_REQUESTED events without paired decision (legacy auto-decisions)`);
     if (candidates.length === 0) {
+      // Mutation-witness declared no-op (Codex diff r4 F7): zero legacy
+      // candidates is a graceful append-free success.
+      const { loadLibOptional } = await import('./_libroot.mjs');
+      (await loadLibOptional('mutation-witness.mjs'))?.witnessNoop?.('idempotent-nothing-to-migrate');
       console.log('(nothing to migrate)');
       return;
     }

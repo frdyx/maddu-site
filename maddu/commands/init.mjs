@@ -12,7 +12,7 @@
 //   6. Appends FRAMEWORK_INSTALLED to the spine.
 //   7. Adds Máddu's standard .gitignore entries (token paths, no-token-export).
 
-import { mkdir, readFile, writeFile, appendFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile, appendFile, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { parseFlags } from './_args.mjs';
@@ -32,6 +32,7 @@ const GITIGNORE_BLOCK = `
 # the working tree perpetually dirty. Ignore .maddu/* by default; re-include
 # only the durable, authored artifacts a team would want to share.
 .maddu/*
+!.maddu/anchors/
 !.maddu/config/
 !.maddu/skills/
 !.maddu/plans/
@@ -134,18 +135,24 @@ export default async function init(argv) {
   }
   console.log(`  scaffolded .maddu/ skeleton (${skeleton.length} dirs)`);
 
-  // 3. Seed lane catalog + empty claims.
+  // 3. Seed lane catalog + empty claims — ONLY when absent. The catalog and
+  // claims are operator/project state from the moment they exist: an
+  // `init --force` re-install must never replace a customized catalog with
+  // the seed or wipe live claims (Codex Tier-4b review round 1 — a real
+  // data-loss path; --force means "overwrite FRAMEWORK files", never state).
   const { DEFAULT_LANE_CATALOG } = await import(
     'file://' + join(TEMPLATE_ROOT, 'maddu', 'runtime', 'lib', 'defaults.mjs').replace(/\\/g, '/')
   );
-  await writeFile(
-    join(cwd, '.maddu', 'lanes', 'catalog.json'),
-    JSON.stringify(DEFAULT_LANE_CATALOG, null, 2) + '\n'
-  );
-  await writeFile(
-    join(cwd, '.maddu', 'lanes', 'claims.json'),
-    JSON.stringify({ schemaVersion: 1, claims: [] }, null, 2) + '\n'
-  );
+  const catalogPath = join(cwd, '.maddu', 'lanes', 'catalog.json');
+  if (await exists(catalogPath)) {
+    console.log('  lane catalog already exists — preserved (operator-owned; seed is first-install only)');
+  } else {
+    await writeFile(catalogPath, JSON.stringify(DEFAULT_LANE_CATALOG, null, 2) + '\n');
+  }
+  const claimsPath = join(cwd, '.maddu', 'lanes', 'claims.json');
+  if (!(await exists(claimsPath))) {
+    await writeFile(claimsPath, JSON.stringify({ schemaVersion: 1, claims: [] }, null, 2) + '\n');
+  }
   // The lane catalog is a one-time seed — once installed, it belongs to the
   // project. `maddu upgrade` does NOT manage it, so we don't list it in the
   // managed manifest. To pull a newer framework default, delete the file and
@@ -162,8 +169,63 @@ export default async function init(argv) {
   await writeMadduJson(cwd, madduJson);
   console.log(`  wrote maddu.json (framework_version: ${fwVersion})`);
 
-  // 5. First spine event.
-  const eventsSegment = join(cwd, '.maddu', 'events', '000000000001.ndjson');
+  // An interrupted `maddu upgrade` leaves .maddu/state/upgrade-in-progress.json
+  // standing, and install-integrity treats that as a CRITICAL half-applied
+  // install. Clearing it here is not tidying: this line is what makes the
+  // documented remedy chain terminate. `maddu upgrade` cannot recover an install
+  // whose manifest is missing or truncated — it exits before it can read the
+  // plan — so it sends the operator to `maddu init --force`, and until now that
+  // command re-scaffolded every framework file and rewrote the manifest while
+  // leaving the marker untouched. The gate stayed red after the operator did
+  // exactly what they were told, with nothing left to try.
+  //
+  // Sound because of what has just happened above, not by assumption: every
+  // framework file has been rewritten from this checkout and `managed` recorded
+  // fresh, so the window the marker describes — file tree and manifest in
+  // disagreement — is closed by construction. Best-effort, like the upgrade's
+  // own clear: a failed unlink must never fail an install that succeeded.
+  try { await unlink(join(cwd, '.maddu', 'state', 'upgrade-in-progress.json')); }
+  catch (err) { if (err && err.code !== 'ENOENT' && err.code !== 'ENOTDIR') console.log(`  note: could not clear the stale upgrade marker (${err.code}) — \`maddu doctor\` will still flag it`); }
+
+  // 5. First spine event(s) — CHAINED (audit P1). Install is single-writer, so we
+  //    chain the prefix inline (no lock): genesis prev_hash=null, then the two
+  //    agent-file events below link forward via the canonical hashLine. A >=1.98
+  //    FRAMEWORK_INSTALLED genesis also flips the verifier's strictChain, so these
+  //    prefix events are held to post-cutover strict rules (their edits are caught).
+  const { hashLine } = await import(
+    'file://' + join(TEMPLATE_ROOT, 'maddu', 'runtime', 'lib', 'spine-append-core.mjs').replace(/\\/g, '/')
+  );
+  // Mutation-witness (S1): the fresh-install genesis writes below bypass
+  // spine.append by design (single-writer inline chaining), so each raw write
+  // declares itself a REAL witnessed append via witnessRawWrite — a
+  // census-pinned exception in command-tier-discipline. Fail-open: the lib
+  // ships in the same template being installed.
+  let witnessRaw = () => {};
+  try {
+    const mw = await import(
+      'file://' + join(TEMPLATE_ROOT, 'maddu', 'runtime', 'lib', 'mutation-witness.mjs').replace(/\\/g, '/')
+    );
+    if (typeof mw.witnessRawWrite === 'function') witnessRaw = mw.witnessRawWrite;
+  } catch {}
+  const eventsDir = join(cwd, '.maddu', 'events');
+  const eventsSegment = join(eventsDir, '000000000001.ndjson');
+  // An EXISTING spine is project state — `init --force` re-installs framework
+  // files but must never truncate the append-only event history (Codex
+  // Tier-4b round 2; the old unconditional writeFile destroyed segment 1).
+  // On a re-install, the three install events route through the canonical
+  // spine.append instead (correct prev_hash chaining onto the current tail,
+  // funnel lock, sync-mode partition routing).
+  let existingSegs = [];
+  try { existingSegs = (await readdir(eventsDir)).filter((f) => /^\d{12}\.ndjson$/.test(f)); } catch {}
+  let hasByReplica = false;
+  try { hasByReplica = (await readdir(join(eventsDir, 'by-replica'))).length > 0; } catch {}
+  let appendViaLib = null;
+  if (existingSegs.length > 0 || hasByReplica) {
+    const spineMod = await import(
+      'file://' + join(TEMPLATE_ROOT, 'maddu', 'runtime', 'lib', 'spine.mjs').replace(/\\/g, '/')
+    );
+    appendViaLib = (e) => spineMod.append(cwd, { type: e.type, actor: e.actor, lane: e.lane, data: e.data });
+  }
   const ts = new Date().toISOString();
   const ev = {
     v: 1,
@@ -174,8 +236,17 @@ export default async function init(argv) {
     lane: null,
     data: { version: fwVersion, files: files.length }
   };
-  await writeFile(eventsSegment, JSON.stringify(ev) + '\n');
-  console.log(`  spine seeded with FRAMEWORK_INSTALLED event`);
+  let lastStoredLine = null;
+  if (appendViaLib) {
+    await appendViaLib(ev);
+    console.log(`  spine preserved — FRAMEWORK_INSTALLED appended to the existing record (re-install)`);
+  } else {
+    ev.prev_hash = null; // genesis
+    lastStoredLine = JSON.stringify(ev);
+    await writeFile(eventsSegment, lastStoredLine + '\n');
+    witnessRaw('init-genesis'); // census-pinned raw spine write 1/3
+    console.log(`  spine seeded with FRAMEWORK_INSTALLED event`);
+  }
 
   // 6. .gitignore — append only if our block isn't already present.
   const gitignorePath = join(cwd, '.gitignore');
@@ -234,7 +305,14 @@ export default async function init(argv) {
       lane: null,
       data: { files: result.files, action: result.action, perFile: result.perFile }
     };
-    await appendFile(eventsSegment, JSON.stringify(ev2) + '\n');
+    if (appendViaLib) {
+      await appendViaLib(ev2);
+    } else {
+      ev2.prev_hash = hashLine(lastStoredLine);
+      lastStoredLine = JSON.stringify(ev2);
+      await appendFile(eventsSegment, lastStoredLine + '\n');
+      witnessRaw('init-genesis'); // census-pinned raw spine write 2/3
+    }
     const perFileSummary = Object.entries(result.perFile)
       .map(([f, a]) => `${f}:${a}`).join(', ');
     console.log(`  agent files synced (${result.action}) — ${perFileSummary}`);
@@ -256,7 +334,14 @@ export default async function init(argv) {
         reason: slashResult.reason || null,
       }
     };
-    await appendFile(eventsSegment, JSON.stringify(ev3) + '\n');
+    if (appendViaLib) {
+      await appendViaLib(ev3);
+    } else {
+      ev3.prev_hash = hashLine(lastStoredLine);
+      lastStoredLine = JSON.stringify(ev3);
+      await appendFile(eventsSegment, lastStoredLine + '\n');
+      witnessRaw('init-genesis'); // census-pinned raw spine write 3/3
+    }
     const slashSummary = slashResult.files.length
       ? `${slashResult.files.length} command(s)`
       : (slashResult.reason || 'no commands');
@@ -265,24 +350,14 @@ export default async function init(argv) {
     console.error(`  (agent-file sync skipped: ${err.message})`);
   }
 
-  // v1.1.0 Phase 8b — seed starter skills into .maddu/skills/. Idempotent.
+  // v1.1.0 Phase 8b — seed starter skills into .maddu/skills/. Idempotent;
+  // single-sourced with upgrade via _config-seed.mjs (the 2026-07-07 template
+  // audit found upgrade never backfilled these — same drift class the config
+  // defaults had before v1.11.0).
   try {
-    const { readdir, copyFile } = await import('node:fs/promises');
-    const starterSrc = join(FRAMEWORK_ROOT, 'template', 'maddu', 'skills', 'starter');
-    const targetDir = join(cwd, '.maddu', 'skills');
-    await mkdir(targetDir, { recursive: true });
-    let entries = [];
-    try { entries = await readdir(starterSrc, { withFileTypes: true }); } catch {}
-    let seeded = 0;
-    for (const e of entries) {
-      if (!e.isFile() || !e.name.endsWith('.md')) continue;
-      const dest = join(targetDir, e.name);
-      if (!(await exists(dest))) {
-        await copyFile(join(starterSrc, e.name), dest);
-        seeded += 1;
-      }
-    }
-    if (seeded > 0) console.log(`  starter skills seeded (${seeded} skill${seeded === 1 ? '' : 's'})`);
+    const { seedStarterSkills } = await import('./_config-seed.mjs');
+    const { skillsSeeded } = await seedStarterSkills(cwd, { templateRoot: TEMPLATE_ROOT });
+    if (skillsSeeded.length > 0) console.log(`  starter skills seeded (${skillsSeeded.length} skill${skillsSeeded.length === 1 ? '' : 's'})`);
   } catch (err) {
     console.error(`  (starter skills skipped: ${err.message})`);
   }
@@ -312,7 +387,9 @@ export default async function init(argv) {
   console.log(`  ./maddu/run agents register   # add the install stanza to ~/.claude, ~/.codex, …`);
   console.log(`  (asks which agents; idempotent; touches only its own marker block)`);
 
-  console.log(`\nNever start building unrecorded — wire session discipline into Claude Code:`);
+  console.log(`\nHooks are NOT installed yet — until they are, sessions won't auto-register`);
+  console.log(`and this install stays parked at the bottom of the activation funnel.`);
+  console.log(`Wiring them is the proven activation lever (one-time):`);
   console.log(`  ./maddu/run hooks install   # SessionStart auto-registers + records to the spine`);
   console.log(`  (writes .claude/settings.json; one register then flows into lane/slice-stop)`);
 }

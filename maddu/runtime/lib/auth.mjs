@@ -12,28 +12,21 @@
 // The spine records only metadata events (AUTH_KEY_ADDED, …_REMOVED,
 // …_ROTATED, …_RATE_LIMITED). Key VALUES are never appended to the spine.
 
-import { mkdir, readFile, readdir, writeFile, chmod, stat, unlink } from 'node:fs/promises';
+import { readFile, readdir, writeFile, chmod, stat, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
-import { homedir, platform } from 'node:os';
+import { platform } from 'node:os';
 import { createHash } from 'node:crypto';
 import { append, EVENT_TYPES } from './spine.mjs';
+import { configDir, ensureConfigDir } from './config-dir.mjs';
 
-export function authDir() {
-  if (platform() === 'win32') {
-    const appData = process.env.APPDATA || join(homedir(), 'AppData', 'Roaming');
-    return join(appData, 'maddu', 'auth');
-  }
-  const xdg = process.env.XDG_CONFIG_HOME || join(homedir(), '.config');
-  return join(xdg, 'maddu', 'auth');
+// v1.139.0 (register E3): the config-dir rule lives in config-dir.mjs; this
+// module only appends its `auth` segment.
+function authDir() {
+  return join(configDir(), 'auth');
 }
 
 async function ensureDir() {
-  const d = authDir();
-  await mkdir(d, { recursive: true });
-  if (platform() !== 'win32') {
-    try { await chmod(d, 0o700); } catch {}
-  }
-  return d;
+  return ensureConfigDir('auth');
 }
 
 function providerFile(provider) {
@@ -161,7 +154,7 @@ export async function markRateLimited(repoRoot, provider, keyId, untilIso, by = 
 
 // Pick the next usable key. Logs an AUTH_KEY_ROTATED event when we switch
 // away from the previously-marked-active key (tracked via lastUsedAt).
-export async function pickActive(repoRoot, provider, by = null) {
+async function pickActive(repoRoot, provider, by = null) {
   const doc = await readProviderFile(provider);
   if (doc.keys.length === 0) return null;
   const now = Date.now();

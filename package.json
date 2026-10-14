@@ -6,10 +6,12 @@
   "description": "Landing site for Máddu — the local-first orchestration spine for AI agents.",
   "scripts": {
     "dev": "astro dev",
-    "build": "node scripts/gen-og.mjs && node scripts/gen-capabilities.mjs && astro build && node scripts/strip-og-sources.mjs && node scripts/extract-headings.mjs",
+    "build": "node scripts/gen-og.mjs && node scripts/gen-docs.mjs && node scripts/gen-capabilities.mjs && astro build && node scripts/strip-og-sources.mjs && node scripts/extract-headings.mjs",
     "preview": "astro preview",
     "og": "node scripts/gen-og.mjs",
-    "capabilities": "node scripts/gen-capabilities.mjs",
+    "docs": "node scripts/gen-docs.mjs",
+    "capabilities": "node scripts/gen-docs.mjs && node scripts/gen-capabilities.mjs",
+    "sync": "node scripts/gen-docs.mjs && node scripts/gen-capabilities.mjs",
     "astro": "astro"
   },
   "dependencies": {

@@ -1,0 +1,148 @@
+---
+title: "CI rail (maddu ci)"
+slug: "ci"
+group: "Operations"
+order: 0
+description: "maddu ci is the headless, LLM-free gate rail for continuous integration: one verb that runs every deterministic check and exits nonzero only on gates this repo has pinned as…"
+sourceFile: "46-ci.md"
+sourceUrl: "https://github.com/frdyx/maddu/blob/main/docs/46-ci.md"
+verb: "ci"
+---
+`maddu ci` is the headless, LLM-free gate rail for continuous integration:
+one verb that runs every deterministic check and exits nonzero **only on
+gates this repo has pinned as required**. No model call, no network, no
+spine write — the whole run is local and reproducible, which is exactly what
+a CI verdict has to be.
+
+```bash
+maddu ci            # run all gates + a learn-scan advisory; verdict per the pinned profile
+maddu ci pin        # pin the currently-green gate set as this repo's required list
+maddu ci --strict   # fail on ANY gate failure, pinned or not
+maddu ci --json     # machine-readable result
+```
+
+## The churn-proof exit contract
+
+The design problem: framework upgrades **add gates**. If CI failed on any
+red gate, a [`maddu upgrade`](/capabilities/upgrade) could turn a stranger's pipeline red overnight —
+the framework's gate-set churn would become every consumer's problem.
+
+So the verdict is opt-in by construction:
+
+- **Unpinned** (fresh install): `maddu ci` is informational — full report,
+  exit 0, and a pointer to `maddu ci pin`.
+- **Pinned**: `maddu ci pin` snapshots the gate ids that currently pass
+  (status `ok` or `warn`) into the repo's required list. From then on the run
+  exits 1 **iff a pinned gate reports `fail`**. New gates added by upgrades
+  are reported but never fail the build until you re-pin.
+- **`--strict`**: for repos that *want* to inherit gate-set churn — any
+  `fail` is red.
+
+Currently-failing gates are excluded at pin time (and named, so you can fix
+and re-pin). A fail-capable gate pinned while its *status* is `warn` fails the
+build only if it later degrades to `fail` — warn is soft everywhere in Máddu,
+including here.
+
+**Warn-severity gates are never pinnable.** Pinning keys on a gate's declared
+*severity*, not on this run's status: a gate whose severity is `warn`
+(`self-test-recent`, `heavy-suites-recent`, `acceptance-proven`, …) can never
+report `fail`, so listing it as "required" would be a required check that
+cannot red — the green-because-wrong-scope hole by another name. `maddu ci pin`
+refuses them and names them as `advisory (warn-severity) — never pinnable`, and
+a required id that resolves to a warn-severity gate is itself a red at verdict
+time. The consequence for coverage: something a warn-severity gate merely *nags*
+about (the heavy suites having run recently) has to be provided by CI actually
+running it — which is why the source repo's heavy suites run on a schedule
+([26-stress-testing.md](https://github.com/frdyx/maddu/blob/main/docs/26-stress-testing.md)) rather than behind a pin.
+
+## Where the pin lives
+
+- **Consumer installs:** `maddu.json` → `"ci": { "requiredGates": [...] }` —
+  the install marker travels with the repo, so the CI contract is versioned
+  alongside the code it protects.
+- **Framework source checkout:** `.maddu/config/ci.json` (the source repo has
+  no `maddu.json` by design — it *is* the framework).
+
+## What a run includes
+
+- **Every gate** the runner discovers (built-in + operator gates), headless,
+  with `emitEvents: false` — CI observes, it never writes the spine.
+- **A learn-scan advisory line** (the completion-claim-without-proof check
+  from [37-failure-learning.md](/docs/reference/failure-learning)) — informational in
+  v1, never part of the exit code.
+
+## Local enforcement first (no GitHub required)
+
+Máddu runs without GitHub — only local git — and so does its enforcement.
+`maddu ci` is a plain command with a plain exit code, and the local-first
+equivalent of a branch-protection rule is a **pre-push hook**:
+
+```bash
+# .git/hooks/pre-push   (chmod +x)
+#!/bin/sh
+exec maddu ci
+```
+
+Three lines, fully offline: a push is refused while a pinned required gate is
+red — with any remote, or no remote at all. This is the default enforcement
+story; hosted CI below is the team-scale extension of the same exit code, not
+a replacement for it.
+
+The same contract plugs into **any** CI system (GitLab CI, Jenkins, Forgejo,
+Woodpecker…): run `maddu ci`, respect the exit code. Nothing about the verb
+knows or needs GitHub.
+
+## GitHub Actions
+
+Detection is automatic (`GITHUB_ACTIONS`): failed required gates emit
+`::error` annotations, and a one-table job summary is appended to the step
+summary. The whole workflow is five lines:
+
+```yaml
+- uses: actions/checkout@v4
+- uses: actions/setup-node@v4
+  with: { node-version: 20 }
+- run: npx github:frdyx/maddu ci
+  working-directory: .
+```
+
+(For a repo with Máddu already installed, `node maddu/../bin` resolution is
+handled by the installed `maddu` entry point — `npx github:frdyx/maddu ci`
+works in both cases.)
+
+## The source repo's own workflow (dogfood, v1.98.0+)
+
+Máddu's own `.github/workflows/maddu-ci.yml` is stricter than the five-line
+consumer contract above, because it is the framework's QA and must not pass for
+the wrong reason (audit remediation P4, "green-because-wrong-scope"):
+
+- **`npm ci` runs first.** The cockpit gates need `happy-dom` (and a browser for
+  the playwright smoke). Without the dev deps they print `SKIP` and exit 0 — and
+  a runner that maps exit-0 to PASS never actually runs them. Installing the
+  pinned dev deps makes them RUN.
+- **`self-test --fail-on-skip`.** A task that is genuinely non-applicable (an
+  optional dep absent) exits the reserved code `77` and is recorded as a distinct
+  `skip`, never a `pass`. `--fail-on-skip` turns any skip red in CI, so a dep
+  that failed to install reds the build instead of silently greening a gate that
+  never ran. (Locally, a zero-install checkout still skips cleanly — `SKIP` is
+  honest, just not counted as success.)
+- **A dedicated browser job** installs Chromium and runs the real-browser cockpit
+  smoke, so the one full-profile-only cockpit gate also runs in CI.
+- **A single aggregate `ci` job** `needs` every leaf job and, via `if: always()`
+  plus an explicit all-success assertion, turns any failed / cancelled / skipped
+  leaf into a red aggregate. **That aggregate `ci` context is the required status
+  check on `main`** — a plain required leaf can be "skipped but required" and
+  wave a PR through; the aggregate cannot.
+
+With branch protection requiring the aggregate check, the merge ritual is
+**merge after Actions is green** (not merely after local gates pass); admin
+bypass is reserved for documented emergencies.
+
+## Why this exists (positioning)
+
+The gates are Máddu-held state — deterministic checks over the repo's own
+governance record. No vendor can absorb "`.maddu` gates green" into their
+platform, because no vendor holds the gates. `maddu ci` is what makes that
+state **org-binding**: a branch-protection rule away from "agent work doesn't
+merge unless the governance record is green." See
+[45-category.md](/docs/reference/category) for the category this operationalizes.

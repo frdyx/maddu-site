@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "pinnedPackages": [],
+  "audit": {
+    "freshness_warn_days": 30,
+    "freshness_block_days": 7
+  }
+}

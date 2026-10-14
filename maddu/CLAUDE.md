@@ -82,13 +82,13 @@ The detailed form of those three steps:
 Long work should heartbeat every meaningful step:
 
 ```bash
-maddu session heartbeat --session-id <id> --focus "<what changed / what's next>"
+maddu session heartbeat --session <id> --focus "<what changed / what's next>"
 ```
 
 Before stopping your CLI session:
 
 ```bash
-maddu session close --session-id <id> --focus "<handoff summary>"
+maddu session close --session <id> --focus "<handoff summary>"
 ```
 
 ## The slice-stop ritual
@@ -140,8 +140,9 @@ rule is about the **Máddu framework layer**):
    `~/.config/maddu/auth/` (Linux/macOS) or `%APPDATA%\maddu\auth\` (Windows).
    `maddu export` scrubs them; `maddu import` refuses to overwrite them.
 7. **Three-layer brand boundary.** Framework shell brand / app brand /
-   content brand never mix. The cockpit's `tokens.css` is owned by Máddu and
-   must not be referenced from app or content code.
+   content brand never mix. The cockpit's design tokens (the `--m-*`
+   custom properties in `cockpit.css`) are owned by Máddu and must not
+   be referenced from app or content code.
 8. **Lane ownership.** No two agents may hold the same lane concurrently. Use
    the mailbox bus (`.maddu/lanes/<lane>/mailbox.ndjson`) for cross-lane
    handoffs, not shared mutation.
@@ -156,11 +157,13 @@ rule is about the **Máddu framework layer**):
 For any non-trivial "ship / build / fix / team" work, the default is a
 pipeline — `maddu pipeline run <name> "<goal>"` — not an ad-hoc one-off.
 Pipelines walk the one canonical flow (orient → plan → coordinate → slice
-→ test → review → land → account) and each stage is a literal `maddu`
-invocation against the substrate above. Three default pipelines ship:
-`ship-a-feature` (the default, for end-to-end feature work), `fix-a-bug`
-(something broken), and `plan-and-delegate` (fan-out across disjoint
-lanes). Reserve ad-hoc `/maddu-autopilot` (no pipeline) for genuinely
+→ test → review → land → account). The runner is a BOOKKEEPER: it records
+which stage was entered, in order, and leaves each stage's work to you —
+it invokes nothing itself. Four default pipelines ship: `ship-a-feature`
+(the default, for end-to-end feature work), `fix-a-bug` (something
+broken), `plan-and-delegate` (fan-out across disjoint lanes), and
+`plan-exec-verify-fix` (the end-to-end work shape). Reserve ad-hoc
+`/maddu-autopilot` (no pipeline) for genuinely
 one-off changes. The operator surface stays slash commands + natural
 language — there are no verbose CLI flags to memorize. See the full agent
 brief in [`agent-files/MADDU.md`](agent-files/MADDU.md) §"Intent routing"
@@ -168,12 +171,26 @@ and the charter in [`docs/charter.md`](../docs/charter.md).
 
 ## Provider / runtime resolution
 
-Each lane may declare a preferred runtime + model in
-`.maddu/lanes/catalog.json`. Resolution order on worker spawn:
+The runtime is chosen explicitly per spawn (the name given to
+`maddu runtime spawn <name>` or `coordinator --runtime <name>`). The model
+HINT comes from the runtime descriptor (`.maddu/runtimes/<name>.json`)
+`modelPreference` — a flat string or per-stage
+`{ default, plan?, exec?, verify?, review? }` — resolved for the spawn's
+stage and forwarded to the worker as `MADDU_MODEL_HINT` env. The worker
+decides whether to honor it (the framework never makes the model call).
+When resolution yields nothing, no new hint is set — but a nested worker
+may still inherit its parent's `MADDU_MODEL_HINT` through the `MADDU_*`
+env passthrough.
 
-1. Per-spawn override — `--runtime` / `--model` flag.
-2. Lane default — `catalog.json` `lanes[<laneId>].defaults`.
-3. Global default — `.maddu/state/runtime-defaults.json`.
+Lane and pipeline-stage model preferences share the same shape; lane
+*defaults* also appear in the cockpit's lane routing panel, while
+configured pipeline-stage preferences are gate-validated but not
+cockpit-visible. The shipped spawn call sites do not currently feed either
+into the resolution — on a spawned worker only the runtime descriptor's
+preference takes effect, with one exception: the focus director passes its
+configured `.maddu/config/focus.json` `model` as a direct hint.
+Field-level details and validation status:
+[`docs/25-model-routing.md`](../docs/25-model-routing.md).
 
 If the resolved provider is not signed in, the bridge returns
 `{error: 'PROVIDER_AUTH_MISSING', provider}` and the cockpit `/auth` route
@@ -187,8 +204,9 @@ The cockpit is the operator's view; talk to it via the bridge:
   cockpit's Chats route renders this.
 - `POST /bridge/approvals/request` — request permission before doing
   something the operator may want to gate.
-- `maddu events append --type <T> --payload-json '<json>'` — typed event
-  into the spine; projections rebuild automatically.
+- Every `maddu` verb records its own typed events — there is no raw
+  event-append CLI. The spine is written only by the verbs (`slice-stop`,
+  `mailbox send`, approvals, …); projections rebuild automatically.
 
 ## Useful commands
 
@@ -230,12 +248,12 @@ You usually reach these through slash commands or natural language (see
 [`agent-files/MADDU.md`](agent-files/MADDU.md) §"Intent routing"), but every one
 is a real verb you can call directly. Run `maddu help` for flags.
 
-- **Orient & state:** `maddu orient` · `maddu brief` · `maddu status` · `maddu register` · `maddu insights`
+- **Orient & state:** `maddu orient` · `maddu brief` · `maddu status` · `maddu register` · `maddu insights` · `maddu experience`
 - **Plan & coordinate:** `maddu plan` · `maddu goal` · `maddu phase` · `maddu loop` · `maddu coordinator` · `maddu team` · `maddu pipeline` · `maddu handoff`
 - **Do the work:** `maddu slice` · `maddu slice-stop` · `maddu review` · `maddu advise` · `maddu suggest` · `maddu search` · `maddu task`
-- **Memory & learning:** `maddu memory` · `maddu learn` · `maddu skill` · `maddu blueprint` · `maddu debt`
+- **Memory & learning:** `maddu memory` · `maddu learn` · `maddu skill` · `maddu blueprint` · `maddu debt` · `maddu evolve` · `maddu wiki`
 - **Tools (audited subprocess wrappers):** `maddu git` · `maddu test` · `maddu self-test` · `maddu format` · `maddu lint` · `maddu install`
-- **Capabilities & governance:** `maddu mcp` · `maddu plugin` · `maddu governance` · `maddu trust` · `maddu audit` · `maddu architecture`
+- **Capabilities & governance:** `maddu mcp` · `maddu plugin` · `maddu governance` · `maddu trust` · `maddu audit` · `maddu architecture` · `maddu model`
 - **Accounting:** `maddu cost` · `maddu log` · `maddu help`
 
 ## When you're stuck
@@ -246,14 +264,14 @@ is a real verb you can call directly. Run `maddu help` for flags.
 4. Append a question to the inbox:
 
    ```bash
-   maddu mailbox send --lane harness --text "QUESTION: <what's blocking>"
+   maddu mailbox send harness --type question --subject "QUESTION: <what's blocking>"
    ```
 
    The cockpit operator sees it.
 
 ## What NOT to touch
 
-- `.maddu/events/` — append-only NDJSON; only via `maddu events append`.
+- `.maddu/events/` — append-only NDJSON; written only by `maddu` verbs — never hand-edit or append directly.
 - `.maddu/state/` — read-only projection of events; never hand-edit.
 - `.maddu/sessions/` — owned by `maddu session register/heartbeat/close`.
 - `.maddu/inbox/` — append-only; only via `maddu mailbox send` or

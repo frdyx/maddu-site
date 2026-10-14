@@ -29,6 +29,26 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node maddu/bin/maddu.mjs hooks fire pre-tool-use"
+          }
+        ],
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash"
+      }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Edit(maddu/runtime/**)",
+      "Edit(.maddu/config/**)",
+      "Edit(.maddu/gates/**)",
+      "Edit(.claude/settings.json)",
+      "Edit(.claude/settings.local.json)"
     ]
   }
 }

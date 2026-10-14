@@ -17,14 +17,15 @@
 import { readFile, readdir, stat, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
+import { gitRun } from './git-exec.mjs';
 
-export const SOURCE_EXTS = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.py'];
+const SOURCE_EXTS = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.py'];
 export const FAIL_ON = new Set(['none', 'new', 'any']);
 // Structural-mass defaults: a file over this many lines is a "monolith". The
 // import graph can't see file mass (a 9000-line file is one node), so this is a
 // separate dimension. 1500 cleanly separates genuine monoliths from large-but-
 // reasonable modules in this repo; override via contract options.mass.maxLines.
-export const MASS_MAX_LINES = 1500;
+const MASS_MAX_LINES = 1500;
 
 const SKIP_DIRS = new Set([
   '.git', 'node_modules', '.maddu', 'dist', 'build', 'out', 'coverage',
@@ -33,7 +34,7 @@ const SKIP_DIRS = new Set([
 ]);
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
 
-export class ArchitectureConfigError extends Error {
+class ArchitectureConfigError extends Error {
   constructor(message) { super(message); this.name = 'ArchitectureConfigError'; this.exitCode = 2; }
 }
 
@@ -127,26 +128,59 @@ async function* walk(dir, rel = '') {
   }
 }
 
+// The set of paths git considers part of this working tree: TRACKED (`--cached`)
+// plus UNTRACKED-BUT-NOT-IGNORED (`--others --exclude-standard`). Returns null
+// when git cannot answer, and the caller then falls back to the raw walk.
+//
+// WHY THIS EXISTS (v1.120.0). The walker below honours SKIP_DIRS and the
+// contract's own `ignore` globs but knows nothing about `.gitignore`, so it
+// scanned files that are not in the repository at all. Concretely: a local,
+// gitignored analysis script under `docs/audit/` imported three runtime libs
+// and produced a permanent `forbidden: docs -> runtime-libs` violation. The
+// operator's `maddu audit` was red on a file no commit could fix and that CI
+// would never see — a local scratch file silently degrading a governance
+// signal into noise.
+//
+// Untracked-but-not-ignored files are deliberately KEPT: a forbidden import in
+// a file you just created must be caught before you commit it, not after.
+// Only what git is explicitly told to ignore is dropped.
+async function gitVisibleFiles(repoRoot) {
+  const r = await gitRun(['ls-files', '-z', '--cached', '--others', '--exclude-standard'], repoRoot);
+  if (!r || r.code !== 0) return null;
+  const set = new Set();
+  for (const p of r.stdout.split('\0')) {
+    const rel = p.trim();
+    if (rel) set.add(rel);
+  }
+  // An EMPTY listing from a successful call means "this directory holds no
+  // files git can see". Treating that as "git could not answer" would silently
+  // reinstate the bug in exactly the repo shape it matters least to guess in,
+  // so it is returned as the empty set, not as null.
+  return set;
+}
+
 export async function scanFiles(repoRoot, ignore = []) {
+  const visible = await gitVisibleFiles(repoRoot);
   const files = [];
   for await (const rel of walk(repoRoot)) {
     const dot = rel.lastIndexOf('.');
     const ext = dot < 0 ? '' : rel.slice(dot);
     if (!SOURCE_EXTS.includes(ext)) continue;
     if (ignore.some((re) => re.test(rel))) continue;
+    if (visible && !visible.has(rel)) continue; // gitignored — not part of the repo
     files.push(rel);
   }
   return files.sort();
 }
 
 // ── module assignment (most-specific glob wins) ──────────────────────────────
-export function buildModuleMatchers(contract) {
+function buildModuleMatchers(contract) {
   return contract.modules.map((m) => ({
     name: m.name,
     matchers: (m.paths || []).map((p) => ({ re: globToRegExp(p), spec: globSpecificity(p) })),
   }));
 }
-export function assignModule(relPath, matchers) {
+function assignModule(relPath, matchers) {
   let best = null;
   let bestSpec = -1;
   for (const m of matchers) {
@@ -200,7 +234,7 @@ function tryResolve(target, fileSet) {
   return null;
 }
 
-export function resolveImport(fromFileRel, imp, fileSet) {
+function resolveImport(fromFileRel, imp, fileSet) {
   const spec = imp.spec;
   if (imp.kind === 'js') {
     if (!spec.startsWith('.')) return null; // package/external — ignored in MVP

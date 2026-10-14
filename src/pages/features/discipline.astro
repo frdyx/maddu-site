@@ -18,10 +18,10 @@ import CtaBlock from '../../components/CtaBlock.astro';
       </div>
       <h1>Every session on the record. <span class="dim-h1">Before the first edit.</span></h1>
       <p class="lede">
-        Hooks register a session the moment it starts and checkpoint governance before every context compaction. You never open a session that the spine didn't witness.
+        Hooks register a session the moment it starts, checkpoint governance before every context compaction, and — since v1.97.0 — <strong>block a mutating edit</strong> when a session ritual is stale. Discipline you have to remember isn't discipline; Máddu enforces it.
       </p>
       <pre class="feat-cli"><code>$ maddu hooks install
-wired SessionStart · SessionEnd · PreCompact into .claude/settings.json</code></pre>
+wired SessionStart · SessionEnd · PreCompact · PreToolUse into .claude/settings.json</code></pre>
     </div>
   </section>
 
@@ -55,7 +55,7 @@ wired SessionStart · SessionEnd · PreCompact into .claude/settings.json</code>
             <span class="panel-title">It never breaks you</span>
             <span class="panel-aside">fails open</span>
           </div>
-          <p>The hooks always exit 0. A governance instrument must never break the session it observes, so a failing checkpoint degrades to a note — never a blocked session.</p>
+          <p>The hooks never exit <code>2</code>. A governance instrument must never crash the session it observes — any evaluator, git, or parse error degrades to allow. Enforcement can only <em>deny an edit through a structured decision</em>, never break the tool.</p>
         </div>
       </div>
 
@@ -70,7 +70,49 @@ wired SessionStart · SessionEnd · PreCompact into .claude/settings.json</code>
   <section class="section">
     <div class="container">
       <header class="section-head">
-        <span class="eyebrow">§ 02 · On the record</span>
+        <span class="eyebrow">§ 02 · The enforcement gate · since v1.97.0</span>
+        <h2>Governance stopped being advisory.</h2>
+        <p>
+          The <code>PreToolUse</code> hook evaluates the session's rituals before every <strong>mutating</strong> tool call — the edit tools always, and <code>Bash</code> only when the command is a recognized write (<code>&gt;</code>/<code>&gt;&gt;</code> redirects, <code>sed -i</code>, <code>tee</code>, <code>mv</code>/<code>cp</code>/<code>rm</code>, PowerShell <code>Set-Content</code>…). If a ritual is stale, it <strong>denies the edit</strong> and names the exact remedy. Reads and the remedy commands themselves are never gated, so a block can't deadlock its own fix.
+        </p>
+      </header>
+
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Ordered blockers</span>
+            <span class="panel-aside">first-stale wins</span>
+          </div>
+          <p>session → lane → governing goal/plan → slice-stop freshness → uncommitted pileup. The deny names the <em>first</em> stale ritual only, with its exact remedy — <code>maddu register</code>, <code>lane claim</code>, <code>goal set</code>, <code>plan</code>, or <code>slice-stop</code>.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Tier-scaled</span>
+            <span class="panel-aside">governance mode</span>
+          </div>
+          <p><code>strict</code> blocks at the first threshold; <code>standard</code> is <em>graduated</em> — block a missing session/lane now, warn then block on a stale slice-stop or commit pileup; <code>relaxed</code> only nudges. One governance value, <code>discipline-enforcement</code>, sets it.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Gates before done</span>
+            <span class="panel-aside">strict</span>
+          </div>
+          <p>At enforcing tiers, <code>maddu goal done</code> and <code>maddu plan complete</code> run the gate suite first and refuse to close while a required gate is red. <code>abandon</code>/<code>cancel</code> are honest terminal states and are never gated.</p>
+        </div>
+      </div>
+
+      <Callout tone="accent" title="Block-and-tell — never auto-perform" tag="pre-tool-use">
+        <p>
+          Máddu never auto-slice-stops or auto-commits to satisfy a gate — that would fake the record. Enforcement is <strong>block-and-tell</strong>: it stops the edit and hands you the one command that clears the block. The companion <code>discipline-observed</code> doctor gate flags a repo that pins a tier but never wired the hook — where enforcement silently does nothing. Back out any time with <code>maddu hooks uninstall</code>.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 03 · On the record</span>
         <h2>What a disciplined session looks like on the spine.</h2>
       </header>
       <EventStream

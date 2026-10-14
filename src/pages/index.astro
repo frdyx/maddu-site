@@ -4,19 +4,42 @@ import CompareStrip from '../components/CompareStrip.astro';
 import CtaBlock from '../components/CtaBlock.astro';
 import SubstrateLoop from '../components/SubstrateLoop.astro';
 import EventStream from '../components/EventStream.astro';
-import { VERSION_SHORT, VERBS_TOTAL, DOCTOR_GATES, HARD_RULES, RELEASE_COUNT, EVENT_TYPES } from '../data/stats';
+import { VERSION_SHORT, VERBS_TOTAL, DOCTOR_GATES, HARD_RULES, RELEASE_COUNT, EVENT_TYPES, CONTRACT_VERSION } from '../data/stats';
 import { RELEASES } from '../data/releases';
 
 // Marketing homepage — leads with verification + the record-as-contract, then
 // the seven shapes of work. Reference material (architecture, governance,
 // verbs) lives in the dedicated docs section at /docs; this page sells there.
 
+// ── MADDU banner — pixel-grid render of the half-block wordmark, per-column
+// truecolor sweep. Mirrors egna_projekt/maddu-banner.sh exactly: same glyph
+// rows, same piecewise lime → midpoint → electric interpolation, ░ = hatch.
+const BANNER_ROWS = ['█▀▄▀█ ▄▀█ █▀▄ █▀▄ █░█', '█░▀░█ █▀█ █▄▀ █▄▀ █▄█'];
+const BANNER_COLS = 21;
+const bannerColor = (i: number): string => {
+  const A = [208, 255, 0], M = [147, 219, 127], B = [86, 184, 255];
+  const half = (BANNER_COLS - 1) / 2;
+  const [from, to, t] = i <= half ? [A, M, i / half] : [M, B, (i - half) / (BANNER_COLS - 1 - half)];
+  const c = from.map((v, j) => Math.round(v + (to[j] - v) * t));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+};
+const bannerCells: { x: number; y: number; hatch: boolean }[] = [];
+BANNER_ROWS.forEach((row, r) => {
+  [...row].forEach((ch, x) => {
+    const top = r * 2 + 1, bot = r * 2 + 2;
+    if (ch === '█') bannerCells.push({ x, y: top, hatch: false }, { x, y: bot, hatch: false });
+    else if (ch === '▀') bannerCells.push({ x, y: top, hatch: false });
+    else if (ch === '▄') bannerCells.push({ x, y: bot, hatch: false });
+    else if (ch === '░') bannerCells.push({ x, y: top, hatch: true }, { x, y: bot, hatch: true });
+  });
+});
+
 // The three-legged trust claim — the spine's identity.
 const contractLegs = [
   {
     n: '01',
     tone: 'accent-2',
-    title: 'Tamper-evident',
+    title: 'Tamper-detecting',
     lead: 'Append-only + hash-chained',
     body: 'Every event is one line on a log that only grows, each hashed over the last. Nothing already written can change unnoticed.',
   },
@@ -121,12 +144,13 @@ maddu model promote models/promote.json
 # the approval ride — no auto-decide near production
 maddu model gates install
 # 12 ML-lifecycle gates in .maddu/gates/ — yours, ci-pinnable`,
-    caption: 'Every promotion above candidate waits for an explicit per-request decision — standing approval policies are deliberately inert near production. Rollback is strictly downward; re-promotion goes through the full ride, and the spine verifier holds the ladder tamper-evident on replay. The honesty line is structural: Máddu records what your tools declared and pins the bytes — it never trains, serves, evaluates, or decides a model is good.',
+    caption: 'Every promotion above candidate waits for an explicit per-request decision — standing approval policies are deliberately inert near production. Rollback is strictly downward; re-promotion goes through the full ride, and the spine verifier holds the ladder tamper-detecting on replay. The honesty line is structural: Máddu records what your tools declared and pins the bytes — it never trains, serves, evaluates, or decides a model is good.',
   },
 ];
 
 const features = [
-  { tone: 'accent',   glyph: '⌗', title: 'Session discipline', body: 'Hooks auto-register every session, close it cleanly, and checkpoint governance before every compaction. Never build unrecorded.', href: '/features/discipline' },
+  { tone: 'ok',       glyph: '⇄', title: 'Acceptance proofs',  body: 'A goal condition can carry a derived proof that its command was seen to exit nonzero before it exited zero — while the oracle stayed frozen. New in v1.121.', href: '/features/acceptance' },
+  { tone: 'accent',   glyph: '⌗', title: 'Session discipline', body: 'Hooks auto-register every session, checkpoint before every compaction, and — since v1.97 — block a mutating edit when the ritual is stale. Never build unrecorded.', href: '/features/discipline' },
   { tone: 'accent-2', glyph: '⑂', title: 'Worktree lanes',     body: 'Each lane claims its own isolated git worktree — parallel agents never share a checkout, every event lands on one spine.', href: '/features/worktrees' },
   { tone: 'warn',     glyph: '⟁', title: 'Earned autonomy',    body: 'A deterministic trust ladder over verified outcomes recommends relaxing a lane’s governance — never applies it.', href: '/features/autonomy' },
   { tone: 'accent',   glyph: '∴', title: 'Failure learning',   body: 'Mines past sessions for failed→succeeded tool calls and distils corrections. A fix learned once propagates across repos.', href: '/features/learn' },
@@ -140,7 +164,15 @@ const features = [
 <Layout title="The verifiable record for AI coding agents" description="The external, verifiable record of what your AI coding agents did, so no agent is ever the sole witness to its own work. Local-first and files-only: agents work as an auditable team through lanes, approvals, and gates. Máddu never sits in the request path or touches your keys." pathname="/">
   <!-- ── HERO ─────────────────────────────────────────────────────── -->
   <section class="hero">
-    <div class="container">
+    <div class="container-wide">
+      <div class="hero-banner" aria-hidden="true">
+        {bannerCells.map((c) => (
+          <i
+            class:list={['hb', { 'hb-hatch': c.hatch }]}
+            style={`grid-area:${c.y}/${c.x + 1};--c:${bannerColor(c.x)}`}
+          ></i>
+        ))}
+      </div>
       <div class="eyebrow-chain">
         <span class="eyebrow">Local-first</span>
         <span class="eyebrow-sep">·</span>
@@ -181,7 +213,7 @@ const features = [
       <header class="section-head">
         <span class="eyebrow">The problem</span>
         <h2>&ldquo;Done ✅, tests pass.&rdquo; <span class="dim">Was it?</span></h2>
-        <p>Generation stopped being the bottleneck — verification is. An agent&rsquo;s chat summary is the actor grading its own work. Máddu makes the record the witness instead: an append-only, tamper-evident, independently-checkable log of what your agents actually did.</p>
+        <p>Generation stopped being the bottleneck — verification is. An agent&rsquo;s chat summary is the actor grading its own work. Máddu makes the record the witness instead: an append-only, tamper-detecting, independently-checkable log of what your agents actually did.</p>
       </header>
 
       <div class="split">
@@ -226,11 +258,116 @@ const features = [
         ))}
       </div>
       <div class="contract-artifact">
-        <code class="schema-chip">docs/event-schema.json &middot; draft 2020-12 &middot; x-contractVersion 1.1.0 &middot; {EVENT_TYPES} event types</code>
+        <code class="schema-chip">docs/event-schema.json &middot; draft 2020-12 &middot; x-contractVersion {CONTRACT_VERSION} &middot; {EVENT_TYPES} event types</code>
         <p>
           Validate your governance record against its own published contract with <code>ajv</code>, <code>check-jsonschema</code>, or any validator — the witness is a contract a third party can verify, not a log you&rsquo;re asked to trust. And it&rsquo;s safe to hand over: every event&rsquo;s payload is redacted at the write boundary, so the record you share can&rsquo;t leak a pasted secret.
         </p>
       </div>
+    </div>
+  </section>
+
+  <!-- ── ACCEPTANCE PROOFS (v1.121) ──────────────────────────────── -->
+  <section class="section proof-section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">New in v1.121 &middot; acceptance proofs</span>
+        <h2>A check that has never rejected anything <span class="dim">has never shown that it can.</span></h2>
+        <p>A green suite tells you it passes <em>now</em>. It doesn&rsquo;t tell you it ever failed — and the oldest way to weaken verification without touching production code is to write a check that passes no matter what, then truthfully report green. An acceptance proof is the narrow answer to exactly that, and it is derived from the record every time somebody looks, never stored.</p>
+      </header>
+
+      <div class="proof-claim">
+        <span class="proof-claim-label">What a proof claims — all of it</span>
+        <p>One declared command <b>exited nonzero</b> and later <b>exited zero</b>, while the declared <b>oracle</b> bytes stayed identical and the declared <b>implementation</b> bytes moved.</p>
+      </div>
+
+      <div class="proof-readouts">
+        <article class="proof-readout proof-readout--live">
+          <span class="proof-state">live</span>
+          <pre class="proof-line"><code>✓ met — proof: RED→GREEN · oracle 12 files frozen</code></pre>
+          <p>The strongest thing a checkmark here can say: this command was <em>seen</em> to exit nonzero before it exited zero, and the thing judging it did not change in between.</p>
+        </article>
+        <article class="proof-readout proof-readout--none">
+          <span class="proof-state">unproven</span>
+          <pre class="proof-line"><code>proof: none — this command has never been
+observed to exit nonzero.</code></pre>
+          <p>And this line is the actual product. Nothing-declared never renders like declared-and-clean; a suite that has only ever been green says so, in those words, instead of borrowing credit it never earned.</p>
+        </article>
+      </div>
+
+      <div class="proof-body">
+        <div class="proof-how">
+          <h3>Declare it on the goal, observe it on purpose</h3>
+          <pre class="usecase-code"><code>{[
+            'maddu goal set "ship the retry backoff" \\',
+            '  --success "npm test -- retry::backs off exponentially" \\',
+            '  --oracle  "test/retry.test.js" \\',
+            '  --impl    "src/retry.js"',
+            '',
+            '# orient records the RED before the fix, the GREEN after',
+            'maddu orient',
+            '',
+            '# or let ralph record the baseline, then iterate toward it',
+            'maddu loop ralph --from-goal --iterate "<agent turn>"',
+          ].map((line) => (
+            <span class:list={['ucode-line', /^\s*#/.test(line) && 'is-comment']}>{line + '\n'}</span>
+          ))}</code></pre>
+          <p>Observation belongs to the two commands you invoke on purpose — the <code>acceptance-proven</code> gate renders the state wherever gates run but <b>executes nothing</b>, because a gate that ran declared commands would turn <code>maddu doctor</code> into an arbitrary-command runner any goal declaration could aim.</p>
+        </div>
+
+        <aside class="proof-limits panel">
+          <div class="panel-head"><span class="panel-title">Honest limits</span><span class="panel-aside">exported, not summarized</span></div>
+          <ul>
+            <li><b>Process-level, not assertion-level.</b> A RED means the command exited nonzero — a missing module or an unresolvable interpreter counts too.</li>
+            <li><b>A weak oracle proven RED→GREEN is still a weak oracle.</b> An assertion checking almost nothing yields an entirely honest, entirely worthless proof.</li>
+            <li><b>Endpoint equality, not continuous immutability.</b> A run that mutates the oracle and restores it before the post-hash is not detected.</li>
+            <li><b>Only the declared sets are bound.</b> Not the environment, not the revision, not files nobody declared.</li>
+            <li><b>A receipt is a cooperative actor&rsquo;s assertion.</b> The chain is unkeyed SHA-256; deriving a proof removes the minting verb, not the forgery.</li>
+          </ul>
+          <p class="proof-limits-foot">The full list ships from the code as <code>ACCEPTANCE_HONEST_LIMITS</code>, reproduced verbatim beside every readout — so no surface can quietly narrow it.</p>
+        </aside>
+      </div>
+
+      <p class="proof-nobaseline">
+        <b>There is no re-baseline verb.</b> Editing the oracle between the RED and the GREEN means no qualifying pair ever forms; re-declaring the goal leaves the new declaration visibly unproven rather than green. The only route back is to observe the new RED and then the new GREEN — which is the work you were avoiding.
+      </p>
+
+      <p class="loop-more">
+        <a class="btn" href="/docs/reference/acceptance-proof">Acceptance proofs, in full <span aria-hidden="true">→</span></a>
+        <a class="btn btn-ghost" href="/threat-model">What it closes, and what it doesn&rsquo;t <span aria-hidden="true">→</span></a>
+      </p>
+    </div>
+  </section>
+
+  <!-- ── TWO WAYS IN (v1.147–v1.151 embedded runtime) ────────────── -->
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">New in v1.151 &middot; two ways in</span>
+        <h2>Govern the agents that build it. <span class="dim">Or embed the record in what you ship.</span></h2>
+        <p>The CLI governs <em>agent development</em>. The opt-in <code>maddu/runtime</code> export carries the same discipline into an AI-powered product: a dependency-free module your app calls to record what the model did, check exactly what it produced, and release a side effect only behind a handle your own policy service signed.</p>
+      </header>
+
+      <div class="grid-2">
+        <article class="panel">
+          <div class="panel-head"><span class="panel-title">Use Máddu while building software</span><span class="panel-aside">the CLI</span></div>
+          <p>Lanes, slice-stops, approvals, gates and the hash-chained spine, through the slash commands, the cockpit and the bridge.</p>
+          <pre class="usecase-code"><code>npx github:frdyx/maddu init</code></pre>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><span class="panel-title">Embed Máddu in an AI-powered product</span><span class="panel-aside">opt-in</span></div>
+          <p>Per-run hash-chained evidence. Checks whose <code>error</code>, <code>timeout</code> and <code>unknown</code> never read as <code>pass</code>. Decisions bound to the exact artifact. A portable receipt that says <b>unsigned</b> because it is.</p>
+          <pre class="usecase-code"><code>import &#123; decide &#125; from 'maddu/runtime'</code></pre>
+        </article>
+      </div>
+
+      <p class="proof-nobaseline">
+        <b>Stated, not assumed.</b> The in-memory store is supported and the file store is experimental. There is no economy and no performance claim. A test reads the docs and the README and exits nonzero if either claims a mode the code doesn&rsquo;t have.
+      </p>
+
+      <p class="loop-more">
+        <a class="btn" href="/features/runtime">The embedded runtime <span aria-hidden="true">→</span></a>
+        <a class="btn btn-ghost" href="/docs/reference/embedded-runtime">Tested guarantees and their limits <span aria-hidden="true">→</span></a>
+      </p>
     </div>
   </section>
 
@@ -408,8 +545,9 @@ const features = [
   <div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Enlarged diagram">
     <button class="lightbox-close" id="lightboxClose" aria-label="Close">✕</button>
     <figure class="lightbox-fig">
-      <img id="lightboxImg" src="" alt="" />
+      <div class="lightbox-pan"><img id="lightboxImg" src="" alt="" /></div>
       <figcaption id="lightboxCap"></figcaption>
+      <span class="lightbox-hint" aria-hidden="true">⟲ rotate the phone — or drag the diagram sideways</span>
     </figure>
   </div>
 
@@ -468,7 +606,26 @@ const features = [
     letter-spacing: -0.02em;
     margin: 0 0 var(--m-space-6);
     color: var(--m-fg-0);
-    max-width: 24ch;
+  }
+  .hero-banner {
+    /* one banner column; half-block cells are square (terminal cell = 1:2) */
+    --hb: clamp(10px, 2.4vw, 28px);
+    display: grid;
+    grid-template-columns: repeat(21, var(--hb));
+    grid-template-rows: repeat(4, var(--hb));
+    margin: 0 0 var(--m-space-8);
+    user-select: none;
+    filter:
+      drop-shadow(0 0 26px rgba(208, 255, 0, 0.12))
+      drop-shadow(0 0 38px rgba(86, 184, 255, 0.14));
+  }
+  .hb { display: block; background: var(--c); }
+  .hb-hatch {
+    background: repeating-linear-gradient(
+      45deg,
+      var(--c) 0 calc(var(--hb) / 9),
+      transparent calc(var(--hb) / 9) calc(var(--hb) / 3)
+    );
   }
   .hero-title em {
     color: var(--m-accent);
@@ -479,7 +636,7 @@ const features = [
   .hero-lede {
     font-size: 17px;
     color: var(--m-fg-1);
-    max-width: min(66ch, 100%);
+    max-width: min(80ch, 100%);
     line-height: 1.55;
     margin-bottom: var(--m-space-4);
   }
@@ -676,6 +833,72 @@ const features = [
   }
   .contract-artifact p { max-width: min(74ch, 100%); color: var(--m-fg-1); font-size: 14px; line-height: 1.6; }
 
+  /* Acceptance proofs — the claim, the two readouts, how + limits */
+  .proof-claim {
+    padding: var(--m-space-5); margin-bottom: var(--m-space-5);
+    background: radial-gradient(120% 90% at 0% 0%, var(--m-accent-glow-bg), transparent 60%), var(--m-bg-2);
+    border: 1px solid var(--m-line); border-left: 2px solid var(--m-accent);
+    border-radius: var(--m-radius-lg);
+  }
+  .proof-claim-label {
+    display: block; font-family: var(--m-font-mono); font-size: 10.5px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--m-accent);
+    margin-bottom: 8px;
+  }
+  .proof-claim p { margin: 0; color: var(--m-fg-0); font-size: 16px; line-height: 1.6; }
+  .proof-claim b { color: var(--m-fg-0); font-weight: 600; }
+
+  .proof-readouts {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--m-space-4); margin-bottom: var(--m-space-6);
+  }
+  .proof-readout {
+    padding: var(--m-space-5); background: var(--m-bg-2);
+    border: 1px solid var(--m-line); border-radius: var(--m-radius-lg);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .proof-readout--live { border-top: 1px solid var(--m-ok); }
+  .proof-readout--none { border-top: 1px solid var(--m-fg-4); }
+  .proof-state {
+    font-family: var(--m-font-mono); font-size: 10.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--m-fg-4);
+  }
+  .proof-readout--live .proof-state { color: var(--m-ok); }
+  .proof-line {
+    margin: 0; padding: 12px 14px; background: var(--m-bg-true-black);
+    border: 1px solid var(--m-line); border-radius: var(--m-radius); overflow-x: auto;
+  }
+  .proof-line code {
+    font-family: var(--m-font-mono); font-size: 12px; line-height: 1.65;
+    color: var(--m-fg-1); background: none; border: 0; padding: 0; white-space: pre;
+  }
+  .proof-readout--live .proof-line code { color: var(--m-ok); }
+  .proof-readout p { margin: 0; color: var(--m-fg-2); font-size: 13.5px; line-height: 1.55; }
+
+  .proof-body {
+    display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: var(--m-space-4); align-items: start; margin-bottom: var(--m-space-5);
+  }
+  .proof-how h3 {
+    margin: 0 0 var(--m-space-3); font-family: var(--m-font-cond);
+    font-weight: 600; font-size: 19px; color: var(--m-fg-0);
+  }
+  .proof-how p { margin: var(--m-space-3) 0 0; color: var(--m-fg-1); font-size: 14px; line-height: 1.6; }
+  .proof-limits ul { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 9px; }
+  .proof-limits li { color: var(--m-fg-2); font-size: 13px; line-height: 1.55; }
+  .proof-limits li b { color: var(--m-fg-1); font-weight: 600; }
+  .proof-limits-foot { margin: var(--m-space-4) 0 0; color: var(--m-fg-3); font-size: 12.5px; line-height: 1.55; }
+  .proof-nobaseline {
+    margin: 0 0 var(--m-space-5); padding: var(--m-space-4) var(--m-space-5);
+    color: var(--m-fg-1); font-size: 14px; line-height: 1.6;
+    background: var(--m-bg-1); border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent-2); border-radius: var(--m-radius);
+  }
+  .proof-nobaseline b { color: var(--m-fg-0); font-weight: 600; }
+  @media (max-width: 860px) {
+    .proof-body { grid-template-columns: minmax(0, 1fr); }
+  }
+
   /* Seven use cases — 2 columns, richer copy, click-to-enlarge diagram */
   .usecases { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--m-space-4); }
   .usecase { padding: var(--m-space-5); display: flex; flex-direction: column; gap: var(--m-space-3); }
@@ -709,8 +932,12 @@ const features = [
   }
   .usecase-figure:hover .usecase-zoom,
   .usecase-figure:focus-visible .usecase-zoom { opacity: 1; }
+  /* touch devices have no hover — the enlarge affordance must be visible */
+  @media (hover: none) {
+    .usecase-zoom { opacity: 1; }
+  }
   .usecase-caption { margin: 0; color: var(--m-fg-2); font-size: 12.5px; line-height: 1.55; }
-  @media (max-width: 860px) { .usecases { grid-template-columns: 1fr; } }
+  @media (max-width: 860px) { .usecases { grid-template-columns: minmax(0, 1fr); } }
   .parts-grid { margin-bottom: var(--m-space-6); }
 
   /* Diagram lightbox */
@@ -722,9 +949,23 @@ const features = [
   }
   .lightbox.is-open { display: flex; }
   .lightbox-fig { margin: 0; max-width: 1480px; width: 100%; }
+  .lightbox-pan { border-radius: var(--m-radius-lg); }
   .lightbox-fig img {
     display: block; width: 100%; height: auto;
     border: 1px solid var(--m-line); border-radius: var(--m-radius-lg); box-shadow: var(--m-shadow-lg);
+  }
+  .lightbox-hint { display: none; }
+  /* Small portrait screens: fit-to-width makes the 1480px diagrams unreadable —
+     render at a readable width inside a pannable strip instead. */
+  @media (max-width: 720px) {
+    .lightbox { padding: 12px; }
+    .lightbox-pan { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .lightbox-fig img { width: auto; max-width: none; min-width: 920px; }
+    .lightbox-hint {
+      display: block; margin-top: 10px; text-align: center;
+      font-family: var(--m-font-mono); font-size: 11px; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--m-fg-3);
+    }
   }
   .lightbox-fig figcaption {
     margin-top: 12px; text-align: center; font-family: var(--m-font-mono);

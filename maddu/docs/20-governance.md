@@ -39,7 +39,7 @@ The bridge surfaces the same view at `GET /bridge/orientation`. The cockpit's **
 `maddu doctor` is a fan-out runner over a discoverable gate set:
 
 ```
-template/maddu/runtime/gates/builtin/*.mjs    # framework-shipped (10 today)
+template/maddu/runtime/gates/builtin/*.mjs    # framework-shipped (76 today)
 <repoRoot>/.maddu/gates/*.mjs                 # operator-supplied
 ```
 
@@ -64,6 +64,24 @@ export default {
 
 Each run emits one `GATE_RAN` event per gate. The cockpit's **Gates** route and `GET /bridge/gates?limit=N` surface recent history.
 
+### GATE_RAN outcome states (v1.101.0)
+
+The event data carries `{ gateId, ok, status, severity, durationMs, evidence }`.
+`status` is the resolved verdict — the pass/non-pass states are, exhaustively:
+
+| status | how it arises |
+| --- | --- |
+| `ok` | the gate returned `ok: true` (and no explicit status override) |
+| `warn` | `ok: false` on a `severity: 'warn'` gate, **or** an explicit `result.status = 'warn'` soft pass (e.g. install-integrity's locally-modified-but-present) — `ok` may be true here |
+| `fail` | `ok: false` on a `critical`/`safety` gate — including a gate that **threw** (the runner catches, sets `ok: false`, message `gate threw: …`) |
+
+Legacy events written before `status` was persisted derive it read-side from
+`ok × severity`; events with neither field are counted apart as `other`, never
+guessed. `maddu insights` renders the fleet-wide tally (`Gate outcomes`), and
+the `gate-fail-path` self-test forces failing fixture gates and asserts the
+non-pass events actually land on the spine — so "all green" is provably
+distinguishable from "the fail path never writes".
+
 ### Filter at the CLI
 
 ```bash
@@ -72,6 +90,11 @@ maddu doctor --severity critical           # filter by severity
 ```
 
 ### Built-in gates
+
+The framework ships **76 built-in gates today** (`template/maddu/runtime/gates/builtin/*.mjs`
+is the exhaustive, discoverable set — `maddu doctor`/`maddu audit` run them all). The
+table below is a **representative selection**, not the full list; it shows the original
+v0.16.0 core plus a few later additions to convey the range.
 
 | id | severity | what it checks | shipped |
 |---|---|---|---|
@@ -84,7 +107,7 @@ maddu doctor --severity critical           # filter by severity
 | spine-integrity | critical | append-only spine: parseable, id-unique, referential | v0.16.0 |
 | active-session-cache | warn | active-session cache points at an open session | v0.16.0 |
 | approval-ledger-completeness | warn | every auto-decision has a paired spine event | v0.16.0 |
-| tracked-source-drift | critical | tracked SSOT files unchanged since last rebuild | v0.16.0 |
+| tracked-source-drift | warn | tracked SSOT files unchanged since last rebuild | v0.16.0 |
 | command-tier-discipline | safety | every CLI command has a tier in `_tiers.mjs` | v0.16.0 |
 | slice-scope | critical | slices that declare scope stay within it | v0.16.0 |
 | generated-artifacts-current | safety | every single-sourced artifact (the four agent briefs from `rules.json`; the `template/maddu/docs/*.md` payload mirrored from `docs/`) is byte-equal to a fresh render of its source, with no orphan payload files (framework source repo only). Retired and supersedes `docs-in-sync` in v1.22.0 | v1.19.0 |
@@ -100,18 +123,27 @@ maddu doctor --severity critical           # filter by severity
 | token-ledger-populated | warn | after a worker exits cleanly the token ledger is non-empty — flags a misconfigured wrapper | v0.19.0 |
 | skill-injection-bounded | critical | `SKILL_INJECTED` events stay within the cap (≤3 skills, ≤24 KB total) and all skill ids resolve on disk | v0.19.0 |
 | model-hint-shape | safety | `modelPreference` on runtimes / lanes / pipeline stages has valid shape (string or `{default,plan,exec,verify,review}`) | v0.19.0 |
-| heavy-suites-recent | warn | both heavy suites current: stress harness ran in the last 30 days AND upgrade-path matrix ran clean since the last install (merges the retired `stress-harness-recent` + `upgrade-matrix-recent` pair — a named 2→1 governance-budget retirement; reads the same two `.maddu/state/*-last-run.json` files) | v1.88.0 |
+| heavy-suites-recent | warn | both heavy suites current: the stress harness AND the upgrade-path matrix each have a complete, passing run within the last 30 days, and the matrix's run also postdates the last install (merges the retired `stress-harness-recent` + `upgrade-matrix-recent` pair — a named 2→1 governance-budget retirement). Proven by verified spine receipts (`VERIFICATION_RAN` with `kind: stress` / `upgrade-matrix`), not by the hand-writable `.maddu/state/*-last-run.json` files, which only distinguish a fresh install from missing receipts. Warn-severity, so never pinnable as a required CI gate — the suites run in CI on a schedule instead ([26-stress-testing.md](26-stress-testing.md)) | v1.88.0 |
+| audit-ledger-coherent | safety | `docs/audit/LEDGER.json` findings are well-formed and every `fixed` finding back-links to a registered guardrail gate | v1.76.0 |
+| can-read-old-state | safety | the versioned projection reader normalizes any old or partial projection into a total current-shape object — no missing keys, no throw — so an upgrade can always read the state it inherits | v1.84.0 |
+| event-dispositions-complete | safety | every `EVENT_TYPES` key carries a definition-site disposition (`active` / `dormant` / `plugin`) with a reason where one is required, so a dormant domain is declared rather than mistaken for dead | v1.75.0 |
+| event-schema-complete | safety | every `EVENT_TYPES` key carries an explicit, well-formed entry in the published event contract (`event-schema.mjs`) — the contract cannot silently lag the emitters | v1.93.0 |
+| memory-injection-bounded | critical | every `MEMORY_INJECTED` event stays within the cap (≤ 8 facts, ≤ 16 KB) and every fed fact carried a live approval whose content hash matches the witness at injection time | v1.115.0 |
+| release-parity | safety | a consumer-impacting change (runtime, cockpit, agent files, commands, bin) is carried by a version bump that records what it delivers in `docs/audit/FIXED-IN.json`; pending impacting changes without a bump WARN as delivery debt | v1.75.0 |
+| replica-untracked | fail | a team-sync checkout never git-tracks `.maddu/config/replica.json` — a committed replica id duplicates across clones and forks the partition chain | v1.94.0 |
+| worktree-lane-coherence | warn | live lane-worktree attachments agree with git: no orphaned, missing, or catalog-less worktrees | v1.93.0 |
 | completion-claim | warn | no LIVE pattern of hedged completion claims without observed proof (≥3 cumulative, ≥1 in 30d) across slice-stops — the deterministic learn-scan heuristic as a gate; proof = a real `GATE_RAN(ok)` during the slice or a verified deliverable on the event, never the self-reported flags. Fires at every slice-stop (surfaces, never blocks). Warn tier holds ≥1 quarter of own-repo data before any promotion to fail | v1.88.0 |
 | self-test-recent | warn | framework source `maddu self-test` ran recently with a green quick/full profile (records last-run at `.maddu/state/self-test-last-run.json`) | v1.16.0 |
 | project-test-recent | warn | consumer repo adaptive `maddu test --profile quick\|full` ran recently and green (records last-run at `.maddu/state/project-test-last-run.json`) | v1.16.0 |
 | defaults-single-sourced | safety | `init.mjs` + `upgrade.mjs` seed config defaults via `commands/_config-seed.mjs`; neither re-inlines `DEFAULT_TRIGGERS`/pipelines/config constants (prevents the init↔upgrade drift that silently dropped v1.10.0 triggers on upgrade) | v1.11.0 |
 | brief-coherence | warn | every agent-facing `COMMANDS` verb is named in the worker brief `template/maddu/CLAUDE.md` (closes the gap that shipped `learn` without a brief mention) | v1.11.0 |
+| acceptance-proven | warn | every verifiable success condition of the ACTIVE goal holds a **live** RED→GREEN acceptance proof — the declared command observed to exit nonzero then zero with the declared oracle frozen ([56-acceptance-proof.md](56-acceptance-proof.md)). Read-only: it executes no declared command (observation belongs to `orient` / `loop ralph`) and renders from the same shared view those surfaces render from. Nothing-declared stays visibly distinct from proven-clean — no goal, no verify command, and no `--oracle`/`--impl` set are three separate refusals. **Permanently advisory**: `maddu ci pin` structurally refuses warn-severity gates, and that ceiling is honest — the actor who can green a proof can re-declare the goal underneath it | v1.120.0 |
 
 **Config defaults are single-sourced.** All `.maddu/config/*.json` defaults (the rule-#9 trigger allowlist, janitor/trust/worker-env/governance, the pipeline catalog) live in `commands/_config-seed.mjs` and are seeded by BOTH `maddu init` and `maddu upgrade` via one `seedConfigDefaults()` call — so the two commands can't drift. Every write is write-if-missing; `triggers.json` merges new entries without removing operator additions; an operator-edited config is never overwritten. `maddu upgrade` now backfills every config default (so a repo installed before a config existed gets it on upgrade — including `worker-env.json`'s default-deny-secrets). The `defaults-single-sourced` gate fails if anyone re-inlines a default.
 
 ## Tracked sources
 
-When operator-critical files (hard-rules, CLAUDE.md, key concepts docs) drift unrecorded, agents and humans end up working from stale assumptions. The tracked-source-drift gate makes this a hard fail.
+When operator-critical files (hard-rules, CLAUDE.md, key concepts docs) drift unrecorded, agents and humans end up working from stale assumptions. The warn-severity tracked-source-drift gate surfaces this as a visible drift report.
 
 ```bash
 # 1. Pin the SSOT files
@@ -119,14 +151,16 @@ cat > .maddu/config/tracked-sources.json <<'EOF'
 { "schemaVersion": 1, "paths": ["docs/hard-rules.md", "CLAUDE.md", "docs/02-concepts.md"] }
 EOF
 
-# 2. Snapshot their hashes onto the spine
-maddu sources rebuild         # emits SOURCE_HASH_RECOMPUTED
+# 2. Snapshot their hashes onto the spine (a reason is mandatory — refused without one)
+maddu sources rebuild --reason "initial pin"   # emits SOURCE_HASH_RECOMPUTED { …, reason, by }
 
-# 3. Going forward, doctor fails the gate when any tracked file diverges
+# 3. Going forward, the warn-severity gate reports when any tracked file diverges
 maddu sources status          # show recorded vs current per file
 ```
 
-After accepted edits, re-run `maddu sources rebuild` to record the new hashes.
+After accepted edits, re-run `maddu sources rebuild --reason "…"` to record the
+new hashes — the reason lands on the spine (with the session id when one is
+active), so a re-baseline is always a reasoned, queryable act.
 
 ## Slice scope-lock (opt-in)
 

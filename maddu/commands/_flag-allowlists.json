@@ -1,0 +1,540 @@
+{
+  "_generated": "scripts/generate-flag-allowlists.mjs — do not hand-edit; scripts/test/flag-allowlists.mjs reds when stale",
+  "version": 1,
+  "open": [
+    "format",
+    "git",
+    "install",
+    "lint",
+    "test"
+  ],
+  "verbs": {
+    "advise": [
+      "no-auth-check",
+      "prompt",
+      "session",
+      "stub-only",
+      "timeout-sec"
+    ],
+    "agents": [
+      "agent",
+      "all",
+      "dry-run",
+      "path",
+      "remove",
+      "yes"
+    ],
+    "approval": [
+      "action",
+      "decision",
+      "dry-run",
+      "id",
+      "lane",
+      "reason",
+      "session",
+      "summary",
+      "tool"
+    ],
+    "architecture": [
+      "baseline",
+      "fail-on",
+      "force",
+      "json",
+      "repo"
+    ],
+    "audit": [
+      "json"
+    ],
+    "auth": [
+      "by",
+      "confirm",
+      "label",
+      "minutes",
+      "value",
+      "value-file"
+    ],
+    "autonomy": [
+      "json",
+      "lane",
+      "no-emit"
+    ],
+    "blueprint": [
+      "distill",
+      "full",
+      "json",
+      "no-auth-check",
+      "repo",
+      "runtime",
+      "since",
+      "slug",
+      "timeout-sec"
+    ],
+    "bridges": [],
+    "brief": [
+      "drain",
+      "dry-run",
+      "for-agent",
+      "json",
+      "tags",
+      "triggers"
+    ],
+    "checkpoint": [
+      "apply",
+      "by",
+      "lane",
+      "mode",
+      "title"
+    ],
+    "ci": [
+      "json",
+      "strict"
+    ],
+    "coordinator": [
+      "dry-run",
+      "iter-cap",
+      "runtime",
+      "synthetic-cmd"
+    ],
+    "cost": [
+      "by",
+      "json",
+      "unreported-count",
+      "usd"
+    ],
+    "debt": [
+      "json",
+      "no-write",
+      "repo"
+    ],
+    "doctor": [
+      "all",
+      "gate",
+      "severity",
+      "verbose"
+    ],
+    "events": [
+      "after",
+      "bridge",
+      "limit",
+      "type"
+    ],
+    "evolve": [
+      "json",
+      "to"
+    ],
+    "experience": [
+      "format",
+      "json",
+      "lane",
+      "limit",
+      "out",
+      "since",
+      "until"
+    ],
+    "export": [
+      "endpoint",
+      "follow",
+      "header",
+      "interval",
+      "otel",
+      "pretty",
+      "service",
+      "since"
+    ],
+    "fleet": [
+      "all",
+      "apply",
+      "json",
+      "max",
+      "only",
+      "plan"
+    ],
+    "focus": [],
+    "global": [
+      "action",
+      "by",
+      "cron",
+      "decision",
+      "disabled",
+      "lane",
+      "natural",
+      "targets",
+      "title",
+      "tool",
+      "value"
+    ],
+    "goal": [
+      "abandon",
+      "constraint",
+      "force",
+      "impl",
+      "json",
+      "note",
+      "objective",
+      "oracle",
+      "success"
+    ],
+    "governance": [
+      "approve",
+      "force",
+      "reason"
+    ],
+    "handoff": [
+      "body",
+      "json",
+      "plain"
+    ],
+    "help": [
+      "format",
+      "topic"
+    ],
+    "hooks": [
+      "dry-run",
+      "no-guardrails",
+      "retire-inert-write-twins",
+      "statusline"
+    ],
+    "import": [
+      "by",
+      "file",
+      "kind"
+    ],
+    "init": [
+      "force"
+    ],
+    "insights": [
+      "include-imported",
+      "json",
+      "no-transcripts",
+      "role"
+    ],
+    "lane": [
+      "adopt",
+      "focus",
+      "force",
+      "integration-ref",
+      "json",
+      "lane",
+      "prune",
+      "reason",
+      "recover",
+      "session",
+      "worktree"
+    ],
+    "learn": [
+      "adopt",
+      "dir",
+      "from-claude-memory",
+      "json",
+      "no-auth-check",
+      "recent-days",
+      "root",
+      "runtime",
+      "since",
+      "slug",
+      "spine",
+      "stub-only",
+      "threshold",
+      "timeout-sec"
+    ],
+    "log": [
+      "json",
+      "lane",
+      "op",
+      "rebuild",
+      "since",
+      "window"
+    ],
+    "loop": [
+      "from-goal",
+      "goal",
+      "impl",
+      "iterate",
+      "lane",
+      "loop",
+      "max-iter",
+      "oracle",
+      "plan",
+      "verify"
+    ],
+    "mailbox": [
+      "body",
+      "from",
+      "id",
+      "session",
+      "subject",
+      "summary",
+      "type"
+    ],
+    "mcp": [
+      "approve",
+      "args",
+      "by",
+      "command",
+      "disabled",
+      "display",
+      "env",
+      "lanes",
+      "name",
+      "notes",
+      "skip-provenance",
+      "transport",
+      "url"
+    ],
+    "memory": [
+      "all",
+      "force",
+      "json",
+      "kind",
+      "lane",
+      "limit",
+      "prior",
+      "reason",
+      "rebuild",
+      "tags",
+      "text",
+      "trust"
+    ],
+    "model": [
+      "confirm",
+      "force-list",
+      "json",
+      "model",
+      "reason",
+      "reverted-to",
+      "session",
+      "wait"
+    ],
+    "orient": [
+      "curate",
+      "curate-budget",
+      "digest",
+      "json",
+      "no-verify"
+    ],
+    "phase": [
+      "name",
+      "notes",
+      "tier"
+    ],
+    "pipeline": [
+      "goal",
+      "json",
+      "session"
+    ],
+    "plan": [
+      "force",
+      "goal",
+      "intent",
+      "name",
+      "note",
+      "phase",
+      "phases",
+      "plan",
+      "reason",
+      "summary"
+    ],
+    "plugin": [
+      "json",
+      "trust"
+    ],
+    "register": [
+      "label",
+      "parent",
+      "role"
+    ],
+    "review": [
+      "limit",
+      "reviewer",
+      "slice"
+    ],
+    "runtime": [
+      "all",
+      "approval",
+      "args",
+      "binary",
+      "by",
+      "detect",
+      "display",
+      "json",
+      "lane",
+      "lanes",
+      "mcp",
+      "name",
+      "notes",
+      "protocol",
+      "session",
+      "streaming",
+      "tools"
+    ],
+    "schedule": [
+      "action-kind",
+      "action-value",
+      "at",
+      "by",
+      "cron",
+      "disabled",
+      "natural",
+      "title"
+    ],
+    "search": [
+      "kinds",
+      "limit",
+      "sort"
+    ],
+    "self-test": [
+      "bail",
+      "fail-on-skip",
+      "json",
+      "list",
+      "no-report",
+      "only",
+      "profile",
+      "skip"
+    ],
+    "session": [
+      "focus",
+      "handoff",
+      "id",
+      "json",
+      "label",
+      "lane",
+      "parent",
+      "role",
+      "root",
+      "runtime",
+      "session",
+      "session-id"
+    ],
+    "skill": [
+      "body",
+      "by",
+      "reason",
+      "session",
+      "source-url",
+      "tag",
+      "tags",
+      "title",
+      "trust",
+      "when"
+    ],
+    "slice": [
+      "max-files",
+      "max-growth-pct",
+      "paths",
+      "reason",
+      "session",
+      "slice-id"
+    ],
+    "slice-stop": [
+      "action",
+      "gates",
+      "lane",
+      "learnings",
+      "next",
+      "no-git-diff",
+      "paths",
+      "reason",
+      "session",
+      "slice-id",
+      "summary",
+      "targets",
+      "triggered-by"
+    ],
+    "sources": [
+      "reason"
+    ],
+    "spine": [
+      "assess",
+      "event",
+      "json",
+      "keep",
+      "replay",
+      "seq",
+      "session",
+      "status",
+      "upgrade",
+      "verify"
+    ],
+    "start": [
+      "force-active",
+      "port"
+    ],
+    "status": [
+      "line"
+    ],
+    "stop": [],
+    "suggest": [
+      "emit-command",
+      "emit-lane",
+      "json",
+      "task"
+    ],
+    "task": [
+      "add-blocker",
+      "blocked-by",
+      "by",
+      "created-by",
+      "description",
+      "id",
+      "lane",
+      "owner",
+      "remove-blocker",
+      "status",
+      "tags",
+      "title"
+    ],
+    "team": [
+      "json",
+      "label",
+      "lanes",
+      "members",
+      "n",
+      "runtime",
+      "session",
+      "t",
+      "task",
+      "team-id"
+    ],
+    "trust": [
+      "cve",
+      "fresh",
+      "hash",
+      "json",
+      "lane",
+      "version"
+    ],
+    "upgrade": [
+      "dry-run",
+      "force"
+    ],
+    "usage": [
+      "dry-run",
+      "from",
+      "session",
+      "since"
+    ],
+    "wiki": [
+      "force",
+      "json"
+    ],
+    "worker": [
+      "args",
+      "by",
+      "code",
+      "command",
+      "focus",
+      "id",
+      "lane",
+      "pid",
+      "reason",
+      "session"
+    ],
+    "workspace": [
+      "id",
+      "label",
+      "path",
+      "role"
+    ]
+  }
+}

@@ -18,7 +18,14 @@ import { DEFAULT_LANE_CATALOG } from './defaults.mjs';
 // stdlib-only core so the worker token-wrapper can share them. hashLine is
 // re-exported below so verify.mjs / usage.mjs (which import it from here) are
 // unaffected.
-import { hashLine, readActiveReplicaId, resolveWriteReplica, appendPartitioned, readAllPartitioned } from './spine-append-core.mjs';
+import { hashLine, readActiveReplicaId, resolveWriteReplica, appendPartitioned, appendFlatChained, readAllPartitioned, resolveIdentityForAppend, writeIdentityCache, publishWsAnchorOnce, appendWsResolutionOnce } from './spine-append-core.mjs';
+import { redactDataPayload } from './secret-scan.mjs';
+// Mutation-witness credit (buzz-steals S1): every SUCCESSFUL logical append
+// credits the active witness context exactly once — counted here (not in the
+// core primitives) so the retry loop below can't double-count, and so the
+// worker token-wrapper's child-process appends (ALS-invisible by design)
+// stay out of the parent's ledger. Import direction is spine → witness only.
+import { witnessSpineAppend } from './mutation-witness.mjs';
 export { hashLine };
 
 const ROLL_BYTES = 10 * 1024 * 1024;
@@ -103,6 +110,9 @@ export const EVENT_TYPES = {
   FOLLOWUP_OPENED:           'FOLLOWUP_OPENED',
   GATE_RAN:                  'GATE_RAN',
   GOAL_DECLARED:             'GOAL_DECLARED',
+  // A declared goal was marked done (or abandoned). Closes the goal lifecycle so
+  // a finished goal stops lingering as "the current goal". data: { note, outcome }
+  GOAL_COMPLETED:            'GOAL_COMPLETED',
   PENDING_ACTION_DRAINED:    'PENDING_ACTION_DRAINED',
   PENDING_ACTION_ENQUEUED:   'PENDING_ACTION_ENQUEUED',
   PHASE_DECLARED:            'PHASE_DECLARED',
@@ -150,6 +160,12 @@ export const EVENT_TYPES = {
   // more skill bodies to the orientation digest based on trigger/tag
   // matches. data: { sessionId, triggers, tags, skillIds, totalBytes }.
   SKILL_INJECTED:            'SKILL_INJECTED',
+  // A matching skill was NOT injected because its provenance is untrusted
+  // (imported without `maddu skill trust`, or no provenance). Closes the
+  // load-time half of the imported-skill threat (docs/34 scenario 5): the
+  // refusal is witnessed on the spine, not a silent drop.
+  // data: { sessionId, reason, refused: [{ id, provenance }] }
+  SKILL_INJECTION_REFUSED:   'SKILL_INJECTION_REFUSED',
   // v1.1.0 Phase 1 — default framework tools (git/test/format/lint/install)
   // emit one event per invocation. TOOL_INVOKED at start, TOOL_COMPLETED on
   // exit, TOOL_REFUSED when allowlist or dangerous-form check blocks before
@@ -163,6 +179,12 @@ export const EVENT_TYPES = {
   // v1.1.0 Phase 3 — workspace governance tier transitions.
   // data: { from, to, by: sessionId|null, reason }
   GOVERNANCE_MODE_CHANGED:   'GOVERNANCE_MODE_CHANGED',
+  // audit P2 — a governance behavior OVERRIDE key was changed (or cleared). The
+  // discipline off-switch (`set-override discipline-enforcement off`) rides this
+  // so disabling enforcement is always on the record; recorded WRITE-AHEAD (before
+  // the config write) so a failed append aborts the change rather than disabling
+  // silently. A cleared override is `to:null`. data: { key, from, to, by, reason }
+  GOVERNANCE_OVERRIDE_CHANGED: 'GOVERNANCE_OVERRIDE_CHANGED',
   // v1.1.0 Phase 5 — plan persistence + revision.
   // PLAN_CREATED:        { planId, title, phases: [{name, intent}], goal }
   // PLAN_PHASE_ADDED:    { planId, name, intent, at }
@@ -251,6 +273,25 @@ export const EVENT_TYPES = {
   // chain survives a `rebuildMemory` replay (events are the source of truth).
   //   MEMORY_FACT_SUPERSEDED: { factId, supersedes, kind, reason }
   MEMORY_FACT_SUPERSEDED:     'MEMORY_FACT_SUPERSEDED',
+  // v1.115.0 (memory-recall track) — fact trust states. Every extracted fact
+  // starts implicitly `asserted` (no event). Operator approval flips it
+  // injectable; revocation excludes it from recall. Trust lives on the spine
+  // so it survives a rebuildMemory replay and is never inferred from the
+  // fact's kind, actor, or hash-chain membership.
+  //   MEMORY_FACT_APPROVED: { factId, kind, reason }
+  //   MEMORY_FACT_REVOKED:  { factId, kind, reason }
+  MEMORY_FACT_APPROVED:       'MEMORY_FACT_APPROVED',
+  MEMORY_FACT_REVOKED:        'MEMORY_FACT_REVOKED',
+  // v1.115.0 (memory-recall track) — bounded recall injection witnesses,
+  // mirroring SKILL_INJECTED / SKILL_INJECTION_REFUSED. One MEMORY_INJECTED
+  // per `brief --for-agent` call that feeds ≥1 approved fact; one
+  // MEMORY_INJECTION_REFUSED when ≥1 context-relevant fact was withheld for
+  // trust reasons (witnessed, never silently dropped). The critical
+  // `memory-injection-bounded` gate re-verifies every MEMORY_INJECTED row.
+  //   MEMORY_INJECTED:          { sessionId, factIds, totalBytes, query, lane }
+  //   MEMORY_INJECTION_REFUSED: { sessionId, reason, refused }
+  MEMORY_INJECTED:            'MEMORY_INJECTED',
+  MEMORY_INJECTION_REFUSED:   'MEMORY_INJECTION_REFUSED',
   // v1.9.0 — reversible briefings (retrieve-on-demand / CCR). A curated
   // orient/handoff briefing persists its full original so dropped detail stays
   // retrievable via `maddu learn retrieve <briefingId>`.
@@ -264,6 +305,65 @@ export const EVENT_TYPES = {
   // limited per offending origin to avoid spine flooding). data:
   //   { reason:'host'|'origin', host, origin, path, method }
   BRIDGE_ORIGIN_REJECTED:     'BRIDGE_ORIGIN_REJECTED',
+  // v1.98.0 (audit P0b) — a bridge request selected a workspace other than the
+  // active one (via the X-Maddu-Workspace header, incl. the `_all` fan-out).
+  // Cross-repo access is authorized by the capability token but always recorded
+  // (rate-limited per workspace+path) so one repo reaching into another's spine
+  // is on the record. data: { workspace, active, method, path }
+  BRIDGE_CROSS_WORKSPACE:     'BRIDGE_CROSS_WORKSPACE',
+  // audit P1 — chain-local tamper-detection cutover anchor. Seeded into a
+  // freshly-minted sync partition (spine sync init) so the verifier holds that
+  // partition to the post-cutover strict rules even without a migrated FRAMEWORK
+  // marker. data: { version }
+  SPINE_CUTOVER:              'SPINE_CUTOVER',
+  WS_IDENTITY_ANCHORED:       'WS_IDENTITY_ANCHORED',
+  WS_IDENTITY_RESOLVED:       'WS_IDENTITY_RESOLVED',
+  // audit P2 — self-discipline honesty. A mutating tool was let through WITHOUT a
+  // discipline check (enforcement off, a self-disable attempt, or the enforcement
+  // hook uninstalled), so a bypass always leaves a witness. Emitted best-effort at
+  // the hook-handler seam (discipline.mjs stays spine-less). data:
+  //   { reason, tool, sessionId, enforcement, blocked? }
+  DISCIPLINE_SKIPPED:         'DISCIPLINE_SKIPPED',
+  DISCIPLINE_DENIED:          'DISCIPLINE_DENIED',
+  MUTATION_UNWITNESSED:       'MUTATION_UNWITNESSED',
+  // audit P2 — the discipline enforcement path threw and fell open. Recording the
+  // failure keeps a silent fail-open from hiding a persistent enforcement bug.
+  // data: { reason, tool, sessionId }
+  ENFORCEMENT_ERROR:          'ENFORCEMENT_ERROR',
+  // audit P3 — verification is not actor-witness. A verification run (a goal
+  // success-eval, a project/self test, or a heavy suite) is OPENED here, BEFORE
+  // it runs, so a crash/append-failure leaves a dangling attempt with no receipt
+  // (the recency gates read that as non-green rather than trusting a stale pass).
+  // Its id is the attemptId a paired VERIFICATION_RAN references. data:
+  //   { kind, profile }  kind ∈ success-eval|project-test|self-test|stress|upgrade-matrix
+  VERIFICATION_STARTED:       'VERIFICATION_STARTED',
+  // audit P3 — the verification RECEIPT, appended from the runner's IN-PROCESS
+  // result (never a re-read state file), so the witness is the tamper-detecting
+  // spine, not a hand-writable projection. Every RAN references exactly one
+  // preceding kind+profile-matched VERIFICATION_STARTED. data:
+  //   { kind, startedId, profile, complete, result:'pass'|'fail', counts?,
+  //     // success-eval only: allMet, metCount, verifiable, pendingCount,
+  //     //   objective, setAt, conditions:[{text,state}] }
+  VERIFICATION_RAN:           'VERIFICATION_RAN',
+  // witness PR 4 (contract 1.10.0) — `maddu spine anchor` stamped a canonical
+  // payload (receipt digest + subject SHA + spine position + chain head) into
+  // the OpenTimestamps calendars. The proof completes hours later when Bitcoin
+  // confirms; local pending/complete status is NEVER assurance evidence — only
+  // an operator-run Bitcoin-backed `ots verify` at consume time is. data:
+  //   { seq, payload_digest, calendars: [urls], proof_files: [{path, digest}] }
+  ANCHOR_STAMPED:             'ANCHOR_STAMPED',
+  // witness PR 4 — `maddu spine anchor --upgrade` changed a proof file
+  // (partial calendar merge or a completed Bitcoin attestation). Emitted only
+  // when the proof bytes actually changed; a no-op pending poll is silent.
+  // data: { seq, payload_digest, complete, proof_files: [{path, digest}] }
+  ANCHOR_UPGRADED:            'ANCHOR_UPGRADED',
+  // witness PR 4 (producer ships in PR 6a) — an OPERATOR-run consume ceremony
+  // recorded an assurance assessment. Ledger convenience ONLY: no projection or
+  // gate may treat it as proof, and every consumer labels it non-authoritative.
+  // Per-level REQUIRED evidence shapes are enforced by the producer via
+  // spine-anchor.mjs validateAssuranceEvidence. data:
+  //   { subject_sha, receipt_digest, level, evidence, assessed_by, note? }
+  ASSURANCE_ASSESSED:         'ASSURANCE_ASSESSED',
   // v1.15.0 — `maddu blueprint --distill` spawned a provider CLI (subprocess,
   // hard rule #5) to rewrite the deterministic skeleton into prose. Recorded on
   // success only; an unmet auth gate or worker failure falls back to the
@@ -314,12 +414,52 @@ export const EVENT_TYPES = {
   //   WORKTREE_ATTACHED: { schemaVersion, attachmentId, claimEventId, lane, session,
   //                        pathRepoRel, pathAbs, branchRef, baseRef, baseHeadAtAttach,
   //                        created, reused, dirty, gitCommonDir, platform }
+  //   WORKTREE_DETACHING: { schemaVersion, intentId, attachmentId, lane, pathRepoRel,
+  //                        worktreeInstanceId, disposition: merged|abandoned,
+  //                        integrationRef, integrationHead, branchHead,
+  //                        ancestorCheck, dirtyAtDetach, reason }  ← PR-D durable
+  //                        detach intent (removing dispositions only); appended
+  //                        AFTER authorization, BEFORE git removal, so a crash
+  //                        between is recoverable. readAttachments IGNORES it
+  //                        (the attachment stays live until WORKTREE_DETACHED).
   //   WORKTREE_DETACHED: { schemaVersion, attachmentId, lane, pathRepoRel,
   //                        disposition: merged|abandoned|kept|orphaned,
   //                        branchHead, integrationRef, integrationHead,
-  //                        ancestorCheck: pass|fail|skipped, dirtyAtDetach, reason }
+  //                        ancestorCheck: pass|fail|skipped, dirtyAtDetach, reason,
+  //                        worktreeInstanceId?, recoveryActor?, attachmentOwner? }
   WORKTREE_ATTACHED:          'WORKTREE_ATTACHED',
-  WORKTREE_DETACHED:          'WORKTREE_DETACHED'
+  WORKTREE_DETACHING:         'WORKTREE_DETACHING',
+  WORKTREE_DETACHED:          'WORKTREE_DETACHED',
+  // SLM-governance p2 (plan pln_20260706133422_0f60, contract 1.1.0) — the
+  // MODEL_ family: Máddu governs an SLM factory's record (hash-pinned
+  // manifests via lib/model-manifests.mjs ingest), never the training.
+  // Design: docs/research/slm-governance-design.md §5. All 11 carry
+  // data.schemaVersion:1; manifest-backed ones carry manifestPath +
+  // manifestHash (pinned). Verifier rules in verify.mjs; emitted by
+  // `maddu model` (phase 3) — registered and verifier-covered FIRST so no
+  // unshaped event can ever land on a spine.
+  MODEL_DATASET_SNAPSHOT_RECORDED: 'MODEL_DATASET_SNAPSHOT_RECORDED',
+  MODEL_TRAINING_RUN_STARTED:   'MODEL_TRAINING_RUN_STARTED',
+  MODEL_TRAINING_RUN_COMPLETED: 'MODEL_TRAINING_RUN_COMPLETED',
+  MODEL_CHECKPOINT_REGISTERED:  'MODEL_CHECKPOINT_REGISTERED',
+  MODEL_EVAL_RAN:               'MODEL_EVAL_RAN',
+  MODEL_REGRESSION_FOUND:       'MODEL_REGRESSION_FOUND',
+  MODEL_REGRESSION_ACKNOWLEDGED: 'MODEL_REGRESSION_ACKNOWLEDGED',
+  MODEL_PROMOTION_PROPOSED:     'MODEL_PROMOTION_PROPOSED',
+  MODEL_PROMOTION_APPROVED:     'MODEL_PROMOTION_APPROVED',
+  MODEL_RELEASED:               'MODEL_RELEASED',
+  MODEL_ROLLED_BACK:            'MODEL_ROLLED_BACK',
+  // Harness-parity PR1 — `maddu runtime doctor` compared the repo-versioned
+  // capability manifest (lib/harness-capabilities.mjs) against what is
+  // actually installed, and this is the reading. An OBSERVATION, never an
+  // enforcement receipt: `status` is 'verified' only when the detected CLI
+  // version falls inside the window the manifest's review actually covered,
+  // and 'assumed' (with a `drift` reason) whenever it does not — a claim is
+  // never upgraded by observing it.
+  //   data: { harness, status, cliVersion, manifestVersion, capabilities,
+  //           enforcementCeiling, drift, probeFailure, volatile, configPath,
+  //           configs: [{ path, status }], workRoot }
+  HARNESS_CAPABILITY_OBSERVED:  'HARNESS_CAPABILITY_OBSERVED'
 };
 
 export const STUCK_THRESHOLD_MS = 15000;
@@ -345,6 +485,31 @@ export function makeId(prefix, ts = new Date().toISOString(), bytes = 3) {
 function genId(ts) { return makeId('evt', ts); }
 
 function genSessionId() { return makeId('ses'); }
+
+// ── Session-id grammars (PR-A, v1.111.0) ────────────────────────────────────
+// Typed PREDICATES, never bare regexes: JS regex .test() coerces non-strings,
+// so a bare `--id` flag (boolean true), a number, or an array would pass a
+// naked regex. Every check requires `typeof === 'string'` first.
+//
+//   isSid    — STRICT. Gates ids we CREATE (registration) and ids we
+//              INTERPOLATE into shell-adjacent surfaces (CLAUDE_ENV_FILE
+//              export line, additionalContext export recommendation). Every
+//              id genSessionId has ever produced conforms.
+//   isRefId  — RELAXED. Gates ids we REFERENCE at external input boundaries
+//              (validated per-surface; spine-derived ids are trusted by the
+//              lifecycle helpers, which verify existence themselves).
+//              Filename-safe, shell-metacharacter-free, admits legacy shapes.
+//   isClaudeId — the `claude:<id>` counter-key fallback's id component.
+// SSOT relocated to id-grammar.mjs (PR-B) — a stdlib-only, dependency-free
+// module so standalone code (the worker token-wrapper, telemetry) can share the
+// grammar WITHOUT importing the full spine. Re-exported here so every existing
+// `from './spine.mjs'` predicate importer (verify.mjs, discipline.mjs, the hook
+// chain, …) is byte-for-byte unaffected. New symbols (isClaimLane,
+// InvalidExplicitId, envActingSid, normalizeParentId) ride the same door.
+export {
+  SID_RE, SID_REF_RE, CLAUDE_ID_RE, isSid, isRefId, isClaudeId,
+  isClaimLane, InvalidExplicitId, envActingSid, normalizeParentId,
+} from './id-grammar.mjs';
 
 export function genTaskId() { return makeId('tsk'); }
 
@@ -407,7 +572,7 @@ export async function ensureSpine(repoRoot) {
   return paths;
 }
 
-// ── Tamper-evidence: forward `prev_hash` chain (v1.14.0) ──
+// ── Tamper-detection: forward `prev_hash` chain (v1.14.0) ──
 //
 // Each event carries `prev_hash` = the SHA-256 of the EXACT stored line of the
 // immediately-preceding event (the literal NDJSON line, trailing CR stripped so
@@ -447,78 +612,311 @@ async function lastEventLine(paths) {
   return null;
 }
 
-export async function append(repoRoot, { type, actor = null, lane = null, data = {}, triggered_by = null }) {
+// ── ACKNOWLEDGEMENT LEVEL (v1.141.0, P0 audit A2-004 / A5-003) ──
+//
+// A resolved append() — and the primitives beneath it, appendFlatChained() and
+// appendPartitioned() in spine-append-core.mjs — means the stored line was
+// handed to the operating system: the O_APPEND write(2) completed and the append
+// lock was released. Nothing on this path calls fsync/fdatasync. The record
+// therefore survives the death of THIS PROCESS (the bytes sit in the OS page
+// cache), but NOT a kernel crash or power loss before the OS flushes them — and
+// no signal distinguishes those outcomes afterwards: a fully-written line lost by
+// the OS is byte-indistinguishable from a legitimately shorter chain. The
+// torn-tail detector (lastEventLineInDir / verify's torn_trailing_line) covers
+// the OTHER failure — a write interrupted mid-syscall that left an unterminated
+// final line — never a completed-then-lost one. This is the honest contract of a
+// local, files-only, git-versioned development spine. A caller that needs a
+// stronger level (a product-runtime evidence store) adds its own durable
+// acknowledgement rather than assuming one here — docs/57-product-runtime-rfc.md
+// ADR-003 and ADR-011.
+//
+// `maxWaitMs` bounds how long the APPEND LOCK is waited for, not the write.
+// Default Infinity — every existing caller is unchanged. A caller that must
+// stay responsive (the PreToolUse denial witness) passes a bound so a lock
+// held by a live process makes the append GIVE UP BEFORE IT STARTS WRITING,
+// rather than being abandoned part-way through one.
+export async function append(repoRoot, { type, actor = null, lane = null, data = {}, triggered_by = null }, { maxWaitMs = Infinity } = {}) {
   if (!EVENT_TYPES[type]) {
     throw new Error(`unknown event type: ${type}`);
   }
+  // Write-boundary payload sweep: every emit site funnels through here, so a
+  // secret-shaped value in caller/agent/worker-supplied free text is redacted
+  // BEFORE the line is built — prev_hash chains over the stored (redacted)
+  // bytes on both the flat and partitioned branches, and the ENOENT-retry
+  // reuses the same already-swept `ev`. Clean data passes through by
+  // reference (no clone, identical return value). Scope: `data` only —
+  // actor/lane/triggered_by carry ids by construction.
+  data = redactDataPayload(data);
   const paths = await ensureSpine(repoRoot);
+
+  // ── Workspace identity (S2): pre-stamp gate + stamping ──
+  // The two ws-authority event types are ws-less BY PROTOCOL (the anchor
+  // precedes stamping; the resolution must be appendable WHILE conflicted) —
+  // but neither is a free pass (diff-funnel r1-F2):
+  //   WS_IDENTITY_ANCHORED — internal bootstrap capability ONLY. The public
+  //     API refuses it outright: anchors are published exclusively by the
+  //     needAnchor recursion below and by sync-init's core-primitive path.
+  //   WS_IDENTITY_RESOLVED — validated HERE against a fresh re-read of the
+  //     current anchor set: there must BE an unresolved conflict, `selected`
+  //     must be an existing conflicting identity, and the binding must
+  //     deep-equal the canonical anchor tuple list (validateResolutionBinding
+  //     — exact {eventId, genesisHash, spineIdentity} tuples, canonical
+  //     order, no extras).
+  // Everything else resolves the identity:
+  //   conflict → refuse with a stable code (Codex plan r6 advisory 1) so the
+  //     dispatcher's ceremony exception can key on it;
+  //   needAnchor → publish WS_IDENTITY_ANCHORED first (once), then stamp;
+  //   bootstrap → this IS the genesis line; it stays ws-less (self-reference).
+  let wsStamp = null;
+  const WS_AUTHORITY_TYPE = type === EVENT_TYPES.WS_IDENTITY_ANCHORED || type === EVENT_TYPES.WS_IDENTITY_RESOLVED;
+  if (WS_AUTHORITY_TYPE) {
+    if (type === EVENT_TYPES.WS_IDENTITY_ANCHORED) {
+      // Anchors are published ONLY by the serialized bootstrap
+      // (publishWsAnchorOnce below / sync-init's core-primitive path) —
+      // never through the public API, and never at all while conflicted.
+      const err = new Error('spine append: WS_IDENTITY_ANCHORED is published only by the identity bootstrap, never by callers');
+      err.code = 'WS_ANCHOR_RESTRICTED';
+      throw err;
+    }
+    // WS_IDENTITY_RESOLVED is validated + appended ATOMICALLY under the
+    // write funnel's lock (appendWsResolutionOnce below, after the envelope
+    // is built) — validating here, outside the lock, would let concurrent
+    // ceremonies race the same conflict (diff-funnel r2-F4).
+    // Both types append ws-less with NO recursive identity resolution.
+  } else {
+    // Wait out any in-flight `spine sync init` BEFORE resolving identity
+    // (duplicate-anchor race: an append resolving mid-migration sees an
+    // anchorless partial partition, takes `needAnchor`, and would publish a
+    // second anchor after the init publishes its own — resolveWriteReplica
+    // already embodies the wait-for-activation law, so reuse it; a genuine
+    // stall surfaces as the same refusal the write path below would give).
+    // The gate is a small RETRY LOOP: a sync-init can complete BETWEEN the
+    // funnel resolution and the identity resolution (neither holds a lock),
+    // leaving `wGate` stale — mid-transition outcomes (needAnchor/refuse)
+    // whose funnel has since changed re-run the gate against the settled
+    // world instead of failing on a snapshot that no longer exists.
+    let wGate, idr;
+    for (let gateTry = 0; ; gateTry++) {
+      wGate = await resolveWriteReplica(repoRoot);
+      if (wGate.pending) {
+        throw new Error('spine append: a `spine sync init` migration is pending/stalled — re-run `maddu spine sync init`, then retry');
+      }
+      if (wGate.unattached) {
+        // r7-F1: sync partitions without a replica identity (a fresh clone).
+        // Refuse EVERY write — a flat append here is never Git-carried.
+        const err = new Error('spine append: this checkout has sync partitions but no replica identity — run `maddu spine sync init` first');
+        err.code = 'REPLICA_UNATTACHED';
+        throw err;
+      }
+      idr = await resolveIdentityForAppend(repoRoot);
+      if ((idr.needAnchor || idr.refuse) && gateTry < 3) {
+        const wNow = await resolveWriteReplica(repoRoot);
+        if ((wNow.id || null) !== (wGate.id || null) || wNow.pending) continue; // the world moved — re-run
+      }
+      break;
+    }
+    if (idr.conflict) {
+      const err = new Error(`spine append: conflicting workspace-identity anchors (${idr.conflict.join(', ')}) — run \`maddu spine identity resolve --keep <ws_...>\``);
+      err.code = 'WS_IDENTITY_CONFLICT';
+      throw err;
+    }
+    if (idr.refuse) {
+      const err = new Error(`spine append: workspace identity unresolvable — ${idr.refuse}`);
+      err.code = 'WS_IDENTITY_UNRESOLVABLE';
+      throw err;
+    }
+    if (idr.needAnchor) {
+      // Serialized + idempotent under the partition lock: an anchor that
+      // landed while we raced is adopted, a conflict freezes, and only a
+      // still-anchorless workspace publishes (exactly once).
+      if (!wGate.id) {
+        // Partitioned identity with a flat write funnel = a checkout that
+        // has partitions but no replica identity (a fresh clone of a synced
+        // repo). It must not publish anchors or write at all.
+        const err = new Error('spine append: this checkout has sync partitions but no replica identity — run `maddu spine sync init` first');
+        err.code = 'WS_IDENTITY_UNRESOLVABLE';
+        throw err;
+      }
+      // The bound travels into the anchor publish too: identity bootstrap takes
+      // that partition's lock on the way to a first append in an anchorless
+      // workspace, so a caller that asked to be bounded would otherwise still
+      // wait forever there. (Noted here rather than in spine-append-core.mjs,
+      // which is on the monolith ratchet and may not grow.)
+      const anchorTs = new Date().toISOString();
+      const pub = await publishWsAnchorOnce(repoRoot, wGate.id, ({ spineIdentity, genesis }) => ({
+        v: 1, id: genId(anchorTs), ts: anchorTs,
+        type: EVENT_TYPES.WS_IDENTITY_ANCHORED,
+        actor, lane: null,
+        data: { v: 1, spineIdentity, genesis },
+      }), { maxWaitMs });
+      if (pub.conflict) {
+        const err = new Error(`spine append: conflicting workspace-identity anchors (${pub.conflict.join(', ')}) — run \`maddu spine identity resolve --keep <ws_...>\``);
+        err.code = 'WS_IDENTITY_CONFLICT';
+        throw err;
+      }
+      if (pub.unresolvable) {
+        const err = new Error(`spine append: workspace identity unresolvable — ${pub.unresolvable}`);
+        err.code = 'WS_IDENTITY_UNRESOLVABLE';
+        throw err;
+      }
+      wsStamp = pub.adopted || pub.ws || null; // bootstrap → null (this event IS the genesis)
+      if (wsStamp) {
+        // Converge the cache to a PROVABLY-fresh state (with fingerprint):
+        // the re-resolution rescans (the anchor now exists → authority) and
+        // caches with a pre-scan fingerprint, so cache-only readers (the
+        // token wrapper's no-scan freshness law) can stamp immediately
+        // post-bootstrap. Every non-{ws} outcome PROPAGATES (diff-funnel
+        // r3-F2: a peer anchor arriving right after publication is a real
+        // conflict — overwriting that freeze with a fallback clean cache and
+        // stamping the pre-conflict identity would append what verify then
+        // FAILs as ws_anchor_conflict/ws_mismatch).
+        const idr2 = await resolveIdentityForAppend(repoRoot);
+        if (idr2.conflict) {
+          const err = new Error(`spine append: conflicting workspace-identity anchors (${idr2.conflict.join(', ')}) — run \`maddu spine identity resolve --keep <ws_...>\``);
+          err.code = 'WS_IDENTITY_CONFLICT';
+          throw err;
+        }
+        if (!idr2.ws) {
+          const err = new Error(`spine append: workspace identity unresolvable — ${idr2.refuse || 'anchor bootstrap did not converge'}`);
+          err.code = 'WS_IDENTITY_UNRESOLVABLE';
+          throw err;
+        }
+        wsStamp = idr2.ws;
+      }
+    } else if (idr.ws) {
+      wsStamp = idr.ws;
+    }
+    // idr.bootstrap → wsStamp stays null: the genesis line is ws-less.
+  }
+
   const ts = new Date().toISOString();
   const ev = { v: 1, id: genId(ts), ts, type, actor, lane, data };
   if (triggered_by) ev.triggered_by = triggered_by;
+  // Stamped INSIDE the stored line (after triggered_by, before prev_hash) —
+  // it rides into prev_hash with zero new hashing code. Caller-supplied `ws`
+  // is impossible by construction: the destructured signature above never
+  // accepts one.
+  if (wsStamp) ev.ws = wsStamp;
 
   // ── Sync mode (#12c): partitioned append ──
   // Write to this replica's partition under the funnel (prev_hash computed inside
   // the lock, so the chain cannot fork). A write NEVER touches a partition whose
   // migration hasn't committed: if a `spine sync init` is in progress, resolveWrite-
   // Replica WAITS for it to commit, then writes to the completed partition; if it
-  // stalls, we refuse rather than fork. Absent any replicaId/marker this is a no-op
-  // and the DEFAULT flat path below runs unchanged.
-  const w = await resolveWriteReplica(repoRoot);
-  if (w.id) return appendPartitioned(repoRoot, w.id, ev);
-  if (w.pending) throw new Error('spine append: a `spine sync init` migration is pending/stalled — re-run `maddu spine sync init`, then retry');
+  // stalls (>timeoutMs), we refuse rather than fork. Absent any replicaId/marker
+  // this is a no-op and the DEFAULT flat path runs unchanged.
+  //
+  // A `sync init` marker can appear in the WINDOW between the outer resolve (which
+  // saw default/flat) and appendFlatChained's non-waiting re-resolve under the lock
+  // — the primitive then hands back `{pending}` (it MUST NOT block on a migration
+  // while holding the flat lock; the migration may need that lock). That is not a
+  // stall — it is the documented "retry later" outcome (spine-append-core §
+  // appendFlatChained). So we LOOP: the next outer resolve WAITS for the migration
+  // to commit and routes the event to its partition, so a concurrent append during
+  // `sync init` is never lost (only a genuine >timeoutMs stall, surfaced by the
+  // outer resolve, still refuses). The retry cap is a livelock backstop only.
+  const STALL_MSG = 'spine append: a `spine sync init` migration is pending/stalled — re-run `maddu spine sync init`, then retry';
+  // One credit per LOGICAL event: every success return funnels through here,
+  // so the pending/ENOENT retries below can never double-count.
+  const credit = (out) => { witnessSpineAppend(); return out; };
 
-  // Tamper-evidence (v1.14.0): link to the prior event by hashing its stored
-  // line. Computed before the append so it reflects the true predecessor;
-  // genesis (empty spine) → null.
-  //
-  // The flat write is wrapped: a concurrent `spine sync init` can rename these
-  // segments out from under us (ENOENT). That never happens in pure default mode
-  // (no migration ever runs); when it does, re-resolve and route to the now-
-  // committing partition instead of failing. Non-ENOENT errors propagate unchanged.
-  try {
-    const prevLine = await lastEventLine(paths);
-    ev.prev_hash = prevLine === null ? null : hashLine(prevLine);
-    const seg = await currentSegment(paths);
+  // The ceremony type takes the ATOMIC path: scan + law + binding +
+  // idempotency + inline append in one critical section (r2-F4).
+  if (type === EVENT_TYPES.WS_IDENTITY_RESOLVED) {
+    for (let i = 0; i < 3; i++) {
+      const out = await appendWsResolutionOnce(repoRoot, ev, { maxWaitMs });
+      if (out.retry) continue;
+      if (out.invalid) {
+        const err = new Error(`spine append: WS_IDENTITY_RESOLVED refused — ${out.invalid}`);
+        err.code = 'WS_RESOLUTION_INVALID';
+        throw err;
+      }
+      if ('already' in out) {
+        const err = new Error(`spine append: WS_IDENTITY_RESOLVED refused — no unresolved anchor conflict exists${out.already ? ` (authority already ${out.already})` : ''}`);
+        err.code = 'WS_RESOLUTION_INVALID';
+        err.resolvedAuthority = out.already;
+        throw err;
+      }
+      return credit(out.ev);
+    }
+    throw new Error(STALL_MSG);
+  }
 
-  // ── Concurrency + framing (A2 / hard rule #2) ──
-  //
-  // There IS a real concurrent-writer path: the long-lived bridge
-  // (runtime/server.js) and a short-lived CLI invocation (`maddu slice-stop`,
-  // `maddu doctor`, …) can both call append() against the same segment at the
-  // same instant. Máddu deliberately has no mutex (lane claims coordinate
-  // AGENTS, not spine bytes). The lock here is the OS: appendFile opens with
-  // flag 'a' (O_APPEND), and an O_APPEND write is positioned at EOF and is
-  // atomic for sizes under PIPE_BUF (4096 on Linux; Windows FILE_APPEND_DATA is
-  // atomic for appends too). A serialized event line is virtually always under
-  // that, so two concurrent appends never interleave bytes — they serialize
-  // into two whole lines. The flag is passed explicitly so this guarantee is
-  // not silently lost if someone later swaps in a positional write.
-  //
-  // Framing invariant: exactly ONE event per physical line. JSON.stringify
-  // escapes any embedded newline to "\\n", so a serialized event can never
-  // contain a raw LF — assert it, because the verifier's torn-trailing-line
-  // detection (and NDJSON itself) depends on one-event-per-line being absolute.
-  //
-  // Durability: we do NOT fsync per append (the spine IS the WAL — see
-  // docs/15-architecture.md). A crash between write() and the OS flushing can
-  // leave a truncated final line; that is detected, not auto-repaired, by
-  // `maddu spine verify` (issue kind `torn_trailing_line`).
-    const line = JSON.stringify(ev);
-    if (line.includes('\n')) {
-      throw new Error('spine.append: serialized event contains a raw newline — NDJSON framing invariant violated');
+  // One bounded restamp (diff-funnel r11-F1): the primitives re-validate the
+  // ws stamp INSIDE the append lock, so a ceremony/anchor that raced us
+  // surfaces as WS_IDENTITY_MISMATCH here — re-resolve once and restamp with
+  // the settled authority instead of hard-failing a healable verb. A
+  // conflict or unresolvable outcome still propagates.
+  let wsRestamped = false;
+  const restampOrRethrow = async (err) => {
+    if (err?.code !== 'WS_IDENTITY_MISMATCH' || wsRestamped) throw err;
+    wsRestamped = true;
+    const idrR = await resolveIdentityForAppend(repoRoot);
+    if (idrR.conflict) {
+      const e = new Error(`spine append: conflicting workspace-identity anchors (${idrR.conflict.join(', ')}) — run \`maddu spine identity resolve --keep <ws_...>\``);
+      e.code = 'WS_IDENTITY_CONFLICT';
+      throw e;
     }
-    await appendFile(join(paths.events, seg), line + '\n', { flag: 'a' });
-    return ev;
-  } catch (err) {
-    if (err && err.code === 'ENOENT') {
-      // A `spine sync init` migration began mid-write and renamed a segment. Re-
-      // resolve: it routes to the committed partition (or waits for it). A rename
-      // implies the marker exists, so this never loops back to the flat branch.
-      const w2 = await resolveWriteReplica(repoRoot);
-      if (w2.id) return appendPartitioned(repoRoot, w2.id, ev);
-      if (w2.pending) throw new Error('spine append: a `spine sync init` migration is pending/stalled — re-run `maddu spine sync init`, then retry');
-    }
+    if (idrR.ws) { ev.ws = idrR.ws; return; }
+    if (idrR.bootstrap) { delete ev.ws; return; }
     throw err;
+  };
+  let enoentRetries = 0;
+  for (let attempt = 0; ; attempt++) {
+    const w = await resolveWriteReplica(repoRoot);
+    if (w.id) {
+      try { return credit(await appendPartitioned(repoRoot, w.id, ev, { maxWaitMs })); }
+      catch (err) { await restampOrRethrow(err); continue; }
+    }
+    if (w.pending) throw new Error(STALL_MSG);           // a genuine stall (outer wait elapsed)
+    if (w.unattached) {
+      const err = new Error('spine append: this checkout has sync partitions but no replica identity — run `maddu spine sync init` first');
+      err.code = 'REPLICA_UNATTACHED';
+      throw err;
+    }
+
+    // Test seam (no-op in production): fired exactly ONCE, after the outer resolve
+    // returned flat and BEFORE appendFlatChained's non-waiting re-resolve — the
+    // window in which a `sync init` marker must be written to deterministically
+    // exercise the pending→retry path. Guarded like the cockpit's
+    // `__MADDU_COCKPIT_TEST__`; unset in every real run.
+    if (attempt === 0 && typeof globalThis.__MADDU_SPINE_SEAM_HOOK__ === 'function') {
+      await globalThis.__MADDU_SPINE_SEAM_HOOK__();
+    }
+
+    // Tamper-detection (v1.14.0): link to the prior event by hashing its stored
+    // line. Since audit P1 the flat write goes through the SHARED locked+chained
+    // primitive `appendFlatChained` — prev_hash is computed INSIDE the funnel, so a
+    // concurrent flat writer can't fork the chain, and the token wrapper shares the
+    // exact path so every flat event carries prev_hash. The ENOENT catch is a
+    // backstop for a rename that slips between currentSegment and appendFile (a
+    // migration renaming a segment out from under us — never in pure default mode).
+    try {
+      const outcome = await appendFlatChained(repoRoot, paths.events, ev, { maxWaitMs });
+      if (outcome.reroute) return credit(await appendPartitioned(repoRoot, outcome.reroute, ev, { maxWaitMs }));
+      if (outcome.unattached) {
+        const err = new Error('spine append: this checkout has sync partitions but no replica identity — run `maddu spine sync init` first');
+        err.code = 'REPLICA_UNATTACHED';
+        throw err;
+      }
+      if (outcome.pending) {                             // migration began in the resolve→lock window → retry
+        // Test seam (no-op in production): acknowledge that the inner re-resolve
+        // observed {pending}, so a deterministic test can act AFTER the retry.
+        if (typeof globalThis.__MADDU_SPINE_PENDING_HOOK__ === 'function') globalThis.__MADDU_SPINE_PENDING_HOOK__();
+        if (attempt >= 10000) throw new Error(STALL_MSG); // livelock backstop (never hit in practice)
+        continue;
+      }
+      return credit(outcome).ev;
+    } catch (err) {
+      // ENOENT backstop: a `sync init` renamed the flat segment between
+      // currentSegment and appendFile. The legitimate rename race resolves on the
+      // very next attempt, so a small unbudgeted-by-outer-wait retry limit is
+      // enough — a PERSISTENT ENOENT (a genuinely broken FS, not a migration) then
+      // surfaces the real error instead of hot-spinning.
+      if (err && err.code === 'ENOENT' && ++enoentRetries <= 3) continue;
+      if (err && err.code === 'WS_IDENTITY_MISMATCH') { await restampOrRethrow(err); continue; }
+      throw err;
+    }
   }
 }
 
@@ -551,13 +949,57 @@ export async function readAll(repoRoot) {
       if (err && err.code === 'ENOENT') return readAllPartitioned(repoRoot);
       throw err;
     }
-    for (const line of text.split('\n')) {
+    const lines = text.split('\n');
+    // Committed elements only (diff-funnel r8-F1): a nonempty unterminated
+    // final element is not part of the record even when it parses — reads
+    // must agree with the writers and the verifier about what exists.
+    const committed = text.endsWith('\n') ? lines.length : lines.length - 1;
+    for (let i = 0; i < committed; i++) {
+      const line = lines[i];
       if (!line.trim()) continue;
       try { out.push(JSON.parse(line)); }
       catch (err) { console.error(`spine: bad line in ${seg}:`, err.message); }
     }
   }
   return out;
+}
+
+// audit P3 (T1) — a STRICT read for the bridge GET: unlike readAll (which
+// silently skips a malformed line), this COUNTS parse failures so a caller can
+// downgrade integrity to 'unknown' when a bad line was appended after the last
+// verified snapshot. Flat/default mode parses strictly; sync/partitioned mode
+// returns parseErrors:null ("can't strictly account" → caller treats as unknown).
+// No hashing, no spawn — a single read, safe on a bridge GET.
+export async function readAllStrict(repoRoot) {
+  const paths = await ensureSpine(repoRoot);
+  if (await readActiveReplicaId(repoRoot)) return { events: await readAllPartitioned(repoRoot), parseErrors: null };
+  const segs = await listSegments(paths);
+  if (await readActiveReplicaId(repoRoot)) return { events: await readAllPartitioned(repoRoot), parseErrors: null };
+  const out = [];
+  let parseErrors = 0;
+  for (const seg of segs) {
+    let text;
+    try { text = await readFile(join(paths.events, seg), 'utf8'); }
+    catch (err) {
+      if (err && err.code === 'ENOENT') return { events: await readAllPartitioned(repoRoot), parseErrors: null };
+      throw err;
+    }
+    const lines = text.split('\n');
+    // Committed elements only (diff-funnel r9-F1): a nonempty unterminated
+    // final element is NOT part of the record even when it parses — and a
+    // STRICT reader must also COUNT it, so integrity-sensitive callers see
+    // the accounting gap instead of treating a torn stream as fully
+    // accounted.
+    const committed = text.endsWith('\n') ? lines.length : lines.length - 1;
+    if (committed < lines.length && lines[committed].trim()) parseErrors++;
+    for (let i = 0; i < committed; i++) {
+      const line = lines[i];
+      if (!line.trim()) continue;
+      try { out.push(JSON.parse(line)); }
+      catch { parseErrors++; }
+    }
+  }
+  return { events: out, parseErrors };
 }
 
 export async function readSince(repoRoot, afterId) {

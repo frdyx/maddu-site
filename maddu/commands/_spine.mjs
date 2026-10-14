@@ -4,6 +4,7 @@
 
 import { pathToFileURL } from 'node:url';
 import { join } from 'node:path';
+import { stat } from 'node:fs/promises';
 import { resolveLibDir, FRAMEWORK_ROOT } from './_libroot.mjs';
 
 export async function loadSpineLib() {
@@ -40,7 +41,36 @@ export async function loadSpineLib() {
   // global CLI can run other subcommands against an older install.
   let spineSync = null;
   try { spineSync = await import(pathToFileURL(join(dir, 'spine-sync.mjs')).href); } catch {}
-  return { paths, spine, projections, hindsight, mailbox, skills, search, runtimes, mcp, schedule, checkpoints, auth, imports, sessionActive, approvals, verify, spineSync };
+  // bridge-builders.mjs (buildOversight) powers `maddu spine oversight`.
+  // Optional-load so the readout degrades cleanly on an older install.
+  let bridgeBuilders = null;
+  try { bridgeBuilders = await import(pathToFileURL(join(dir, 'bridge-builders.mjs')).href); } catch {}
+  // spine-anchor.mjs (witness track PR 4) powers `maddu spine anchor`.
+  // Optional-load so a newer global CLI degrades cleanly on an older install.
+  let spineAnchor = null;
+  try { spineAnchor = await import(pathToFileURL(join(dir, 'spine-anchor.mjs')).href); } catch {}
+  // verify-replay.mjs (witness track PR 5) powers `maddu spine verify --replay`.
+  // Optional-load so a newer global CLI degrades cleanly on an older install.
+  let verifyReplay = null;
+  try { verifyReplay = await import(pathToFileURL(join(dir, 'verify-replay.mjs')).href); } catch {}
+  // session-lifecycle.mjs (v1.111.0) — the serialized session-lifecycle
+  // transactions. Optional-load so a newer global CLI degrades cleanly on an
+  // older install (callers fall back to their legacy direct appends).
+  let sessionLifecycle = null;
+  try { sessionLifecycle = await import(pathToFileURL(join(dir, 'session-lifecycle.mjs')).href); } catch {}
+  // recall.mjs (v1.115.0, memory-recall track) — the bounded trust-gated
+  // recall packet. Optional-load so `brief --for-agent` degrades to a brief
+  // without the recall section on older installs.
+  let recall = null;
+  try { recall = await import(pathToFileURL(join(dir, 'recall.mjs')).href); } catch {}
+  // mutation-witness.mjs (v1.116.0, buzz-steals S1) — declared-excuse and
+  // raw-write witness APIs for commands with legitimately zero-append success
+  // paths (idempotent early-returns, delegated mutations, init genesis).
+  // Optional-load: on an older install the calls below are no-ops (the guard
+  // is inert there anyway).
+  let mutationWitness = null;
+  try { mutationWitness = await import(pathToFileURL(join(dir, 'mutation-witness.mjs')).href); } catch {}
+  return { paths, spine, projections, hindsight, mailbox, skills, search, runtimes, mcp, schedule, checkpoints, auth, imports, sessionActive, approvals, verify, spineSync, bridgeBuilders, spineAnchor, verifyReplay, sessionLifecycle, recall, mutationWitness };
 }
 
 // v1.93.0 (roadmap #12a phase 1): commands bind STATE (spine, sessions,
@@ -83,13 +113,287 @@ export async function resolveWorkAndStateRoots(paths) {
 // command, which is the friction that made it get skipped. `sessionActive`
 // is the lib from loadSpineLib() (null on pre-v0.14 installs → cache step
 // is simply skipped, env/flag still work). Returns a string id, or null.
-export async function resolveSessionId(repoRoot, flags, sessionActive) {
-  if (flags && typeof flags.session === 'string' && flags.session.length > 0) return flags.session;
+// Load the id grammar (PR-B) from the resolved runtime lib. Returns
+// { isRefId, InvalidExplicitId } or null on a PRE-PR-B lib — the null case is
+// the fail-open signal (validate nothing, exactly today's behavior; a newer CLI
+// must keep running against an older installed runtime). Fail open ONLY when
+// the module/exports are absent — never swallow a validation THROW.
+export async function loadIdGrammar() {
+  let dir;
+  try { dir = await resolveLibDir(); }
+  catch { return null; } // can't resolve the lib root → pre-PR-B-style fail open
+  const file = join(dir, 'id-grammar.mjs');
+  // EXISTENCE — not the import error code — decides fail-open. Node reports BOTH
+  // an absent target module AND a missing transitive dependency of a PRESENT
+  // module as ERR_MODULE_NOT_FOUND, so the code alone cannot distinguish
+  // "pre-PR-B install (no validator)" from "validator present but broken".
+  // ONLY a definitively ABSENT module (stat ENOENT) is a genuine pre-PR-B
+  // install → fail open (validate nothing, exactly today's behavior). Any OTHER
+  // stat error (EACCES/EPERM/EIO on an ACL-controlled or network-mounted
+  // install) means the file is probably THERE but unreadable → do NOT silently
+  // disable validation; propagate.
+  try { await stat(file); }
+  catch (err) {
+    if (err && err.code === 'ENOENT') return null; // genuinely absent → pre-PR-B
+    throw err;                                      // present-but-unreadable → loud
+  }
+  // Present: any import load error (a syntax error, a missing transitive dep)
+  // propagates — never silently disable a present validator.
+  const m = await import(pathToFileURL(file).href);
+  if (typeof m.isRefId === 'function' && typeof m.InvalidExplicitId === 'function') return m;
+  // Present + loads but missing the expected exports is a CORRUPT / incomplete
+  // validator, NOT a legitimate older shape (id-grammar.mjs is new in PR-B, so a
+  // present file must carry these exports). Fail LOUD, never validate-nothing.
+  throw new Error('id-grammar.mjs present but missing expected exports (isRefId/InvalidExplicitId) — corrupt install');
+}
+
+// CP1b: validate an explicit --session at a DIRECT reader (the commands that
+// read `flags.session` without going through resolveSessionId). Owned-malformed
+// throws InvalidExplicitId; absent → null. Historically these did
+// `flags.session || null`, collapsing a bad explicit flag (or a bare boolean)
+// to a null/true actor. Fail-open on a pre-PR-B lib: a string value passes, a
+// bare/empty flag → null (no worse than main, strictly safer than a boolean).
+export async function explicitSessionFlag(flags) {
+  const g = await loadIdGrammar();
+  if (flags && Object.hasOwn(flags, 'session')) {
+    const v = flags.session;
+    if (g) {
+      if (g.isRefId(v)) return v;
+      throw new g.InvalidExplicitId('session');
+    }
+    return (typeof v === 'string' && v.length > 0) ? v : null;
+  }
+  return null;
+}
+
+// ── Ambient acting-id policy (audit C2) ─────────────────────────────────────
+// A grammar-valid MADDU_SESSION_ID is a CANDIDATE, not an answer. It is
+// classified against the spine and, when it is provably not live, DROPPED with
+// one line on stderr and attribution falls back to the verified active-session
+// cache. Absent and malformed ids are untouched by this: they fall through
+// exactly as before (silently, to null), because the plan changes what a DEAD
+// id does, not what a missing one does.
+//
+// Fail-open at every seam — an older installed runtime without the classifier,
+// an unresolvable root, a throwing replay — all keep the candidate. Dropping
+// attribution because we could not check is the wrong direction.
+const _ambientDecisions = new Map();
+let _ambientWarned = false;
+
+async function loadSessionActiveLib() {
+  let dir;
+  try { dir = await resolveLibDir(); } catch { return null; }
+  const file = join(dir, 'session-active.mjs');
+  try { await stat(file); } catch { return null; }
+  try { return await import(pathToFileURL(file).href); } catch { return null; }
+}
+
+// Decide what a grammar-valid ambient candidate resolves to. Memoized per
+// process: several commands call this more than once per invocation and the
+// classification replays the spine.
+// `repoRoot`/`sessionActive` are the caller's when it has them — resolveSessionId
+// is handed both and must not reach around its own injection points to the real
+// filesystem (that made the resolver untestable and ignored the root it was
+// given). Only the parameterless callers fall back to loading them here. The
+// memo is keyed by root so two roots in one process cannot share an answer.
+async function resolveAmbientRoot(repoRoot) {
+  if (repoRoot) return repoRoot;
+  try {
+    const dir = await resolveLibDir();
+    const paths = await import(pathToFileURL(join(dir, 'paths.mjs')).href);
+    return await resolveRepoRoot(paths);
+  } catch { return null; }
+}
+
+async function decideAmbientSid(candidate, repoRoot = null, sessionActive = null) {
+  // Round 1 F5: resolve the root BEFORE keying the memo. Keying on the caller's
+  // ARGUMENT meant a parameterless call (receipt arming, the witness context)
+  // keyed on '' while resolveSessionId keyed on the real path — two decisions
+  // for one repo, so a single invocation could act as C while its receipt and
+  // its breach row both named B.
+  const root = await resolveAmbientRoot(repoRoot);
+  if (!root) return candidate; // cannot place the repo → keep the candidate
+  const memoKey = `${root}::${candidate}`;
+  if (_ambientDecisions.has(memoKey)) return _ambientDecisions.get(memoKey);
+  const decide = async () => {
+    const lib = (sessionActive && typeof sessionActive.classifySessionId === 'function')
+      ? sessionActive : await loadSessionActiveLib();
+    // A lib without the classifier is a pre-v1.134 runtime (or a caller's stub
+    // that does not implement it): keep the candidate, exactly as before.
+    if (!lib || typeof lib.classifySessionId !== 'function') return candidate;
+    let state;
+    try { state = await lib.classifySessionId(root, candidate); } catch { return candidate; }
+    if (state !== 'not-live') return candidate; // live, or cannot verify
+    if (!_ambientWarned) {
+      _ambientWarned = true;
+      process.stderr.write(`[maddu] MADDU_SESSION_ID ${candidate} is not a live session here — dropped; attributing to the active session instead
+`);
+    }
+    // The fallback cache read belongs to the CALLER's lib when it has one:
+    // the classifier may have come from disk, but whose active session we fall
+    // back to is the caller's question.
+    const cacheLib = (sessionActive && typeof sessionActive.readActiveSessionVerified === 'function')
+      ? sessionActive : lib;
+    try {
+      const res = await cacheLib.readActiveSessionVerified(root);
+      // Round 4: the cache may name the very id we just condemned. We hold
+      // POSITIVE closure evidence for it from this invocation's classification;
+      // a second read that merely fails to see the closure is less informed,
+      // not more, and must never overturn it. Without this the candidate walks
+      // back in through the fallback meant to replace it.
+      const sameAsRejected = (id) => id === candidate;
+      if (res && (res.kind === 'active' || res.kind === 'unverified') && res.record
+        && !sameAsRejected(res.record.sessionId)) return res.record.sessionId;
+      // Round 2 found that this fallback inherited the same bug F2 fixed in the
+      // classifier; round 3 found that re-asking a SECOND replay to confirm a
+      // 'stale' verdict races — a closure visible to the first read can be
+      // missing from the second, resurrecting a closed session. The tolerance
+      // now lives in classifyVerified itself, which decides from the one
+      // snapshot that already saw the events, so an omitted-partition pointer
+      // arrives here as 'unverified' and is accepted by the line above.
+    } catch {}
+    return null;
+  };
+  const p = decide();
+  _ambientDecisions.set(memoKey, p);
+  return p;
+}
+
+// Resolve attribution for an invocation RECEIPT (audit C2). Same ambient
+// policy as everywhere else, run async BEFORE dispatch so the exit handler —
+// which is synchronous and cannot replay anything — has an answer handed to
+// it. The result is authoritative including null: a dropped dead id must not
+// come back when the writer looks at the environment again.
+export async function resolveReceiptSid(repoRoot = null) {
   const env = process.env.MADDU_SESSION_ID;
-  if (env && env.length > 0) return env;
+  const g = await loadIdGrammar();
+  if (env) {
+    // Round 2: with no grammar available we cannot tell a good id from a
+    // malformed one, so we have no ANSWER — returning the raw env made a
+    // malformed value authoritative and suppressed the writer's own cache
+    // fallback on exactly the version-skew installs this branch exists for.
+    if (!g) return undefined;
+    // A malformed ambient id is not a candidate; fall through to the cache
+    // exactly as the writer used to.
+    if (g.isRefId(env)) return decideAmbientSid(env, repoRoot);
+  }
+  // Round 1 F4: UNDEFINED means "resolution was unavailable"; null means
+  // "resolved to nobody". The caller must be able to tell them apart, or a
+  // missing runtime lib becomes an authoritative null that suppresses the
+  // writer's own env/cache derivation — attribution lost precisely where this
+  // resolver could not run.
+  const lib = await loadSessionActiveLib();
+  if (!lib || typeof lib.readActiveSessionVerified !== 'function') return undefined;
+  const root = await resolveAmbientRoot(repoRoot);
+  if (!root) return undefined;
+  try {
+    const res = await lib.readActiveSessionVerified(root);
+    if (!res) return null;
+    if ((res.kind === 'active' || res.kind === 'unverified') && res.record) return res.record.sessionId;
+    // Pre-v1.111 libs return a RAW record rather than the discriminated union;
+    // ignoring that shape lost the cache id on older installs (round 1 F4).
+    if (!res.kind && typeof res.sessionId === 'string' && !res.stale) {
+      return (g && !g.isRefId(res.sessionId)) ? null : res.sessionId;
+    }
+  } catch { return undefined; }
+  return null;
+}
+
+// CP3 (PR-B): resolve the AMBIENT acting-session id from the environment,
+// grammar-gated, for the many command sites that stamped an event actor from a
+// raw `process.env.MADDU_SESSION_ID || null`. A malformed MADDU_SESSION_ID is
+// ambient (not an explicit request) → treated as absent (null), never written
+// raw into a persisted actor/id. Routed through the resolved runtime lib so a
+// newer CLI FAILS OPEN against a pre-PR-B install (returns the raw env, exactly
+// today's behavior) rather than dropping attribution. Returns a ref-id or null.
+export async function envActingSid() {
+  const v = process.env.MADDU_SESSION_ID;
+  if (!v) return null;
+  const g = await loadIdGrammar();
+  if (!g) return v; // pre-PR-B lib: today's behavior (raw env)
+  if (!g.isRefId(v)) return null; // malformed: ambient, silent, unchanged
+  return decideAmbientSid(v);
+}
+
+// CP5 (PR-B): resolve a parent session id for a registration. Grammar + an
+// EXISTENCE check (verify.mjs FAILs a dangling parentSessionId post-append; this
+// is the write-time fail-fast). Explicit --parent malformed → THROW; ambient
+// MADDU_PARENT_SESSION_ID malformed → drop to null (+ note). Existence uses
+// ever-registered proj.sessions (includes CLOSED — a registered-then-closed
+// parent stays valid). Pass { spine, projections } to enable the existence
+// check; omit for grammar-only. Fail-open on a pre-PR-B lib.
+export async function resolveParentId(repoRoot, flags, { projections } = {}) {
+  const g = await loadIdGrammar();
+  let candidate = null;
+  if (flags && Object.hasOwn(flags, 'parent')) {
+    const v = flags.parent; // EXPLICIT — malformed is a hard error
+    if (g) {
+      if (g.isRefId(v)) candidate = v;
+      else throw new g.InvalidExplicitId('parent');
+    } else if (typeof v === 'string' && v.length > 0) candidate = v;
+  } else {
+    const env = process.env.MADDU_PARENT_SESSION_ID; // AMBIENT — malformed drops
+    if (env) {
+      if (g) { if (g.isRefId(env)) candidate = env; else process.stderr.write('[maddu] MADDU_PARENT_SESSION_ID malformed — parent link dropped\n'); }
+      else if (env.length > 0) candidate = env;
+    }
+  }
+  if (!candidate) return null;
+  try {
+    if (projections && typeof projections.project === 'function') {
+      const proj = await projections.project(repoRoot);
+      const known = new Set((proj.sessions || []).map((s) => s.id));
+      if (!known.has(candidate)) {
+        process.stderr.write('[maddu] parent session not found — parent link dropped\n');
+        return null;
+      }
+    }
+  } catch { /* projection read failed → keep candidate; verify is the backstop */ }
+  return candidate;
+}
+
+export async function resolveSessionId(repoRoot, flags, sessionActive) {
+  const g = await loadIdGrammar();
+  // Explicit --session: an OWNED flag must be a valid reference id. A malformed
+  // owned flag (bare `true`, empty '', repeated array, non-string, bad grammar)
+  // is a HARD user error — never a silent fall-through to a DIFFERENT env/cache
+  // session. `Object.hasOwn` (not truthiness) so `--session` / `--session=` are
+  // caught, not collapsed to absence.
+  if (flags && Object.hasOwn(flags, 'session')) {
+    const v = flags.session;
+    if (g) {
+      if (g.isRefId(v)) return v;
+      throw new g.InvalidExplicitId('session');
+    }
+    // Fail open (pre-PR-B lib can't validate): today's behavior.
+    if (typeof v === 'string' && v.length > 0) return v;
+  }
+  // Ambient env: grammar-gate. A malformed MADDU_SESSION_ID is AMBIENT, not an
+  // explicit request → treated as absent (fall through), never thrown.
+  const env = process.env.MADDU_SESSION_ID;
+  if (env) {
+    // Same three-state policy as envActingSid: a grammar-valid candidate must
+    // also be LIVE before it outranks the verified cache below (audit C2).
+    if (g) {
+      if (g.isRefId(env)) {
+        // Round 2: the decision is AUTHORITATIVE, null included. `if (decided)`
+        // threw a memoized null away and ran the cache step again, so a session
+        // registered by another process between arming and resolution gave one
+        // invocation two identities (receipt null, command C).
+        return decideAmbientSid(env, repoRoot, sessionActive);
+      }
+    } else if (env.length > 0) return env;
+  }
   if (sessionActive && typeof sessionActive.readActiveSessionVerified === 'function') {
     const res = await sessionActive.readActiveSessionVerified(repoRoot);
-    if (res && !res.stale && res.sessionId) return res.sessionId;
+    // v1.111.0 discriminated union: `active`/`unverified` resolve over a
+    // SANITIZED (isRefId-gated) record; stale/invalid never resolve.
+    if (res && (res.kind === 'active' || res.kind === 'unverified') && res.record) return res.record.sessionId;
+    // Pre-v1.111 lib shape (a raw record) — grammar-gate it here (the sanitized
+    // union already gates the current shape; the legacy raw arm did not).
+    if (res && res.kind === undefined && !res.stale && res.sessionId) {
+      if (!g || g.isRefId(res.sessionId)) return res.sessionId;
+    }
   }
   return null;
 }

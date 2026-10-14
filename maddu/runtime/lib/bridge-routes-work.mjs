@@ -16,12 +16,14 @@
 // shim that preserves the original `return sendJson(...)` flow verbatim.
 
 import { append, EVENT_TYPES, genWorkerId, genTaskId, readAll } from './spine.mjs';
+import { witnessNoop } from './mutation-witness.mjs';
 import { project } from './projections.mjs';
 import { redactSpawn } from './secret-scan.mjs';
 import { listSkills, readSkill, saveSkill, deleteSkill, applySkill, draftFromSliceStop } from './skills.mjs';
 import { readMailbox, send as mailboxSend, markRead as mailboxMarkRead, counts as mailboxCounts } from './mailbox.mjs';
 import { searchMemory, rebuildMemory, extractEvent } from './hindsight.mjs';
 import { sendJson, readBody } from './http-util.mjs';
+import { readBodySessionId } from './bridge-body-id.mjs';
 
 const reply = (res, code, body) => { sendJson(res, code, body); return true; };
 
@@ -33,6 +35,8 @@ export async function routeWorkers({ req, res, path, repoRoot }) {
   }
   if (path === '/bridge/workers' && req.method === 'POST') {
     const body = (await readBody(req)) || {};
+    const sidr = readBodySessionId(body, { required: false });
+    if (!sidr.ok) return reply(res, sidr.status, { error: sidr.error });
     const id = body.id || genWorkerId();
     // Scrub caller-supplied command/args before persisting (no-op on clean
     // text). The bridge accepts these from any loopback client, so a
@@ -40,14 +44,14 @@ export async function routeWorkers({ req, res, path, repoRoot }) {
     const spawnRec = redactSpawn({ command: body.command || null, args: body.args || [] });
     const ev = await append(repoRoot, {
       type: EVENT_TYPES.WORKER_SPAWNED,
-      actor: body.sessionId || null,
+      actor: sidr.sessionId,
       lane: body.lane || null,
       data: {
         id,
         command: spawnRec.command,
         args: spawnRec.args,
         pid: body.pid || null,
-        sessionId: body.sessionId || null
+        sessionId: sidr.sessionId
       }
     });
     return reply(res, 200, { ok: true, workerId: id, event: ev });
@@ -57,9 +61,27 @@ export async function routeWorkers({ req, res, path, repoRoot }) {
     if (rest.endsWith('/heartbeat') && req.method === 'POST') {
       const id = rest.slice(0, -'/heartbeat'.length);
       const body = (await readBody(req)) || {};
+      const sidr = readBodySessionId(body, { required: false });
+      if (!sidr.ok) return reply(res, sidr.status, { error: sidr.error });
+      // Referential guard (v1.124.0) — the bridge is a public appender for the
+      // same events as the CLI verbs, so it needs the same check: an unknown
+      // id folds to nothing and used to return 200 over a discarded write.
+      // A heartbeat additionally only folds while the worker is live (`stuck`
+      // is a read-time annotation over running, so it stays beatable).
+      {
+        const w = (await project(repoRoot)).workers.find((x) => x.id === id);
+        if (!w) return reply(res, 404, { error: 'worker not found', id });
+        if (w.status !== 'running' && w.status !== 'stuck') {
+          return reply(res, 409, { error: 'worker is not live', id, status: w.status });
+        }
+      }
+      // No post-append confirmation, deliberately — see commands/worker.mjs:
+      // a timestamp is not a receipt identity, and a concurrent heartbeat for
+      // the same worker would make this one falsely 409 though it applied.
+      // High-frequency callers would also pay a second O(history) replay.
       await append(repoRoot, {
         type: EVENT_TYPES.WORKER_HEARTBEAT,
-        actor: body.sessionId || null,
+        actor: sidr.sessionId,
         lane: null,
         data: { id, focus: body.focus || null }
       });
@@ -68,9 +90,14 @@ export async function routeWorkers({ req, res, path, repoRoot }) {
     if (rest.endsWith('/exit') && req.method === 'POST') {
       const id = rest.slice(0, -'/exit'.length);
       const body = (await readBody(req)) || {};
+      const sidr = readBodySessionId(body, { required: false });
+      if (!sidr.ok) return reply(res, sidr.status, { error: sidr.error });
+      if (!(await project(repoRoot)).workers.find((x) => x.id === id)) {
+        return reply(res, 404, { error: 'worker not found', id });
+      }
       await append(repoRoot, {
         type: EVENT_TYPES.WORKER_EXITED,
-        actor: body.sessionId || null,
+        actor: sidr.sessionId,
         lane: null,
         data: { id, exitCode: body.exitCode ?? 0 }
       });
@@ -79,6 +106,9 @@ export async function routeWorkers({ req, res, path, repoRoot }) {
     if (rest.endsWith('/kill') && req.method === 'POST') {
       const id = rest.slice(0, -'/kill'.length);
       const body = (await readBody(req)) || {};
+      if (!(await project(repoRoot)).workers.find((x) => x.id === id)) {
+        return reply(res, 404, { error: 'worker not found', id });
+      }
       await append(repoRoot, {
         type: EVENT_TYPES.WORKER_KILLED,
         actor: body.by || null,
@@ -131,8 +161,10 @@ export async function routeSkills({ req, res, path, repoRoot }) {
     if (rest.endsWith('/apply') && req.method === 'POST') {
       const id = rest.slice(0, -'/apply'.length);
       const body = (await readBody(req)) || {};
+      const sidr = readBodySessionId(body, { required: false });
+      if (!sidr.ok) return reply(res, sidr.status, { error: sidr.error });
       try {
-        const s = await applySkill(repoRoot, id, body.by || null, body.sessionId || null);
+        const s = await applySkill(repoRoot, id, body.by || null, sidr.sessionId);
         return reply(res, 200, { ok: true, applied: { id, title: s.title } });
       } catch (err) { return reply(res, 404, { error: err.message }); }
     }
@@ -188,6 +220,11 @@ export async function routeTasks({ req, res, path, repoRoot }) {
     if (rest.endsWith('/complete') && req.method === 'POST') {
       const id = rest.slice(0, -'/complete'.length);
       const body = (await readBody(req)) || {};
+      // Referential guard (v1.124.0): TASK_COMPLETED folds to nothing on an
+      // unknown id, so this route used to 200 over a discarded write.
+      if (!(await project(repoRoot)).tasks.find((x) => x.id === id)) {
+        return reply(res, 404, { error: 'task not found', id });
+      }
       const ev = await append(repoRoot, {
         type: EVENT_TYPES.TASK_COMPLETED,
         actor: body.by || null,
@@ -199,11 +236,19 @@ export async function routeTasks({ req, res, path, repoRoot }) {
     if (rest.endsWith('/update') && req.method === 'POST') {
       const id = rest.slice(0, -'/update'.length);
       const body = (await readBody(req)) || {};
+      if (!(await project(repoRoot)).tasks.find((x) => x.id === id)) {
+        return reply(res, 404, { error: 'task not found', id });
+      }
       const ev = await append(repoRoot, {
         type: EVENT_TYPES.TASK_UPDATED,
         actor: body.by || null,
         lane: body.lane !== undefined ? body.lane : null,
-        data: { id, ...body, by: undefined }
+        // `id` LAST: spreading body after it let a caller-supplied `body.id`
+        // override the URL id the guard above validated — so
+        // POST /bridge/tasks/tsk_real/update {"id":"tsk_other"} passed the
+        // check on tsk_real and then mutated a DIFFERENT task (or appended a
+        // discarded event for a nonexistent one). The path is authoritative.
+        data: { ...body, id, by: undefined }
       });
       return reply(res, 200, { ok: true, event: ev });
     }
@@ -276,6 +321,10 @@ export async function routeMemory({ req, res, path, url, repoRoot }) {
     return reply(res, 200, { query: q, kind, facts, count: facts.length });
   }
   if (path === '/bridge/memory/extract' && req.method === 'POST') {
+    // S1 declared no-op (Codex diff r2 F3): extraction writes .maddu/memory/
+    // (hindsight state DERIVED from spine slice-stops) — same rationale as
+    // the CLI's `memory extract`.
+    witnessNoop('derived-state-write:memory-facts');
     const body = (await readBody(req)) || {};
     if (body.rebuild) {
       const n = await rebuildMemory(repoRoot);

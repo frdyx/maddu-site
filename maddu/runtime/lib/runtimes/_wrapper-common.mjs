@@ -21,12 +21,12 @@
 // `.maddu/state/worker-logs/<workerId>.wrapper-errors.log` and keeps
 // forwarding stdout untouched. The worker never blocks on bookkeeping.
 
-import { appendFile, mkdir, readdir, stat, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { resolveWriteReplica, appendPartitioned } from '../spine-append-core.mjs';
-
-const ROLL_BYTES = 10 * 1024 * 1024;
+import { resolveWriteReplica, appendPartitioned, appendFlatChained, readFreshCachedIdentity } from '../spine-append-core.mjs';
+import { redactDataPayload, redactText } from '../secret-scan.mjs';
+import { envActingSid } from '../id-grammar.mjs';
 
 function genId() {
   const t = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
@@ -34,32 +34,17 @@ function genId() {
   return `evt_${t}_${r}`;
 }
 
-async function currentSegment(eventsDir) {
-  await mkdir(eventsDir, { recursive: true });
-  let files;
-  try {
-    files = (await readdir(eventsDir)).filter((f) => /^\d{12}\.ndjson$/.test(f)).sort();
-  } catch { files = []; }
-  if (files.length === 0) {
-    const name = '000000000001.ndjson';
-    await writeFile(join(eventsDir, name), '');
-    return name;
-  }
-  const last = files[files.length - 1];
-  try {
-    const st = await stat(join(eventsDir, last));
-    if (st.size < ROLL_BYTES) return last;
-  } catch {}
-  const next = String(parseInt(last.split('.')[0], 10) + 1).padStart(12, '0') + '.ndjson';
-  await writeFile(join(eventsDir, next), '');
-  return next;
-}
-
 // Append a TOKEN_USAGE_REPORTED event directly to the spine NDJSON.
 //
 // repoRoot: the .maddu/ parent dir.
 // payload : { runtime, sessionId, model, inputTokens?, outputTokens?,
-//             cacheRead?, cacheCreation?, unreportedTokens? }
+//             cacheRead?, cacheCreation?, unreportedTokens?, pricingModel? }
+//
+// `model` is DISPLAY metadata (may be a '<runtime>-unknown' fallback or an
+// unproven MADDU_MODEL_HINT). `pricingModel` is the model string the wrapper
+// PARSED out of the provider's own stream — the only value eligible for
+// pricingIdentity. Wrappers that don't parse the stream (gemini) never pass
+// it, so a hinted-but-unproven model can never become pricing provenance.
 export async function appendTokenUsage(repoRoot, payload) {
   const eventsDir = join(repoRoot, '.maddu', 'events');
   const ts = new Date().toISOString();
@@ -82,19 +67,90 @@ export async function appendTokenUsage(repoRoot, payload) {
   if (typeof payload.cacheCreation === 'number') ev.data.cacheCreation = payload.cacheCreation;
   if (payload.unreportedTokens === true) ev.data.unreportedTokens = true;
 
+  // S4 cost provenance: stamp pricingIdentity ONLY when BOTH halves are
+  // proven — the authority arrives via MADDU_PRICING_AUTHORITY (declared on
+  // the runtime descriptor, grammar-checked and inheritance-scrubbed at the
+  // spawn seam), and the model is `payload.pricingModel`: parsed from the
+  // provider's own stream, passed SEPARATELY from the display `model`
+  // (funnel r1-F2 — a '-unknown' fallback or an unproven model hint must
+  // never become factual provenance on the append-only spine). Anything
+  // less → omit the field entirely; the row stays honestly unpriced. No
+  // estimate is ever computed or written here — pricing is read-time
+  // presentation.
+  const authority = process.env.MADDU_PRICING_AUTHORITY;
+  if (typeof authority === 'string' && authority.length > 0 &&
+      typeof payload.pricingModel === 'string' && payload.pricingModel.length > 0) {
+    ev.data.pricingIdentity = { authority, model: payload.pricingModel };
+  }
+
+  // Workspace identity (S2): CACHE-ONLY, freshness-proven read (r2-F5) — the
+  // wrapper never scans/derives (its standalone contract forbids the heavier
+  // machinery, and a drop is acceptable by design). readFreshCachedIdentity
+  // applies the mode/fingerprint/delta law without any authority scan:
+  //   fresh    → stamp the proven-current identity
+  //   conflict → drop the event entirely (a frozen workspace refuses
+  //              best-effort writes rather than spreading either identity)
+  //   unknown  → absent/mode-less/unprovable cache — emit ws-less, tolerated
+  //              forward-only like prev_hash
+  try {
+    const idf = await readFreshCachedIdentity(repoRoot, { refresh: true });
+    if (idf.state === 'conflict') return null; // frozen — drop, never block
+    if (idf.state === 'fresh') ev.ws = idf.ws;
+  } catch { /* best-effort */ }
+
+  // This append bypasses spine.append(), so it applies the same write-boundary
+  // sweep itself. The fields are numbers by construction EXCEPT `model`, which
+  // is parsed from the provider stream — a malformed frame must not carry a
+  // secret-shaped string onto the spine. Clean data (the normal case, always)
+  // passes through by reference. secret-scan.mjs is stdlib-only pure regex, so
+  // the wrapper's standalone contract holds.
+  ev.data = redactDataPayload(ev.data);
+
   // #12c sync mode: land in the replica's partition on a valid chain (shared,
   // stdlib-only core). Token accounting is best-effort and MUST NOT block the
   // worker's exit: the funnel wait is bounded (maxWaitMs), and if a `spine sync
   // init` migration is pending we DROP this one event rather than block or write
   // into an incomplete partition (nothing written → no chain fork). The caller wraps
   // this in try/catch + logWrapperError. Default mode keeps the flat write below.
-  const w = await resolveWriteReplica(repoRoot, { timeoutMs: 3000 });
+  //
+  // MADDU_WRAPPER_APPEND_WAIT_MS (RAISE-ONLY): on saturated CI runners the 3s
+  // funnel wait can expire under normal (slow) operation, so the designed
+  // drop-on-timeout degradation fires and the ledger legitimately misses rows —
+  // a hardware-dependent false alarm in exact-total tests. The env can only
+  // RAISE the bound (a longer best-effort wait is strictly safer accounting;
+  // shortening it would widen the drop window), so values at or below the
+  // default (and garbage) are ignored.
+  const defaultWaitMs = 3000;
+  const rawWait = Number(process.env.MADDU_WRAPPER_APPEND_WAIT_MS);
+  const waitMs = Number.isFinite(rawWait) && rawWait > defaultWaitMs ? rawWait : defaultWaitMs;
+  const w = await resolveWriteReplica(repoRoot, { timeoutMs: waitMs });
   if (w.pending) return null; // migration in flight — drop this token event
-  if (w.id) return appendPartitioned(repoRoot, w.id, ev, { maxWaitMs: 3000 });
+  if (w.unattached) return null; // r7-F1: unattached clone — never write a flat event that can't be Git-carried
+  if (w.id) {
+    // r16-F1: an attached sync workspace shares its events via git — an
+    // UNPROVABLE identity (absent/stale/unreadable cache, failed mode probe)
+    // drops the best-effort event rather than emitting an S2-unprotected
+    // ws-less line into the partition.
+    if (typeof ev.ws !== 'string') return null;
+    return appendPartitioned(repoRoot, w.id, ev, { maxWaitMs: waitMs });
+  }
 
-  const seg = await currentSegment(eventsDir);
-  await appendFile(join(eventsDir, seg), JSON.stringify(ev) + '\n');
-  return ev;
+  // Default flat path — through the SHARED locked+chained primitive (audit P1) so
+  // token events carry prev_hash like every other flat write (no keyless flat
+  // writer remains → the verifier's chain-strip detection stays free of false
+  // positives). Best-effort: `maxWaitMs` bounds lock-contention polling; if the
+  // funnel is contended past the budget the acquire throws and we DROP (return
+  // null, write nothing) rather than block the worker's exit. A migration that
+  // committed while we waited surfaces as {reroute|pending}.
+  try {
+    const outcome = await appendFlatChained(repoRoot, eventsDir, ev, { maxWaitMs: waitMs });
+    if (outcome.reroute) return appendPartitioned(repoRoot, outcome.reroute, ev, { maxWaitMs: waitMs });
+    if (outcome.pending) return null;
+    if (outcome.unattached) return null;
+    return outcome.ev;
+  } catch {
+    return null; // contention past budget / transient — drop, never block the worker
+  }
 }
 
 // Wrapper-local error log. Failures here are tolerated — we never let a
@@ -104,7 +160,10 @@ export async function logWrapperError(repoRoot, workerId, msg) {
     const logDir = join(repoRoot, '.maddu', 'state', 'worker-logs');
     await mkdir(logDir, { recursive: true });
     const logPath = join(logDir, `${workerId || 'unknown'}.wrapper-errors.log`);
-    await appendFile(logPath, `[${new Date().toISOString()}] ${msg}\n`);
+    // Today every call site passes err.message templates only — but a future
+    // site that interpolates a provider-stream line must not persist a raw
+    // secret. No-op on clean text.
+    await appendFile(logPath, `[${new Date().toISOString()}] ${redactText(String(msg)).text}\n`);
   } catch {
     // Last-ditch: drop on the floor. We don't have a better escape.
   }
@@ -135,7 +194,7 @@ export function workerIdFromEnv() {
 }
 
 export function sessionIdFromEnv() {
-  return process.env.MADDU_SESSION_ID || null;
+  return envActingSid();
 }
 
 export function modelHintFromEnv() {

@@ -16,12 +16,12 @@
 // `digestRepo` does the fs read; `buildFleet` wires registry → digests →
 // rollup.
 
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { project } from './projections.mjs';
 import { readRegistry } from './workspaces.mjs';
 import { currencyVerdict } from './framework-currency.mjs';
 import { countCatches } from './outcome.mjs';
+import { resolveInstalledVersion } from './installed-version.mjs';
+import { deriveFunnel, FUNNEL_STAGES } from './activation-funnel.mjs';
 
 const DAY_MS = 86400000;
 // Liveness tiers, in days since the last spine event.
@@ -77,34 +77,32 @@ export function gatePassRate(gatesProjection) {
   return { total, ok: okCount, rate: okCount / total };
 }
 
-async function readMeta(repoRoot) {
-  for (const rel of ['maddu/version.json', 'version.json']) {
-    try {
-      const v = JSON.parse(await readFile(join(repoRoot, rel), 'utf8'));
-      return { version: v.version || null, released: v.released || null };
-    } catch {}
-  }
-  return { version: null, released: null };
-}
-
 // Digest one workspace WITHOUT running its maddu — read its projection + meta.
 // Returns null only when the repo can't be read at all. `now` injected for tests.
+// Version comes from the shared SSOT resolver (installed-version.mjs) so fleet
+// and insights can never disagree on the same repo again (Tier 1, 2026-07-16).
 export async function digestRepo(workspace, now = Date.now()) {
   const repoRoot = workspace.path;
   let proj = null;
   try { proj = await project(repoRoot); } catch { proj = null; }
-  const meta = await readMeta(repoRoot);
+  const meta = await resolveInstalledVersion(repoRoot);
   const lastActivity = proj ? tsFromEventId(proj.lastEventId) : null;
   const liveness = classifyLiveness(lastActivity, now);
   const currency = currencyVerdict({ released: meta.released, version: meta.version, now });
   const stops = proj && Array.isArray(proj.sliceStops) ? proj.sliceStops : [];
   const lastStop = stops.length ? stops[stops.length - 1] : null;
+  // Activation funnel (Tier 3): lifetime furthest ritual stage, read-only
+  // from the spine — which install is parked at which adoption step. Never
+  // decays; liveness above stays the separate recency signal.
+  let funnel = null;
+  try { funnel = await deriveFunnel(repoRoot); } catch {}
   return {
     id: workspace.id || workspace.label || repoRoot,
     label: workspace.label || workspace.id || repoRoot,
     role: workspace.role || 'project',
     path: repoRoot,
     version: meta.version,
+    versionSource: meta.source,
     released: meta.released,
     currency: { level: currency.level, ageDays: currency.ageDays },
     liveness,
@@ -114,6 +112,7 @@ export async function digestRepo(workspace, now = Date.now()) {
     caught: proj && proj.gates ? countCatches(proj.gates.runs) : { total: 0, hard: 0, soft: 0 },
     lastSlice: lastStop ? { ts: lastStop.ts, summary: (lastStop.summary || '').split('\n')[0].slice(0, 100) } : null,
     goal: proj && proj.goal ? (proj.goal.objective || null) : null,
+    funnel,
     readable: !!proj,
   };
 }
@@ -138,11 +137,17 @@ export function aggregate(digests, now = Date.now()) {
     const c = r.caught || { total: 0, hard: 0, soft: 0 };
     return { total: acc.total + c.total, hard: acc.hard + c.hard, soft: acc.soft + c.soft };
   }, { total: 0, hard: 0, soft: 0 });
+  // Funnel rollup (Tier 3): how many repos are parked at each stage — over
+  // ALL repos, not just active (a parked install is the finding, and the
+  // funnel never decays with liveness).
+  const funnelCounts = Object.fromEntries(FUNNEL_STAGES.map((s) => [s, 0]));
+  for (const r of repos) { if (r.funnel && funnelCounts[r.funnel.stage] !== undefined) funnelCounts[r.funnel.stage]++; }
   return {
     generatedAt: new Date(now).toISOString(),
     fleetLatest,
     total: repos.length,
     counts,
+    funnel: funnelCounts,
     active: {
       total: activeRepos.length,
       behind: behindActive.length,

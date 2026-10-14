@@ -6,10 +6,18 @@
 // In team-sync mode each replica writes only its own partition
 // (`.maddu/events/by-replica/<replicaId>/`). For `verify` to be allowed to treat
 // an intra-partition `prev_hash` fork as FATAL on import, that partition must have
-// a STRICTLY valid single-writer chain. The default single-machine spine append
-// path is deliberately lock-free (see spine.mjs:461-473) and is UNCHANGED by this
-// module — the funnel is taken ONLY in sync mode, and only around one partition's
-// read-then-write.
+// a STRICTLY valid single-writer chain. Originally (roadmap #12c) the funnel was
+// taken ONLY in sync mode and the default flat append stayed lock-free; since
+// v1.98.0 (audit P1) the flat path takes it too — spine-append-core.mjs
+// appendFlatChained() is the single locked+chained flat primitive that
+// spine.append() and the token wrapper route through — so EVERY writer, flat or
+// partitioned, computes `prev_hash` inside this lock. The critical section is
+// always one tail read + one O_APPEND write. (The stale "lock-free by design"
+// wording here outlived that change until v1.141.0.)
+//
+// This lock ORDERS writers; it says nothing about durability. What a resolved
+// append promises (handed to the OS, not fsync'd) is stated once, in spine.mjs
+// above append() under ACKNOWLEDGEMENT LEVEL.
 //
 // The real contenders for one partition are same-host only: the long-lived bridge
 // (runtime/server.js) + a short-lived CLI invocation. A replica never writes
@@ -45,7 +53,14 @@ import { open, readFile, unlink } from 'node:fs/promises';
 import { hostname } from 'node:os';
 import { randomBytes } from 'node:crypto';
 
-const HOST = hostname();
+// Lazy (v1.142.0, P0 audit A1-001): the local hostname is resolved on the first
+// lock acquire, never at module load, so importing this file reads no machine
+// state — a precondition for sharing it with the product runtime (docs/57 ADR-011).
+let HOST_CACHE = null;
+function localHost() {
+  if (HOST_CACHE === null) HOST_CACHE = hostname();
+  return HOST_CACHE;
+}
 const POLL_MS = 25;
 // A legit holder writes its owner record in the VERY NEXT await after open('wx') —
 // microseconds normally, at most a few ms even under a congested event loop. A lock
@@ -53,7 +68,26 @@ const POLL_MS = 25;
 // creator DIED between the create and the record write; it is reclaimed. The window
 // is deliberately long so a slow-but-alive holder is never reclaimed (which would let
 // two writers enter), making the reclaim safe without a post-create ownership recheck.
-const BODYLESS_GRACE_POLLS = 80;
+//
+// MADDU_LOCK_BODYLESS_GRACE_MS (RAISE-ONLY): on saturated 2-core CI runners a
+// live holder CAN be descheduled for >2s between the create and the record
+// write, so the reclaim fires on a live holder and two writers fork the chain —
+// the documented long-grace residual manifesting as hardware-dependent false
+// alarms (observed on GitHub runners; never locally). The env can only RAISE
+// the grace above the default: a longer grace is strictly more conservative
+// (it only delays reclaiming a genuinely dead holder — it can never admit a
+// second writer), while lowering it would widen the fork window, so values at
+// or below the default (and garbage) are ignored.
+const DEFAULT_BODYLESS_GRACE_MS = 80 * POLL_MS;
+// Read at ACQUIRE time (v1.142.0, A1-001), not at module load: importing this
+// file reads no environment; each acquire evaluates the raise-only knob afresh.
+function bodylessGraceMs() {
+  const raw = Number(process.env.MADDU_LOCK_BODYLESS_GRACE_MS);
+  return Number.isFinite(raw) && raw > DEFAULT_BODYLESS_GRACE_MS ? raw : DEFAULT_BODYLESS_GRACE_MS;
+}
+function bodylessGracePolls() {
+  return Math.round(bodylessGraceMs() / POLL_MS);
+}
 // Emit an onWait progress callback roughly once per second so a genuinely stuck
 // holder is visible to the operator rather than silently hanging.
 const WAIT_LOG_EVERY = Math.max(1, Math.round(1000 / POLL_MS));
@@ -90,7 +124,7 @@ async function readLock(lockPath) {
 // Steal a lock ONLY if we can prove its holder is a same-host, dead pid, and the
 // lock is still the exact record we read (nonce-guarded). Returns true if stolen.
 async function tryStealDead(lockPath, rec) {
-  if (!rec || rec.host !== HOST) return false; // cross-host: never auto-steal
+  if (!rec || rec.host !== localHost()) return false; // cross-host: never auto-steal
   if (pidAlive(rec.pid) !== false) return false; // only PROVEN-dead
   const cur = await readLock(lockPath);
   if (!cur || cur.ownerId !== rec.ownerId) return false; // it changed under us
@@ -116,19 +150,29 @@ function sleep(ms) {
 // safe because nothing was written, so no chain fork can result.
 export async function acquireAppendLock(lockPath, { onWait = null, maxWaitMs = Infinity } = {}) {
   const ownerId = nonce();
+  const gracePolls = bodylessGracePolls(); // evaluated per acquire, never at import (A1-001)
   const body = JSON.stringify({
     ownerId,
     pid: process.pid,
-    host: HOST,
+    host: localHost(),
     startedAt: new Date().toISOString(),
   });
   let waited = 0;
   let nullReads = 0;
+  let epermRetries = 0;
   for (;;) {
     let fh = null;
     try {
       fh = await open(lockPath, 'wx'); // O_CREAT | O_EXCL — atomic arbiter
     } catch (e) {
+      // Windows transient (AV scan / a concurrent rename touching the parent
+      // dir): open can EPERM/EACCES briefly without any real permission
+      // problem — the same class of error graceful-fs retries. A bounded
+      // retry keeps the arbiter honest; a PERSISTENT denial still throws.
+      if (e && (e.code === 'EPERM' || e.code === 'EACCES') && ++epermRetries <= 20) {
+        await sleep(POLL_MS);
+        continue;
+      }
       if (!e || e.code !== 'EEXIST') throw e;
       const rec = await readLock(lockPath);
       let reclaimed = false;
@@ -137,7 +181,7 @@ export async function acquireAppendLock(lockPath, { onWait = null, maxWaitMs = I
         // written microseconds after open) or a holder that DIED between open('wx')
         // and writing its record (no `pid` to prove dead). After a short grace of
         // consecutive empty reads, reclaim it — otherwise it would hang forever.
-        if (++nullReads >= BODYLESS_GRACE_POLLS) {
+        if (++nullReads >= gracePolls) {
           try { await unlink(lockPath); } catch { /* someone else reclaimed it */ }
           nullReads = 0;
           reclaimed = true;
@@ -172,10 +216,11 @@ export async function acquireAppendLock(lockPath, { onWait = null, maxWaitMs = I
     // re-enters. We deliberately do NOT recheck: an extra read of the lockfile under
     // heavy concurrency empirically broke the funnel here (a reproducible chain fork),
     // whereas the long grace already makes the reclaim practically unreachable (a live
-    // holder writes its record microseconds later, never 2s). Consistent with Máddu's
-    // spine model (best-effort concurrency, integrity VERIFY-REPORTED not lock-enforced
-    // — spine.mjs:461-473), any such fork would be surfaced by `spine verify` /
-    // `spine import` (fatal), never silently merged.
+    // holder writes its record microseconds later, never 2s). Since v1.98.0 (audit
+    // P1) this funnel wraps the flat append too (spine-append-core.appendFlatChained),
+    // so the chain is lock-enforced at write on a post-cutover spine — and any residual
+    // fork (a pre-cutover spine, or this theoretical reclaim) is still surfaced by
+    // `spine verify` / `spine import` (fatal on a strict chain), never silently merged.
     return { ownerId, release: () => releaseAppendLock(lockPath, ownerId) };
   }
 }

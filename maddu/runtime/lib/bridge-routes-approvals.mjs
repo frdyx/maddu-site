@@ -15,6 +15,7 @@ import { append, EVENT_TYPES } from './spine.mjs';
 import { project } from './projections.mjs';
 import { maybeAutoDecide } from './approvals.mjs';
 import { sendJson, readBody } from './http-util.mjs';
+import { readBodySessionId } from './bridge-body-id.mjs';
 
 const reply = (res, code, body) => { sendJson(res, code, body); return true; };
 
@@ -27,9 +28,11 @@ export async function routeApprovals({ req, res, path, repoRoot }) {
   if (path === '/bridge/approvals/request' && req.method === 'POST') {
     const body = (await readBody(req)) || {};
     if (!body.tool) return reply(res, 400, { error: 'tool required' });
+    const sidr = readBodySessionId(body, { required: false });
+    if (!sidr.ok) return reply(res, sidr.status, { error: sidr.error });
     const ev = await append(repoRoot, {
       type: EVENT_TYPES.APPROVAL_REQUESTED,
-      actor: body.sessionId || null,
+      actor: sidr.sessionId,
       lane: body.lane || null,
       data: {
         tool: body.tool,
@@ -61,17 +64,29 @@ export async function routeApprovals({ req, res, path, repoRoot }) {
     if (!body.decision) return reply(res, 400, { error: 'decision required' });
     const valid = ['allow-once', 'allow-always', 'deny', 'deny-always'];
     if (!valid.includes(body.decision)) return reply(res, 400, { error: `decision must be one of ${valid.join('|')}` });
+    // A decision binds to a real, still-open request (v1.145.0, P0 audit
+    // A3-001) — the same guard `maddu approval respond` has always applied:
+    // unknown id → 404, already decided (by an operator or by policy) → 409,
+    // never a second row. Lane and tool come from the REQUEST, not the caller's
+    // body, so the ledger row describes what was actually approved. Same
+    // check-then-append shape as the CLI; single-use consumption inside the
+    // append lock is the runtime RFC's decision handle (ADR-005), not this route.
+    const proj = await project(repoRoot);
+    const open = proj.approvals.open.find((a) => a.approvalId === body.approvalId);
+    if (!open) {
+      const decided = proj.approvals.ledger.find((l) => l.approvalId === body.approvalId);
+      if (decided) return reply(res, 409, { error: 'approval already decided', approvalId: body.approvalId, decision: decided.decision });
+      return reply(res, 404, { error: 'approval not found', approvalId: body.approvalId });
+    }
     const ev = await append(repoRoot, {
       type: EVENT_TYPES.APPROVAL_DECIDED,
       actor: body.actor || 'operator',
-      lane: body.lane || null,
+      lane: open.lane || null,
       data: {
         approvalId: body.approvalId,
         decision: body.decision,
         reason: body.reason || null,
-        // Carry through tool/lane on the decision so a request that was already
-        // auto-resolved by policy still surfaces in the ledger row.
-        tool: body.tool || null
+        tool: open.tool || null
       }
     });
     return reply(res, 200, { ok: true, event: ev });

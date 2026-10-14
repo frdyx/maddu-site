@@ -1,6 +1,7 @@
 # build
 dist/
 .astro/
+preview.log
 
 # deps
 node_modules/

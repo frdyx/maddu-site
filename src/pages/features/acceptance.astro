@@ -1,0 +1,268 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Callout from '../../components/Callout.astro';
+import EventStream from '../../components/EventStream.astro';
+import PageNext from '../../components/PageNext.astro';
+import CtaBlock from '../../components/CtaBlock.astro';
+---
+
+<Layout title="Acceptance proofs — RED→GREEN against a frozen oracle" pathname="/features/acceptance">
+  <section class="page-head">
+    <div class="container">
+      <div class="eyebrow-chain">
+        <span class="eyebrow">Feature</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">maddu goal set --oracle --impl</span>
+        <span class="eyebrow-sep">·</span>
+        <span class="eyebrow-dim">since v1.121.0</span>
+      </div>
+      <h1>Acceptance proofs. <span class="dim-h1">A check that never rejected anything never showed it can.</span></h1>
+      <p class="lede">
+        A green suite tells you it passes <em>now</em>. It does not tell you it ever failed. An acceptance proof says one narrow thing about the record: this command was observed to <strong>exit nonzero</strong>, and later to <strong>exit zero</strong>, while the thing judging it did not change.
+      </p>
+      <pre class="feat-cli"><code>$ maddu orient
+✓ met  retry backs off exponentially  — npm test -- retry
+    proof: RED→GREEN · oracle 1 file frozen</code></pre>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 01 · The problem</span>
+        <h2>The oldest way to weaken verification touches no production code.</h2>
+        <p>
+          Write a check that passes no matter what — or quietly relax one that used to bite — and then truthfully report green. Nothing in the diff looks wrong, the suite is honestly passing, and the verdict is worthless. Drift detection watches the machinery that decides what a result <em>means</em>; it says nothing about whether the check has ever rejected anything. That is the other half, and it is the half acceptance proofs address.
+        </p>
+      </header>
+
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Declared</span>
+            <span class="panel-aside">on the goal</span>
+          </div>
+          <p>Three declarations ride together: the <strong>command</strong> that must flip, the <strong>oracle</strong> set that must stay frozen across the flip, and the <strong>implementation</strong> set that must move. Both set flags are repeatable and shape-validated at the door.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Observed</span>
+            <span class="panel-aside">on purpose</span>
+          </div>
+          <p><code>maddu orient</code> and <code>maddu loop ralph</code> are the only observers — the two commands an operator invokes deliberately. Each observation appends a <code>VERIFICATION_STARTED</code> / <code>VERIFICATION_RAN</code> pair carrying the acceptance identity.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Derived</span>
+            <span class="panel-aside">never stored</span>
+          </div>
+          <p>There is no proof event and no minting verb. The verdict is re-derived from those receipts every time somebody looks, so a proof cannot outlive the facts that support it.</p>
+        </div>
+      </div>
+
+      <Callout tone="ok" title="“Nothing declared” never renders like “declared and clean”" tag="three-distinct-refusals">
+        <p>
+          The <code>acceptance-proven</code> gate keeps three refusals visibly separate: no active goal, an active goal whose conditions carry no verify command, and an active goal with no <code>--oracle</code>/<code>--impl</code> set. A repo that has declared nothing reads as having declared nothing — it never borrows the look of a clean result.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 02 · How you declare it</span>
+        <h2>Two grammars, and a loop that refuses rather than burning iterations.</h2>
+      </header>
+
+      <pre class="feat-cli"><code>$ maddu goal set "ship the retry backoff" \
+    --success "npm test -- retry::retry backs off exponentially" \
+    --oracle  "test/retry.test.js" \
+    --impl    "src/retry.js"
+
+# adopt the active goal's conditions and declared sets
+$ maddu loop ralph --from-goal --iterate "&lt;agent turn&gt;"
+
+# or declare one ad-hoc acceptance for this loop only
+$ maddu loop ralph --goal "fix the retry test" \
+    --verify "npm test -- retry" \
+    --oracle "test/retry.test.js" --impl "src/retry.js"</code></pre>
+
+      <Callout tone="warn" title="Breaking change in v1.121.0" tag="loop-ralph-verify">
+        <p>
+          Bare <code>maddu loop ralph --verify</code> without <strong>both</strong> <code>--oracle</code> and <code>--impl</code> now <strong>exits 2</strong>: an acceptance with no declared sets can never form a proof, so the loop refuses at the door instead of iterating toward something unprovable. Passing <code>--from-goal</code> and <code>--verify</code> together also exits 2 — two answers to one question. A goal that declares neither set is a <em>legacy goal</em>: it evaluates its conditions exactly as before, records no acceptance receipts, and adds no noise.
+        </p>
+      </Callout>
+
+      <p class="feat-note">
+        Before iteration 1, ralph records an explicit <strong>baseline observation</strong> — the RED that must exist before any later GREEN can pair with it. If the baseline is already green the loop still runs, and that GREEN can close a qualifying earlier RED that <code>orient</code> recorded.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 03 · Reading proof state</span>
+        <h2><code>live</code> is the only positive verdict.</h2>
+        <p>
+          The state vocabulary is closed, and every state that is not <code>live</code> is not green. A stale proof cannot keep rendering over code the GREEN never ran.
+        </p>
+      </header>
+
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">live</span><span class="panel-aside">the only pass</span></div>
+          <p>A qualifying pair anchors the latest observation and every liveness condition holds.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">historically-proven</span><span class="panel-aside">not green</span></div>
+          <p>Proven once, but a liveness condition now fails — the implementation moved since, for instance.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">regressed</span><span class="panel-aside">not green</span></div>
+          <p>Proven once; the latest observation exits nonzero again.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">indeterminate</span><span class="panel-aside">not green</span></div>
+          <p>The latest observation did not complete — a timeout, a signal, a spawn error, a void receipt.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">unproven</span><span class="panel-aside">the honest default</span></div>
+          <p>No qualifying pair anchors the latest observation. This command has never been observed to exit nonzero.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">team-sync</span><span class="panel-aside">refused</span></div>
+          <p>A partitioned spine has no single order in which a RED provably precedes a GREEN, so derivation refuses rather than guessing. Never rendered as green — and equally, never covered.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 04 · The gate</span>
+        <h2>Advisory on purpose — and that ceiling is permanent.</h2>
+        <p>
+          <code>acceptance-proven</code> renders <code>N/M live</code> wherever gates run — <code>maddu doctor</code>, <code>maddu audit acceptance</code>, <code>maddu ci</code> — and is green only when <em>every</em> verifiable condition of the active goal is <code>live</code>.
+        </p>
+      </header>
+
+      <Callout tone="warn" title="It ships at severity warn, and that is not a gap" tag="permanently-advisory">
+        <p>
+          <code>maddu ci pin</code> structurally refuses warn-severity gates, so this gate can never become a required, fail-capable check in shared CI. That ceiling is the honest one: the actor who can green a proof can re-declare the goal underneath it, so a <code>critical</code> severity would lend the signal trust-boundary weight it does not have. An operator-authored shadow gate under <code>.maddu/gates/</code> is not a promotion path either — <code>.maddu/*</code> is gitignored, so a shadow never reaches a PR diff or a CI checkout.
+        </p>
+      </Callout>
+
+      <p class="feat-note">
+        The gate <strong>executes nothing</strong>. Observation belongs to <code>orient</code> and <code>loop ralph</code>; a gate that ran declared commands would turn <code>maddu doctor</code> into an arbitrary-command runner that any goal declaration could aim.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 05 · On the record</span>
+        <h2>What a proof looks like on the spine.</h2>
+      </header>
+      <EventStream
+        eyebrow="Declaration, RED, GREEN, gate"
+        source=".maddu/events/2026-08-12.ndjson"
+        entries={[
+          { time: '09:14:02.117', type: 'GOAL_DECLARED',        tone: 'session',   payload: 'oracle=1 pattern · impl=1 pattern · conditions=1',   actor: 'operator' },
+          { time: '09:14:09.885', type: 'VERIFICATION_STARTED', tone: 'framework', payload: 'acceptance=a1c4… · phase=baseline',                  actor: 'orient' },
+          { time: '09:14:14.402', type: 'VERIFICATION_RAN',     tone: 'danger',    payload: 'exit=1 · oracle=sha256:9f2b… · impl=sha256:04ce…',   actor: 'orient' },
+          { time: '10:41:33.208', type: 'VERIFICATION_STARTED', tone: 'framework', payload: 'acceptance=a1c4… · phase=observe',                   actor: 'orient' },
+          { time: '10:41:38.061', type: 'VERIFICATION_RAN',     tone: 'ok',        payload: 'exit=0 · oracle=sha256:9f2b… · impl=sha256:7d10…',   actor: 'orient' },
+          { time: '10:41:38.204', type: 'GATE_RAN',             tone: 'approval',  payload: 'acceptance-proven · 1/1 live · severity=warn',       actor: 'orient' },
+        ]}
+      />
+      <p class="feat-note">
+        Read the two <code>VERIFICATION_RAN</code> lines together and the proof is visible in the record itself: the exit code flipped, the oracle digest held, the implementation digest moved. <strong>There is no proof event</strong> — nothing here mints a verdict; the verdict is re-derived from these receipts on every read.
+      </p>
+      <p class="feat-note">
+        Related verbs: <a href="/capabilities/goal"><code>maddu goal</code></a> · <a href="/capabilities/orient"><code>maddu orient</code></a> · <a href="/capabilities/loop"><code>maddu loop</code></a> · <a href="/capabilities/doctor"><code>maddu doctor</code></a> · <a href="/capabilities/audit"><code>maddu audit</code></a>
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <header class="section-head">
+        <span class="eyebrow">§ 06 · Honest limits</span>
+        <h2>What it does not close is larger than what it does.</h2>
+        <p>
+          The list below is reproduced from <code>ACCEPTANCE_HONEST_LIMITS</code>, exported from the code itself and rendered as a pointer beside every proof readout — precisely so no surface can quietly narrow it.
+        </p>
+      </header>
+
+      <div class="grid-3">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Process-level</span><span class="panel-aside">not assertion-level</span></div>
+          <p>A RED means the declared command exited nonzero. A missing module, a bad config, an unresolvable interpreter, an inner signal death surfacing as <code>128+n</code> — all qualify. Every surface says “exited nonzero”, never “failed a test”.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">A weak oracle stays weak</span><span class="panel-aside">no quality claim</span></div>
+          <p>An assertion checking almost nothing, observed nonzero for an unrelated reason and then zero, yields an entirely honest and entirely worthless proof.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">No causation</span><span class="panel-aside">co-occurrence only</span></div>
+          <p>A moved implementation digest proves some declared byte changed between the two observations — not that the change caused the flip.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Endpoint equality</span><span class="panel-aside">not continuous immutability</span></div>
+          <p>A run that mutates the oracle or the implementation and restores it before the post-hash is not detected, and leaves no recorded difference at all.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Only declared sets are bound</span><span class="panel-aside">scoped</span></div>
+          <p>Digests bind the bytes, path, permission bits and entry type of what the declaration named — not the environment, not the revision, not files nobody declared. Whitespace-only edits satisfy the implementation-moved clause.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">A receipt is cooperative</span><span class="panel-aside">unkeyed chain</span></div>
+          <p>The spine chain is an unkeyed SHA-256 with no HMAC and no signature: fabricated receipts carrying a correctly computed <code>prev_hash</code> verify. Deriving a proof rather than storing it removes the minting verb, not the forgery. Nothing ties a proof to a reviewable commit.</p>
+        </div>
+      </div>
+
+      <Callout tone="accent" title="There is no re-baseline verb" tag="the-only-route-back">
+        <p>
+          Editing the oracle between the RED and the GREEN means the two observations recorded different oracle digests, so <strong>no qualifying pair ever forms</strong>. Re-declaring the goal changes the acceptance identity and leaves the new declaration visibly <em>unproven</em> rather than green. The only route back is to observe the new command exit nonzero and then exit zero — which is the work you were avoiding.
+        </p>
+      </Callout>
+    </div>
+  </section>
+
+  <PageNext
+    eyebrow="Next feature"
+    title="Governance in CI — red only on gates you pinned"
+    hint="Every deterministic gate runs headlessly, and the pipeline goes red only on the gates you committed as required."
+    href="/features/ci"
+    tone="ok"
+  />
+  <CtaBlock />
+</Layout>
+
+<style>
+  .feat-cli {
+    margin: var(--m-space-5) 0 0;
+    padding: var(--m-space-4) var(--m-space-5);
+    background: var(--m-bg-2);
+    border: 1px solid var(--m-line);
+    border-left: 2px solid var(--m-accent);
+    border-radius: var(--m-radius);
+    font-family: var(--m-font-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--m-fg-1);
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .feat-note {
+    margin-top: var(--m-space-5);
+    font-size: 13px;
+    color: var(--m-fg-2);
+    line-height: 1.6;
+  }
+  .feat-note code { font-size: 12px; }
+</style>

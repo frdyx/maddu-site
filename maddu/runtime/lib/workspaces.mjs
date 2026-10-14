@@ -14,34 +14,25 @@
 // that repo. Adding/removing/activating a workspace mutates this file and
 // nothing else.
 
-import { mkdir, readFile, writeFile, stat, chmod } from 'node:fs/promises';
+import { readFile, writeFile, stat, chmod } from 'node:fs/promises';
 import { join } from 'node:path';
-import { homedir, platform } from 'node:os';
+import { platform } from 'node:os';
+import { configDir, ensureConfigDir } from './config-dir.mjs';
+
+// Re-exported so global.mjs (and any consumer) keeps one import site; the
+// derivation itself lives in config-dir.mjs (v1.139.0, register E3).
+export { configDir };
 
 const SCHEMA_VERSION = 1;
 const SLUG_RE = /^[a-z][a-z0-9-]{0,40}$/;
 const WORKSPACE_ROLES = ['project', 'fixture', 'archive'];
-
-export function configDir() {
-  if (platform() === 'win32') {
-    const appData = process.env.APPDATA || join(homedir(), 'AppData', 'Roaming');
-    return join(appData, 'maddu');
-  }
-  const xdg = process.env.XDG_CONFIG_HOME || join(homedir(), '.config');
-  return join(xdg, 'maddu');
-}
 
 export function registryPath() {
   return join(configDir(), 'workspaces.json');
 }
 
 async function ensureDir() {
-  const d = configDir();
-  await mkdir(d, { recursive: true });
-  if (platform() !== 'win32') {
-    try { await chmod(d, 0o700); } catch {}
-  }
-  return d;
+  return ensureConfigDir();
 }
 
 export async function registryExists() {
@@ -53,7 +44,7 @@ function emptyRegistry() {
   return { schemaVersion: SCHEMA_VERSION, workspaces: [], active: null };
 }
 
-export function workspaceRole(role) {
+function workspaceRole(role) {
   if (role === undefined || role === null || role === '') return 'project';
   return String(role).trim().toLowerCase();
 }
@@ -146,15 +137,6 @@ export async function activateWorkspace(id) {
   return reg;
 }
 
-export async function setLabel(id, label) {
-  const reg = await readRegistry();
-  const w = reg.workspaces.find((x) => x.id === id);
-  if (!w) throw new Error(`unknown workspace: ${id}`);
-  w.label = label;
-  await writeRegistry(reg);
-  return w;
-}
-
 export async function setRole(id, role) {
   const reg = await readRegistry();
   const w = reg.workspaces.find((x) => x.id === id);
@@ -164,15 +146,3 @@ export async function setRole(id, role) {
   return w;
 }
 
-// Resolve { workspaceId → repoRoot } map for bridge boot.
-// If the registry is empty/missing, the caller is expected to fall back to
-// legacy cwd walk-up and synthesize `{ default: <repoRoot> }`.
-export async function resolveWorkspaceMap() {
-  const reg = await readRegistry();
-  const map = new Map();
-  for (const w of reg.workspaces) map.set(w.id, w.path);
-  return { map, active: reg.active, registry: reg };
-}
-
-export { SCHEMA_VERSION };
-export { WORKSPACE_ROLES };

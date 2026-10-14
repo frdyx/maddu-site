@@ -41,19 +41,14 @@ export async function project(repoRoot) {
   let janitorAutoClosedThisHour = 0;
   let janitorLastRunAt = null;
   const hourMs = 60 * 60 * 1000;
-  // Default-path lane claims (pre-#12c behavior): lane -> { lane, sessionId,
-  // focus, claimedAt }. Last-writer-claim, release clears the lane. Used when
-  // NOT in sync mode — byte-identical to the original reducer.
-  const claims = new Map();
-  // Team-sync reconciliation (sync mode only): track EVERY active claim per
-  // lane keyed by owning session. The winner is re-derived every rebuild as the
-  // claim earliest in the k-way-merged total order (first-claimer holds); all
-  // later concurrent claims are computed as superseded and surfaced as a
-  // read-time `contentions` view, and NOTHING is written to the spine (rule #2).
-  // Re-derived from the whole set each rebuild, so a late-arriving earlier claim
-  // wins on the next rebuild — monotonic, no frozen "B won" record.
-  const laneClaims = new Map();            // lane -> Map<sessionId, { lane, sessionId, focus, claimedAt, _order }>
-  let claimSeq = 0;                        // monotonic rank = position in the merged total order
+  // Lane ownership (PR-C): ONE ownership-fold state, mutated through the shared
+  // applyOwnershipEvent so this read-time projection and every write-time
+  // decision (ownersOf) reduce identically. Default = last-writer-claim /
+  // release clears the lane; sync = per-owner first-claimer, later concurrent
+  // claims surfaced as the read-time `contentions` view (NOTHING written to the
+  // spine, rule #2 — re-derived each rebuild, so a late-arriving earlier claim
+  // wins on the next rebuild; monotonic, no frozen "B won" record).
+  const ownState = createOwnershipState();
   const sliceStops = [];                   // list of slice-stop events, newest last
   const inbox = [];                        // list of inbox events
 
@@ -104,6 +99,7 @@ export async function project(repoRoot) {
   let gatesLastRunAt = null;
   const sourceHashPaths = {};                 // path -> { hash, recordedAt }
   let sourceHashesLastRecomputedAt = null;
+  let sourceHashesLastReason = null;          // why the last re-pin happened
 
   // Governance Phase 3: slice scope-locks (opt-in).
   // Map sliceId → { scope, lockedScopeHash, expansionBound, expansions[], functionalApproved, declaredAt }
@@ -122,7 +118,7 @@ export async function project(repoRoot) {
   //   teams       : Map teamId -> { id, openedAt, parentSessionId, lanes[], members[], status, closedAt }
   //   pipelines   : Map pipelineRunId -> { id, name, goal, startedAt, stages[], status, completedAt }
   //   advisors    : Array of { id, ts, runtime, prompt, parentSessionId, artifactPath }
-  //   tokenLedger : Array of { ts, runtime, sessionId, model, inputTokens, outputTokens, cacheRead, cacheCreation }
+  //   tokenLedger : Array of { ts, runtime, sessionId, model, inputTokens, outputTokens, cacheRead, cacheCreation, costUsd?, costProvenance?, pricingIdentity? }
   //                 Entries without input/output token counts are kept as
   //                 "minimum-schema" rows; `maddu cost --unreported-count`
   //                 surfaces the gap honestly instead of zeroing it.
@@ -134,6 +130,14 @@ export async function project(repoRoot) {
   // v0.19 Phase 3 — skill auto-injection ledger.
   //   skillInjections: [{ ts, sessionId, skillIds[], triggers[], tags[], totalBytes }]
   const skillInjections = [];
+  // v1.115.0 (memory-recall track) — bounded memory recall ledger.
+  //   memoryInjections: [{ ts, sessionId, factIds[], totalBytes, lane }]
+  const memoryInjections = [];
+  // Oversight surface — skill-injection refusals (the URL-swap payoff made visible).
+  //   skillRefusals: [{ ts, sessionId, reason, refused[{ id, provenance, reason }] }]
+  // Raw payload only — no derived strings, no wall-clock math. The bridge/CLI map
+  // each refused[].reason to plain copy and compute "how long ago" at display time.
+  const skillRefusals = [];
 
   let lastEventId = null;
 
@@ -190,6 +194,17 @@ export async function project(repoRoot) {
         if (s) {
           s.lastHeartbeatAt = ev.ts;
           if (ev.data.focus) s.focus = ev.data.focus;
+          // A heartbeat from a session that is still ACTIVE clears any
+          // janitor stale mark and restores its tree state — otherwise a
+          // renewed continuation stays visibly stale forever and the
+          // one-shot stale guard suppresses every later legitimate
+          // stale episode. Closed sessions stay closed (a late heartbeat
+          // never resurrects state).
+          if (s.status === 'active') {
+            janitorStaleSet.delete(ev.actor);
+            const tt = sessionsTree.get(ev.actor);
+            if (tt && tt.state === 'stale') tt.state = 'active';
+          }
         }
         const t = sessionsTree.get(ev.actor);
         if (t) t.lastHeartbeatAt = ev.ts;
@@ -204,16 +219,8 @@ export async function project(repoRoot) {
         }
         const t = sessionsTree.get(ev.actor);
         if (t) t.state = 'closed';
-        // Release any claims held by this session (across every lane).
-        if (syncMode) {
-          for (const [lane, owners] of laneClaims) {
-            if (owners.delete(ev.actor) && owners.size === 0) laneClaims.delete(lane);
-          }
-        } else {
-          for (const [lane, c] of claims) {
-            if (c.sessionId === ev.actor) claims.delete(lane);
-          }
-        }
+        // Release any claims held by this session (shared ownership fold).
+        applyOwnershipEvent(ownState, ev, { syncMode });
         // Clear from the janitor's stale set — the session is closed
         // by the operator and no longer a janitor concern.
         janitorStaleSet.delete(ev.actor);
@@ -244,62 +251,16 @@ export async function project(repoRoot) {
         // The cockpit can re-window against Date.now() at display time
         // if it wants a sliding hour.
         janitorAutoClosedThisHour += 1;
-        // Release any claims held by the auto-closed session (across every lane).
-        if (syncMode) {
-          for (const [lane, owners] of laneClaims) {
-            if (owners.delete(sid) && owners.size === 0) laneClaims.delete(lane);
-          }
-        } else {
-          for (const [lane, c] of claims) {
-            if (c.sessionId === sid) claims.delete(lane);
-          }
-        }
+        // Release any claims held by the auto-closed session (shared fold).
+        applyOwnershipEvent(ownState, ev, { syncMode });
         break;
       }
-      case 'LANE_CLAIMED': {
-        if (!syncMode) {
-          // Pre-#12c default path: last-writer-claim.
-          claims.set(ev.lane, {
-            lane: ev.lane,
-            sessionId: ev.actor,
-            focus: ev.data.focus || null,
-            claimedAt: ev.ts
-          });
-          break;
-        }
-        // Sync mode: track every owner; first-claimer holds.
-        let owners = laneClaims.get(ev.lane);
-        if (!owners) { owners = new Map(); laneClaims.set(ev.lane, owners); }
-        const rank = claimSeq++;
-        const prior = owners.get(ev.actor);
-        owners.set(ev.actor, {
-          lane: ev.lane,
-          sessionId: ev.actor,
-          focus: ev.data.focus || null,
-          claimedAt: ev.ts,
-          // A re-claim by the SAME owner updates its data (last-writer-wins
-          // within an owner) but KEEPS its original total-order rank, so
-          // first-claimer semantics hold and a focus refresh never moves the
-          // owner behind a rival.
-          _order: prior ? prior._order : rank,
-        });
+      // Lane ownership: one delegating pair — the shared fold applies the exact
+      // per-mode transition (default last-writer / sync per-owner first-claimer).
+      case 'LANE_CLAIMED':
+      case 'LANE_RELEASED':
+        applyOwnershipEvent(ownState, ev, { syncMode });
         break;
-      }
-      case 'LANE_RELEASED': {
-        if (!syncMode) {
-          // Pre-#12c default path: a release clears the lane unconditionally.
-          claims.delete(ev.lane);
-          break;
-        }
-        // Sync mode: drop ONLY the releasing owner's claim, so a co-claimant's
-        // (or foreign/bogus) release never evicts a surviving holder.
-        const owners = laneClaims.get(ev.lane);
-        if (owners) {
-          owners.delete(ev.actor);
-          if (owners.size === 0) laneClaims.delete(ev.lane);
-        }
-        break;
-      }
       case 'SLICE_STOP':
         sliceStops.push({ id: ev.id, ts: ev.ts, actor: ev.actor, lane: ev.lane, ...ev.data });
         break;
@@ -599,11 +560,19 @@ export async function project(repoRoot) {
         break;
       }
       case 'SOURCE_HASH_RECOMPUTED': {
+        // FULL REPLACEMENT, not a merge. A rebuild snapshots the ENTIRE declared
+        // pin set, so the newest event is the whole truth. Merging (the pre-fix
+        // behaviour) meant a path dropped from the config kept its hash forever
+        // and silently resurrected its stale baseline if it was ever re-added —
+        // and it hid the `removed` drift class entirely, since a deleted pinned
+        // file still had a recorded entry.
+        for (const k of Object.keys(sourceHashPaths)) delete sourceHashPaths[k];
         const paths = Array.isArray(ev.data?.paths) ? ev.data.paths : [];
         for (const p of paths) {
           if (p?.path && p?.hash) sourceHashPaths[p.path] = { hash: p.hash, recordedAt: ev.ts };
         }
         sourceHashesLastRecomputedAt = ev.ts;
+        sourceHashesLastReason = ev.data?.reason ?? null;
         break;
       }
       case 'GOAL_DECLARED':
@@ -613,8 +582,31 @@ export async function project(repoRoot) {
           // v1.6.0 — measurable success conditions [{ text, verify }]. Older
           // GOAL_DECLARED events without it project to [] (forward-compat).
           success: Array.isArray(ev.data.success) ? ev.data.success : [],
-          setAt: ev.ts
+          // PR-2 W1 — the declared acceptance sets, array-guarded exactly like
+          // `success` so a pre-W1 GOAL_DECLARED projects two empty sets rather
+          // than undefined. `declEventId` is the goal's own event id: it is an
+          // identity term of every acceptance declared BY this goal, so a
+          // consumer must be able to reach it without re-reading the spine.
+          oracle: Array.isArray(ev.data.oracle) ? ev.data.oracle : [],
+          implementation: Array.isArray(ev.data.implementation) ? ev.data.implementation : [],
+          declEventId: ev.id,
+          setAt: ev.ts,
+          // Goal lifecycle: a freshly declared goal is active until GOAL_COMPLETED.
+          status: 'active',
+          completedAt: null,
+          completionNote: null,
         };
+        break;
+      case 'GOAL_COMPLETED':
+        // Close the current goal's lifecycle (latest-declared goal wins, same as
+        // GOAL_DECLARED). A completed goal stays visible (with its outcome) so
+        // `goal show` / orient can prompt for a fresh one instead of silently
+        // re-surfacing a finished objective as "the goal".
+        if (goal && goal.status === 'active') {
+          goal.status = ev.data.outcome === 'abandoned' ? 'abandoned' : 'completed';
+          goal.completedAt = ev.ts;
+          goal.completionNote = ev.data.note || null;
+        }
         break;
       case 'HANDOFF_SET':
         handoff = { body: ev.data.body || '', by: ev.data.by || ev.actor || null, setAt: ev.ts };
@@ -806,6 +798,16 @@ export async function project(repoRoot) {
       }
       // v0.18 Phase 4 — token ledger.
       // v0.19 Phase 3 — skill auto-injection event.
+      case 'MEMORY_INJECTED': {
+        memoryInjections.push({
+          ts: ev.ts,
+          sessionId: ev.data?.sessionId || ev.actor || null,
+          factIds: Array.isArray(ev.data?.factIds) ? ev.data.factIds.slice() : [],
+          totalBytes: typeof ev.data?.totalBytes === 'number' ? ev.data.totalBytes : null,
+          lane: ev.data?.lane || null,
+        });
+        break;
+      }
       case 'SKILL_INJECTED': {
         skillInjections.push({
           ts: ev.ts,
@@ -817,11 +819,29 @@ export async function project(repoRoot) {
         });
         break;
       }
+      // Oversight surface — a skill was withheld at inject-time (untrusted
+      // provenance or unacknowledged external refs). Kept raw; the display
+      // layer maps each refused[].reason to plain language.
+      case 'SKILL_INJECTION_REFUSED': {
+        skillRefusals.push({
+          ts: ev.ts,
+          sessionId: ev.data?.sessionId || ev.actor || null,
+          reason: typeof ev.data?.reason === 'string' ? ev.data.reason : '',
+          refused: Array.isArray(ev.data?.refused)
+            ? ev.data.refused.map((r) => ({
+                id: r?.id || null,
+                provenance: r?.provenance || null,
+                reason: r?.reason || null,
+              }))
+            : [],
+        });
+        break;
+      }
       case 'TOKEN_USAGE_REPORTED': {
         // Minimum schema: { runtime, sessionId, model, ts }. Optional:
         // inputTokens, outputTokens, cacheRead, cacheCreation. We keep
         // rows verbatim; `maddu cost` does the rollup + unreported count.
-        tokenLedger.push({
+        const row = {
           ts: ev.ts,
           runtime: ev.data.runtime || null,
           sessionId: ev.data.sessionId || ev.actor || null,
@@ -830,7 +850,29 @@ export async function project(repoRoot) {
           outputTokens: typeof ev.data.outputTokens === 'number' ? ev.data.outputTokens : null,
           cacheRead: typeof ev.data.cacheRead === 'number' ? ev.data.cacheRead : null,
           cacheCreation: typeof ev.data.cacheCreation === 'number' ? ev.data.cacheCreation : null,
-        });
+        };
+        // S4 cost provenance — omitted ≠ null ≠ zero: the three provenance
+        // fields are threaded ONLY when present on the event (Object.hasOwn),
+        // so `maddu cost --usd` can distinguish "provider reported null cost"
+        // from "field never emitted". A present-but-mistyped value is dropped
+        // (absent), never coerced — fail toward the unpriced bucket.
+        if (Object.hasOwn(ev.data, 'costUsd') &&
+            (typeof ev.data.costUsd === 'number' || ev.data.costUsd === null)) {
+          row.costUsd = ev.data.costUsd;
+        }
+        if (Object.hasOwn(ev.data, 'costProvenance') && typeof ev.data.costProvenance === 'string') {
+          row.costProvenance = ev.data.costProvenance;
+        }
+        if (Object.hasOwn(ev.data, 'pricingIdentity') &&
+            ev.data.pricingIdentity && typeof ev.data.pricingIdentity === 'object' &&
+            typeof ev.data.pricingIdentity.authority === 'string' &&
+            typeof ev.data.pricingIdentity.model === 'string') {
+          row.pricingIdentity = {
+            authority: ev.data.pricingIdentity.authority,
+            model: ev.data.pricingIdentity.model,
+          };
+        }
+        tokenLedger.push(row);
         break;
       }
     }
@@ -867,6 +909,7 @@ export async function project(repoRoot) {
   // holder = the claim earliest in the total order (lowest rank; a rank tie
   // breaks on sessionId so every replica converges on the same holder). Zero
   // spine writes — pure projection, re-derived every rebuild.
+  const { claims, laneClaims } = ownState;
   let claimsOut;
   const contentions = [];
   if (!syncMode) {
@@ -928,6 +971,7 @@ export async function project(repoRoot) {
     sourceHashes: {
       paths: { ...sourceHashPaths },
       lastRecomputedAt: sourceHashesLastRecomputedAt,
+      lastReason: sourceHashesLastReason,
     },
     // Governance Phase 3: slice scope-locks (opt-in).
     sliceLocks: { ...sliceLocks },
@@ -959,6 +1003,10 @@ export async function project(repoRoot) {
     tokenLedger: tokenLedger.slice(),
     // v0.19 Phase 3 — skill auto-injection ledger (cap 200 most recent).
     skillInjections: skillInjections.slice(-200),
+    // v1.115.0 memory-recall ledger (cap 200 most recent).
+    memoryInjections: memoryInjections.slice(-200),
+    // Oversight surface — skill-injection refusals (cap 200 most recent).
+    skillRefusals: skillRefusals.slice(-200),
   };
 }
 
@@ -1020,12 +1068,13 @@ export function projectionDefaults() {
     tasks: [], workers: [], proposals: [], bossTranscripts: {},
     goal: null, handoff: null, phase: null, autonomy: null, focus: null,
     gates: { lastRunAt: null, runs: [], summary: { ok: 0, warn: 0, fail: 0 } },
-    sourceHashes: { paths: {}, lastRecomputedAt: null },
+    sourceHashes: { paths: {}, lastRecomputedAt: null, lastReason: null },
     sliceLocks: {}, triggers: {}, pendingActions: [],
     reviews: { byVerdict: {}, recent: [] },
     openFollowups: [], sessionsTree: {},
     janitor: { lastRunAt: null, staleSessions: [], autoClosedTotal: 0 },
     teams: [], pipelines: [], advisors: [], tokenLedger: [], skillInjections: [],
+    skillRefusals: [], memoryInjections: [],
   };
 }
 
@@ -1053,5 +1102,198 @@ export function normalizeProjection(raw) {
   out.janitor = { ...d.janitor, ...(r.janitor && typeof r.janitor === 'object' ? r.janitor : {}) };
   out.sourceSchemaVersion = (typeof r.schemaVersion === 'number') ? r.schemaVersion : 0;
   out.schemaVersion = SCHEMA_VERSION;
+  return out;
+}
+
+// ── Narrow pure reducers over a SUPPLIED event snapshot (PR-A, v1.111.0) ─────
+//
+// The session-lifecycle transactions (close / stale-mark / renew / register)
+// must decide from the SAME strict snapshot they parse-gated — `project()`
+// always re-reads the spine tolerantly, so it cannot serve them. These
+// reducers are pure over explicit inputs and mirror project()'s session and
+// claim semantics EXACTLY (a parity fixture pins that). They deliberately
+// return only what the lifecycle helpers need; everything else stays on
+// project().
+//
+// reduceSessions(events, { nowMs }) → { sessions, activeSessions, staleSet }
+//   nowMs is accepted for API stability (callers compute ages themselves);
+//   the reduction itself is time-independent.
+export function reduceSessions(events, { nowMs = 0 } = {}) {
+  void nowMs;
+  const sessions = new Map();
+  const staleSet = new Set();
+  for (const ev of (Array.isArray(events) ? events : [])) {
+    if (!ev || typeof ev !== 'object') continue;
+    switch (ev.type) {
+      case 'SESSION_REGISTERED':
+      case 'SESSION_AUTO_REGISTERED':
+        sessions.set(ev.actor, {
+          id: ev.actor,
+          role: (ev.data && ev.data.role) || null,
+          label: (ev.data && ev.data.label) || null,
+          registeredAt: ev.ts,
+          lastHeartbeatAt: ev.ts,
+          closedAt: null,
+          status: 'active',
+        });
+        break;
+      case 'SESSION_HEARTBEAT': {
+        const s = sessions.get(ev.actor);
+        if (s) {
+          s.lastHeartbeatAt = ev.ts;
+          // Mirrors project(): an active session's heartbeat clears its
+          // janitor stale mark.
+          if (s.status === 'active') staleSet.delete(ev.actor);
+        }
+        break;
+      }
+      case 'SESSION_STALE_DETECTED':
+        if (ev.data && ev.data.sessionId) staleSet.add(ev.data.sessionId);
+        break;
+      case 'SESSION_CLOSED':
+      case 'SESSION_AUTO_CLOSED': {
+        const sid = ev.actor || (ev.data && ev.data.sessionId);
+        const s = sessions.get(sid);
+        if (s) { s.closedAt = ev.ts; s.status = 'closed'; }
+        staleSet.delete(sid);
+        break;
+      }
+      default: break;
+    }
+  }
+  const all = Array.from(sessions.values());
+  return {
+    sessions: all,
+    activeSessions: all.filter((s) => s.status === 'active'),
+    staleSet,
+  };
+}
+
+// ── Lane-ownership fold (PR-C, v1.113.0) — the SINGLE reduction authority ──────
+// One transition + one fold, consumed by BOTH the read-time projection
+// (project(): claims + contentions) and every write-time decision (ownersOf on a
+// fresh in-lock snapshot). Before PR-C the same reduction was hand-copied in
+// three places (project()'s inline reducer, its contentions builder, and
+// reduceClaims) and could drift; now they all derive from foldOwnership, so the
+// writer that DECIDES a claim and the projection that DISPLAYS it can never
+// disagree. syncMode is EXPLICIT: default = last-writer-claim /
+// unconditional-release-clear; sync = first-claimer (earliest _order) /
+// per-owner-release, later concurrent claims surfaced as read-time contentions.
+//   default -> st.claims:     Map<lane, { lane, sessionId, focus, claimedAt }>
+//   sync    -> st.laneClaims:  Map<lane, Map<sessionId, { ..., _order }>> + claimSeq
+export function createOwnershipState() {
+  return { claims: new Map(), laneClaims: new Map(), claimSeq: 0 };
+}
+
+// Apply ONE event's ownership transition to `st` (mutated in place, also
+// returned). Non-ownership events are ignored. Mirrors the exact semantics the
+// pre-PR-C inline reducers used, so project() output stays byte-identical.
+export function applyOwnershipEvent(st, ev, { syncMode = false } = {}) {
+  if (!ev || typeof ev !== 'object') return st;
+  switch (ev.type) {
+    case 'LANE_CLAIMED': {
+      if (!syncMode) {
+        // Default path: last-writer-claim.
+        st.claims.set(ev.lane, {
+          lane: ev.lane,
+          sessionId: ev.actor,
+          focus: (ev.data && ev.data.focus) || null,
+          claimedAt: ev.ts,
+        });
+        break;
+      }
+      // Sync: track every owner; a re-claim by the SAME owner updates its data
+      // but KEEPS its original total-order rank (first-claimer semantics — a
+      // focus refresh never moves an owner behind a rival).
+      let owners = st.laneClaims.get(ev.lane);
+      if (!owners) { owners = new Map(); st.laneClaims.set(ev.lane, owners); }
+      const rank = st.claimSeq++;
+      const prior = owners.get(ev.actor);
+      owners.set(ev.actor, {
+        lane: ev.lane,
+        sessionId: ev.actor,
+        focus: (ev.data && ev.data.focus) || null,
+        claimedAt: ev.ts,
+        _order: prior ? prior._order : rank,
+      });
+      break;
+    }
+    case 'LANE_RELEASED': {
+      if (!syncMode) { st.claims.delete(ev.lane); break; }
+      // Sync: drop ONLY the releasing owner, so a co-claimant's (or foreign/
+      // bogus) release never evicts a surviving holder.
+      const owners = st.laneClaims.get(ev.lane);
+      if (owners) {
+        owners.delete(ev.actor);
+        if (owners.size === 0) st.laneClaims.delete(ev.lane);
+      }
+      break;
+    }
+    case 'SESSION_CLOSED':
+    case 'SESSION_AUTO_CLOSED': {
+      const sid = ev.actor || (ev.data && ev.data.sessionId);
+      if (syncMode) {
+        for (const [lane, owners] of st.laneClaims) {
+          if (owners.delete(sid) && owners.size === 0) st.laneClaims.delete(lane);
+        }
+      } else {
+        for (const [lane, c] of st.claims) {
+          if (c.sessionId === sid) st.claims.delete(lane);
+        }
+      }
+      break;
+    }
+    default: break;
+  }
+  return st;
+}
+
+// Fold an event stream into final ownership state.
+export function foldOwnership(events, { syncMode = false } = {}) {
+  const st = createOwnershipState();
+  for (const ev of (Array.isArray(events) ? events : [])) applyOwnershipEvent(st, ev, { syncMode });
+  return st;
+}
+
+// Sync-mode canonical owner ordering for one lane's owner Map: earliest _order
+// first; a rank tie (impossible within a single lane — claimSeq is unique per
+// claim — but defended for determinism) breaks on sessionId so every replica
+// converges on the same holder.
+function sortSyncOwners(ownersMap) {
+  return Array.from(ownersMap.values()).sort(
+    (a, b) => a._order - b._order || (a.sessionId < b.sessionId ? -1 : a.sessionId > b.sessionId ? 1 : 0)
+  );
+}
+
+// ownersOf(events, lane, { syncMode }) -> { mode, holder, owners } — the
+// write-time authority. Writers call this on a FRESH in-lock strict snapshot to
+// see the FULL owner set (not just the winner) so they can reason about inactive
+// orphans and superseded owners. holder = the winning claim record (or null);
+// owners = every owner of the lane in canonical order (holder first).
+export function ownersOf(events, lane, { syncMode = false } = {}) {
+  const { claims, laneClaims } = foldOwnership(events, { syncMode });
+  if (!syncMode) {
+    const c = claims.get(lane) || null;
+    return { mode: 'default', holder: c, owners: c ? [c] : [] };
+  }
+  const ownersMap = laneClaims.get(lane);
+  const owners = ownersMap ? sortSyncOwners(ownersMap) : [];
+  return { mode: 'sync', holder: owners[0] || null, owners };
+}
+
+// reduceClaims(events, { syncMode }) -> claims array (one entry per held claim).
+// Delegates the fold to foldOwnership (single authority) then applies each
+// mode's winner selection — byte-identical to the pre-PR-C hand-rolled reducer.
+export function reduceClaims(events, { syncMode = false } = {}) {
+  const { claims, laneClaims } = foldOwnership(events, { syncMode });
+  if (!syncMode) return Array.from(claims.values());
+  const out = [];
+  for (const owners of laneClaims.values()) {
+    let winner = null;
+    for (const c of owners.values()) {
+      if (!winner || c._order < winner._order) winner = c;
+    }
+    if (winner) { const { _order, ...rest } = winner; out.push(rest); }
+  }
   return out;
 }

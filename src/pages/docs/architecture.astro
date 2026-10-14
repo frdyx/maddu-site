@@ -2,7 +2,7 @@
 import DocsLayout from '../../layouts/DocsLayout.astro';
 import Mermaid from '../../components/Mermaid.astro';
 import Legend from '../../components/Legend.astro';
-import { EVENT_TYPES, DOCTOR_GATES, AUDIT_CHECKS } from '../../data/stats';
+import { EVENT_TYPES, DOCTOR_GATES, AUDIT_CHECKS, COCKPIT_ROUTES } from '../../data/stats';
 ---
 <DocsLayout title="Architecture" pathname="/docs/architecture" section="Core concepts">
   <h1>Architecture</h1>
@@ -240,7 +240,7 @@ flowchart TB
 
   <h3>Layer 13 &mdash; Cockpit</h3>
   <p>
-    Observe and replay, never command. A static local page that runs in any browser over long-poll &mdash; no websocket, no cloud. Its 38+ routes are grouped by intent (Decide, Operate, Verify, Connect, Reference), with an entity-drawer primitive for click-through detail.
+    Observe and replay, never command. A static local page that runs in any browser over long-poll &mdash; no websocket, no cloud. Its {COCKPIT_ROUTES} routes are grouped by intent (Decide, Operate, Verify, Connect, Reference), with an entity-drawer primitive for click-through detail &mdash; including the Operator Plane readouts (oversight, digest, single-project, decisions, portfolio) for the human on the hook.
   </p>
 
   <h2>How state flows</h2>

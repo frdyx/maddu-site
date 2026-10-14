@@ -64,6 +64,23 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     <p><strong>Hard rules are immutable regardless of tier.</strong> The 8+1 rules &mdash; files-only state, append-only spine, no hosted backend, no broad new deps, no provider SDKs in app code, no token export, brand boundary, lane ownership, and the gauntlet itself &mdash; never change. Tiers tune <em>operational</em> friction; they never loosen <em>structural</em> integrity.</p>
   </div>
 
+  <h2>Discipline enforcement</h2>
+  <p>
+    Since v1.97.0 the tiers do more than gate approvals &mdash; they <strong>enforce the session rituals</strong>. With <code>maddu hooks install</code> wired on Claude Code, the <code>PreToolUse</code> hook evaluates the session before every <em>mutating</em> tool call (the edit tools always, and <code>Bash</code> only for recognized writes). If a ritual is stale, it denies the edit and names the first blocker with its exact remedy, in order: session &rarr; lane &rarr; governing goal/plan &rarr; slice-stop freshness &rarr; uncommitted pileup. Reads and the remedy commands (<code>slice-stop</code>, <code>goal set</code>, <code>plan</code>, <code>lane claim</code>, <code>git commit</code>) are never gated, so a block can't deadlock its own fix.
+  </p>
+  <p>
+    The single governance value <code>discipline-enforcement</code> scales it by tier, using the same three postures:
+  </p>
+  <ul>
+    <li><strong>Strict</strong> &mdash; block at the first threshold; <code>goal done</code> and <code>plan complete</code> also refuse to close while a required gate is red.</li>
+    <li><strong>Standard</strong> &mdash; graduated: block a missing session or lane immediately, warn then block on a stale slice-stop or an uncommitted pileup.</li>
+    <li><strong>Relaxed</strong> &mdash; nudge only; the edit always proceeds.</li>
+  </ul>
+  <div class="dx-note">
+    <span class="dx-note-glyph" aria-hidden="true">◆</span>
+    <p><strong>Block-and-tell, never auto-perform.</strong> Máddu never auto-slice-stops or auto-commits to satisfy a block &mdash; that would fake the record. Enforcement <em>fails open</em> (any evaluator/git/parse error degrades to allow; the hook never exits <code>2</code>), the <code>discipline-observed</code> doctor gate flags a pinned tier with no hook wired, and <code>maddu hooks uninstall</code> is the off-switch.</p>
+  </div>
+
   <h2>The approval flow</h2>
   <p>
     In strict and standard tiers, the approval gate runs at slice-stop. When a worker proposes a mutating action, the gauntlet records an <code>APPROVAL_REQUESTED</code> event (tool, args-shape, and why) and surfaces an approval card in the cockpit. The operator's call is logged on both sides:

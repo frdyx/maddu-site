@@ -53,6 +53,28 @@
   --m-event-lane:      #A8D4B8;
   --m-event-approval:  var(--m-warn);
 
+  /* ─── SYNTAX HIGHLIGHTING (Shiki `css-variables` theme) ───────────────
+   * Astro stamps these onto every rendered <pre>/<span> in the mirrored
+   * corpus. Mapping them here is what keeps generated code blocks on-brand
+   * instead of importing a foreign editor theme. Background matches the
+   * hand-authored .dx-code blocks — true black, not a lifted grey.
+   */
+  --astro-code-background:              var(--m-bg-true-black);
+  --astro-code-foreground:              var(--m-fg-0);
+  --astro-code-token-comment:           var(--m-fg-3);
+  --astro-code-token-punctuation:       var(--m-fg-2);
+  --astro-code-token-keyword:           var(--m-accent);
+  --astro-code-token-function:          var(--m-accent-2);
+  --astro-code-token-string:            var(--m-accent-2);
+  --astro-code-token-string-expression: var(--m-ok);
+  --astro-code-token-constant:          var(--m-event-framework);
+  --astro-code-token-parameter:         var(--m-event-session);
+  --astro-code-token-link:              var(--m-accent-2);
+  /* Older Astro releases read the un-prefixed pair — set both so a version
+     bump can't silently reinstate the grey. */
+  --astro-code-color-background:        var(--m-bg-true-black);
+  --astro-code-color-text:              var(--m-fg-0);
+
   /* ─── SHADOWS + GLOWS ─────────────────────────────────────────────── */
   --m-shadow-sm:     0 1px 2px rgba(0, 0, 0, 0.35);
   --m-shadow-md:     0 8px 24px rgba(0, 0, 0, 0.45);

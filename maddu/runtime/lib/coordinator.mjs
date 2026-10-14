@@ -19,6 +19,7 @@ import { readPlan, completePhase } from './plans.mjs';
 import { readEffectiveGovernance, effectiveValue } from './governance.mjs';
 import { runSliceReview } from './review.mjs';
 import { spawnWorker } from './runtimes.mjs';
+import { isRefId, envActingSid } from './id-grammar.mjs';
 
 // NOTE (v1.3.0 coherence): the per-phase loop below shares its
 // stuck-detection heuristic ("same fail signature twice → halt") with
@@ -151,7 +152,10 @@ export async function runCoordinator(repoRoot, { planId, runtime = null, session
         MADDU_COORDINATOR_PHASE: phase.name,
         MADDU_COORDINATOR_ID: coordinatorId,
         MADDU_COORDINATOR_ITER: String(iter),
-        MADDU_SESSION_ID: sessionId || process.env.MADDU_SESSION_ID || '',
+        // CP3: validate BOTH the explicit coordinator sessionId and the
+        // inherited ambient env before injecting into the child — a malformed
+        // id must not propagate down the spawn chain as an actor identity.
+        MADDU_SESSION_ID: (isRefId(sessionId) ? sessionId : envActingSid()) || '',
       };
 
       let result;
@@ -223,7 +227,22 @@ export async function runCoordinator(repoRoot, { planId, runtime = null, session
 
     // Mark the phase complete on the plan (emits PLAN_PHASE_COMPLETED →
     // refreshes state.json + plan.md artifacts via Phase 5).
-    try { await completePhase(repoRoot, { planId, name: phase.name, summary: `coordinator ${coordinatorId} OK`, by: sessionId }); } catch {}
+    //
+    // This used to be `try { … } catch {}`, which meant a failed plan
+    // mutation was invisible and COORDINATOR_PHASE_COMPLETED was emitted
+    // anyway — the coordinator reporting a green phase the plan never
+    // recorded. A phase that cannot be marked complete is a halt, not a pass.
+    try {
+      await completePhase(repoRoot, { planId, name: phase.name, summary: `coordinator ${coordinatorId} OK`, by: sessionId });
+    } catch (err) {
+      await append(repoRoot, {
+        type: EVENT_TYPES.COORDINATOR_HALTED,
+        actor: sessionId, lane: null,
+        triggered_by: { planId, coordinatorId, phase: phase.name },
+        data: { coordinatorId, planId, phase: phase.name, reason: 'phase-completion-failed', signature: err?.message || String(err), exitCode: null },
+      });
+      return { ok: false, reason: 'phase-completion-failed', phase: phase.name, coordinatorId };
+    }
 
     await append(repoRoot, {
       type: EVENT_TYPES.COORDINATOR_PHASE_COMPLETED,

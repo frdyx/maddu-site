@@ -1,0 +1,125 @@
+---
+title: "25. Model routing hints"
+slug: "model-routing"
+group: "Memory & learning"
+order: 5
+description: "v0.19 adds a way to express model preferences without breaking hard rule 5. A lane or a pipeline stage can declare a preference (Claude Sonnet for plan, Haiku for exec); today…"
+sourceFile: "25-model-routing.md"
+sourceUrl: "https://github.com/frdyx/maddu/blob/main/docs/25-model-routing.md"
+---
+v0.19 adds a way to express **model preferences** without breaking hard rule #5. A lane or a pipeline stage can **declare** a preference (Claude Sonnet for plan, Haiku for exec); today those declarations are shape-validated (and lane defaults appear in the cockpit), while the preference that actually reaches a spawned worker comes from the runtime descriptor (or the focus director's direct hint) — see the wiring column below. The framework never imports a provider SDK — it only forwards the resolved preference as `MADDU_MODEL_HINT=<value>` to the worker subprocess. The worker decides whether to honor it.
+
+The cockpit's `#modelrouting` route (v0.19.2) gives you a read-only view of the per-runtime, per-lane, and per-pipeline preferences at a glance. See [04-cockpit-tour.md](/docs/reference/cockpit-tour#modelrouting-v0192) for the layout.
+
+## The `modelPreference` field
+
+The resolver (`resolveModelHint`) accepts four preference inputs, with
+override precedence (highest wins). **Wiring status matters**: the
+precedence chain describes what the resolver honors when a caller supplies
+the inputs — it is not a promise that every tier is fed on every spawn.
+
+| Source | Where | Wired into shipped spawns today? |
+|---|---|---|
+| 1. Caller-resolved hint | programmatic `opts.modelHint` / `opts.modelHintOverride` on `spawnWorker` — **no CLI flag exposes this** | Only by the focus director, which passes `.maddu/config/focus.json` `model` as a direct hint |
+| 2. Pipeline stage | `.maddu/config/pipelines/<name>.json` `stages[i].modelPreference` | **Not yet** — declared and gate-validated; no shipped call site passes it, and the cockpit's stage-hints panel reads pipeline *run* projections (which carry no `modelPreference`), so configured stage preferences do not appear there either |
+| 3. Lane | `.maddu/lanes/catalog.json` `lanes[].modelPreference` | **Not yet** — declared only; and note the field divergence: the gate validates this top-level field while the cockpit displays `defaults.modelPreference`, so no single lane field is both validated and visible |
+| 4. Runtime descriptor | `.maddu/runtimes/<name>.json` `modelPreference` | **Yes** — read on every `spawnWorker` call |
+
+> **Lane field note:** the `model-hint-shape` gate validates a lane's
+> top-level `modelPreference`, while the cockpit's lane routing panel reads
+> `defaults.modelPreference`. Since neither is fed into spawn resolution
+> yet, both are declarative today; the wiring change should also settle on
+> one field.
+
+At the runtime / lane / pipeline tiers, `modelPreference` may be either of
+the shapes below. The direct tier (tier 1) accepts **plain strings only** —
+`opts.modelHint`, `opts.modelHintOverride`, and `focus.json` `model` are
+ignored unless they are non-empty strings.
+
+- A **flat string** — applies to every stage.
+  ```json
+  "modelPreference": "claude-sonnet-4-5-20251022"
+  ```
+- An **object keyed by stage** — fine-grained per-stage routing.
+  ```json
+  "modelPreference": {
+    "default": "claude-sonnet-4-5-20251022",
+    "plan":    "claude-opus-4-1",
+    "exec":    "claude-haiku-4-5-20251001",
+    "verify":  "claude-sonnet-4-5-20251022",
+    "review":  "claude-opus-4-1"
+  }
+  ```
+
+Valid stage keys: `default`, `plan`, `exec`, `verify`, `review`. Any other key fails the `model-hint-shape` gate.
+
+## How resolution works
+
+`spawnWorker` walks the precedence chain via `resolveModelHint(...)` from `template/maddu/runtime/lib/runtimes.mjs`. The first tier that provides a non-empty string wins. If every tier is null, no env var is set and the worker runs without a hint.
+
+In practice, because shipped call sites currently pass only the runtime
+descriptor's preference (and the focus director its direct hint), the
+resolved value on a spawned worker today comes from tier 1 (focus) or
+tier 4 (descriptor).
+
+One inheritance subtlety: when resolution returns null, **no new hint is
+set** — but the spawn env passes `MADDU_*` variables through, so a nested
+worker can inherit its *parent's* `MADDU_MODEL_HINT` even though its own
+`WORKER_SPAWNED` event records `modelHint: null`. The event records what
+this spawn resolved, not every hint the process environment may carry.
+
+Resolved value lands in the spawned process's environment as:
+
+```
+MADDU_MODEL_HINT=claude-haiku-4-5-20251001
+```
+
+The wrapper script (Phase 1) reads it; the provider CLI reads it (where supported); or the worker's own logic reads it. The framework's contribution ends at the env var.
+
+The `WORKER_SPAWNED` event records both the resolved hint and the stage that was passed, so cockpit and projections can show what each worker was hinted toward:
+
+```json
+{
+  "type": "WORKER_SPAWNED",
+  "data": {
+    "id": "wrk_…",
+    "runtime": "claude-code",
+    "modelHint": "claude-haiku-4-5-20251001",
+    "stage": "exec",
+    "...": "..."
+  }
+}
+```
+
+## What "honor it" means in practice
+
+| Runtime | Honors `MADDU_MODEL_HINT`? |
+|---|---|
+| `claude-code` (claude CLI) | Yes, when the wrapper or CLI forwards `--model <hint>`. Operator wires the wrapper. |
+| `codex` | Partial — codex CLI accepts `--model` but variants differ. |
+| `gemini` | Not stable today; the count-only wrapper carries the hint into the ledger row but the CLI doesn't honor it. |
+| Custom workers | Worker decides. |
+
+Framework code never inspects whether the worker honored the hint. The cockpit surfaces "hint sent, honor unknown" — the operator audits via [`maddu cost --by model`](/capabilities/cost) rollups whether the resolved hint actually shaped the calls.
+
+## Validation: the `model-hint-shape` gate
+
+Severity: **safety**. Runs on every [`maddu doctor`](/capabilities/doctor):
+
+- Every `.maddu/runtimes/<name>.json` with `modelPreference` set has valid shape.
+- Every lane entry in `.maddu/lanes/catalog.json` with `modelPreference` set has valid shape.
+- Every pipeline stage in `.maddu/config/pipelines/*.json` with `modelPreference` set has valid shape.
+
+Violations: empty strings, unknown stage keys, non-string values, arrays, numbers. The gate reports up to 10 violations with a clear "where" prefix (e.g. `lane 'login': modelPreference has unknown stage key 'plann'`).
+
+## What this doesn't do (deliberately)
+
+- **The framework never validates that a hinted model id is a real model.** Claude Sonnet 4.5 may rename to Sonnet 5.0 next quarter; the framework refuses to embed that knowledge. Worker fails its call → operator updates the descriptor.
+- **The framework never auto-routes based on cost or latency telemetry.** Some other layer can do that on top; the hint surface stays simple.
+- **The framework makes zero provider SDK calls.** Hard rule #5 holds: a model hint is a string in an env var, nothing more.
+
+## See also
+
+- [11. Runtimes and MCP](/docs/reference/runtimes-and-mcp) — how runtime descriptors work generally.
+- [24. Skills auto-injection](/docs/reference/skills-auto-inject) — sister v0.19 deferred-feature ship.
+- [hard-rules.md §5](/docs/reference/hard-rules) — the rule this design preserves.

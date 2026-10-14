@@ -11,7 +11,7 @@
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { loadSpineLib, resolveRepoRoot } from './_spine.mjs';
+import { loadSpineLib, resolveRepoRoot, envActingSid } from './_spine.mjs';
 
 const ANSI = { bold: '\x1b[1m', dim: '\x1b[2m', reset: '\x1b[0m', pass: '\x1b[32m', warn: '\x1b[33m', accent: '\x1b[35m' };
 const FOCUS_TRIGGERS = ['heartbeat:focus-director', 'slice-stop:focus-director'];
@@ -60,6 +60,11 @@ export default async function focus(argv) {
       ? [...new Set([...allowed, ...FOCUS_TRIGGERS])]
       : allowed.filter((t) => !FOCUS_TRIGGERS.includes(t));
     await writeTriggers(repoRoot, raw, next);
+    // Mutation-witness declared no-op: edits the rule-#9 trigger allowlist
+    // (.maddu/config/triggers.json) — a config write with no spine event
+    // pre-S1; declared rather than silent.
+    const { loadLibOptional } = await import('./_libroot.mjs');
+    (await loadLibOptional('mutation-witness.mjs'))?.witnessNoop?.('control-plane-config-write:triggers');
     console.log(`Focus Director ${sub === 'enable' ? `${ANSI.pass}enabled${ANSI.reset}` : `${ANSI.warn}disabled${ANSI.reset}`}  ${ANSI.dim}(${FOCUS_TRIGGERS.join(', ')})${ANSI.reset}`);
     return;
   }
@@ -70,7 +75,7 @@ export default async function focus(argv) {
       console.error(`usage: maddu focus resolve <${CHOICES.join('|')}>`);
       process.exit(2);
     }
-    const sessionId = process.env.MADDU_SESSION_ID || null;
+    const sessionId = await envActingSid();
     await spine.append(repoRoot, {
       type: spine.EVENT_TYPES.DRIFT_FLAGGED,
       actor: sessionId,

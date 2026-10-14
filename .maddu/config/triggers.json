@@ -1,0 +1,11 @@
+{
+  "allowed": [
+    "janitor:sessions",
+    "slice-stop:trust-audit",
+    "coordinator:pre-run-checkpoint",
+    "slice-stop:auto-handoff",
+    "slice-stop:auto-review",
+    "hook:auto-claim",
+    "janitor:worktrees"
+  ]
+}

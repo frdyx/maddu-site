@@ -445,7 +445,7 @@
     </div>
 
     <div class="badges">
-      <span class="badge"><span class="dot">●</span> v1.96.0</span>
+      <span class="badge"><span class="dot">●</span> v1.153.0</span>
       <span class="badge"><span class="dot">●</span> Node 20+</span>
       <span class="badge"><span class="dot">●</span> Apache 2.0</span>
       <span class="badge"><span class="dot">●</span> 100% local-first</span>
@@ -574,7 +574,7 @@
         <p>Delete <code>.maddu/state/</code>, rebuild from the spine on any machine, get the <em>exact same</em> ledger. Decisions live as real events — audit immutability is provable, not declared.</p>
       </div>
       <div class="m-card hover-lift feature">
-        <h3><span class="fi">🛡️</span> Tamper-evident bedrock</h3>
+        <h3><span class="fi">🛡️</span> Tamper-detecting bedrock</h3>
         <p><code>spine verify</code> walks every segment — parseability, id-uniqueness, continuity, monotonicity, referential integrity, and a forward <code>prev_hash</code> chain that pinpoints the first altered line.</p>
       </div>
       <div class="m-card hover-lift feature">
@@ -608,7 +608,7 @@
         <thead><tr><th>#</th><th>Rule</th><th class="prev">What it prevents</th></tr></thead>
         <tbody>
           <tr><td class="num">1</td><td class="rule">Files-only state</td><td class="prev">SQLite corruption, opaque feature state, migration hazards</td></tr>
-          <tr><td class="num">2</td><td class="rule">Append-only event spine (tamper-evident)</td><td class="prev">Mutable history, replay-divergence, silent rewrites</td></tr>
+          <tr><td class="num">2</td><td class="rule">Append-only event spine (tamper-detecting)</td><td class="prev">Mutable history, replay-divergence, silent rewrites</td></tr>
           <tr><td class="num">3</td><td class="rule">No hosted backends</td><td class="prev">Telemetry, vendor lock-in, "Máddu Cloud"</td></tr>
           <tr><td class="num">4</td><td class="rule">No broad dependencies</td><td class="prev">Supply-chain risk, transitive vulnerabilities</td></tr>
           <tr><td class="num">5</td><td class="rule">No provider SDKs in app code</td><td class="prev">Hidden API keys, SDK churn in the orchestrator</td></tr>

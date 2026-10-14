@@ -72,7 +72,7 @@
 
   <rect class="node blue" x="704" y="196" width="300" height="64" rx="6"/>
   <text x="720" y="222" class="cond-b" fill="#56B8FF" font-size="13">spine · 11 MODEL_* events</text>
-  <text x="720" y="242" class="mono" fill="#8A93A0" font-size="10">tamper-evident on replay (spine verify)</text>
+  <text x="720" y="242" class="mono" fill="#8A93A0" font-size="10">tamper-detecting on replay (spine verify)</text>
 
   <rect class="node warn" x="1060" y="196" width="380" height="64" rx="6"/>
   <text x="1076" y="220" class="cond-b" fill="#F2BD5C" font-size="13">🔒 12-gate pack · .maddu/gates/</text>

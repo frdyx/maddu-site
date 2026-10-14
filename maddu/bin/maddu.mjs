@@ -11,7 +11,7 @@ const repoRoot = join(__dirname, '..');
 // Operational surface (additive — agents and operators use these to participate
 // in the spine without needing the bridge running):
 //   session, lane
-const COMMANDS = ['init', 'upgrade', 'doctor', 'start', 'stop', 'status', 'slice-stop', 'session', 'lane', 'approval', 'events', 'memory', 'mailbox', 'task', 'skill', 'worker', 'search', 'runtime', 'mcp', 'schedule', 'checkpoint', 'auth', 'import', 'export', 'workspace', 'global', 'spine', 'goal', 'phase', 'brief', 'sources', 'slice', 'review', 'register', 'help', 'suggest', 'team', 'pipeline', 'advise', 'cost', 'usage', 'git', 'test', 'self-test', 'format', 'lint', 'install', 'governance', 'log', 'plan', 'loop', 'coordinator', 'trust', 'bridges', 'audit', 'insights', 'plugin', 'orient', 'handoff', 'learn', 'blueprint', 'debt', 'architecture', 'agents', 'focus', 'hooks', 'fleet', 'ci', 'autonomy'];
+const COMMANDS = ['init', 'upgrade', 'doctor', 'start', 'stop', 'status', 'slice-stop', 'session', 'lane', 'approval', 'events', 'memory', 'mailbox', 'task', 'skill', 'worker', 'search', 'runtime', 'mcp', 'schedule', 'checkpoint', 'auth', 'import', 'export', 'workspace', 'global', 'spine', 'goal', 'phase', 'brief', 'sources', 'slice', 'review', 'register', 'help', 'suggest', 'team', 'pipeline', 'advise', 'cost', 'usage', 'git', 'test', 'self-test', 'format', 'lint', 'install', 'governance', 'log', 'plan', 'loop', 'coordinator', 'trust', 'bridges', 'audit', 'insights', 'plugin', 'orient', 'handoff', 'learn', 'blueprint', 'debt', 'architecture', 'agents', 'focus', 'hooks', 'fleet', 'ci', 'autonomy', 'experience', 'evolve', 'model', 'wiki'];
 
 async function printVersion() {
   const v = JSON.parse(await readFile(join(repoRoot, 'version.json'), 'utf8'));
@@ -42,7 +42,7 @@ Commands:
   skill          Subcommands: list | show | create | from-slice | apply | delete. (Phase B4)
   worker         Subcommands: list | register | heartbeat | exit | kill | show. (Phase B5)
   search         Cross-corpus search over events, memory, skills, mailbox. (Phase B6)
-  runtime        Subcommands: list | show | register | detect | spawn | remove. (Phase C1)
+  runtime        Subcommands: list | show | register | detect | doctor | spawn | remove. (Phase C1)
   mcp            Subcommands: list | show | register | enable | disable | test | remove | visible. (Phase C2)
   schedule       Subcommands: list | show | create | parse | enable | disable | tick | remove. (Phase C3)
   checkpoint     Subcommands: list | show | create | worktree | rollback | remove. (Phase C4)
@@ -77,6 +77,7 @@ Commands:
   loop           Subcommands: ralph | plan | status | cancel. Persist-until-done iteration with stuck-detection. (v1.1.0)
   coordinator    maddu coordinator <plan-id> [--runtime <n>] [--dry-run] [--synthetic-cmd "<bash>"]. Runtime-agnostic multi-phase driver. (v1.1.0)
   trust          Subcommands: audit | pin | unpin | verify | list | report | env-allow. Supply-chain audit + pinning. (v1.2.0)
+  wiki           Subcommands: list | drift | page | sync | rebuild. Per-lane slice-stop wiki; sync backfills missing entries. (v1.115.0)
   bridges        Subcommands: list | kill-all. Device-scope view of running Máddu bridges. (v1.2.1)
   audit          Framework-coherence self-audit: events | commands | cockpit | slash | docs | charter | invariants. [--json] (v1.3.0)
   insights       Cross-project usage: events | dead | verbs | slashes. What's actually utilized vs defined. [--json] (v1.4.0)
@@ -93,6 +94,10 @@ Commands:
   fleet          Read-only single-machine fleet view: per-repo version/currency/liveness + version delta vs fleet latest. [--json] (v1.76.0)
   ci             Headless LLM-free gate rail for CI: run | pin. Exit 1 only on pinned required gates (churn-proof). [--json --strict] (v1.87.0)
   autonomy       Earned autonomy: per-lane Wilson trust score over the verified record → recommend-only tier guidance. [--lane <id>] [--json] [--no-emit] (v1.92.0)
+  experience     Read-only experience ledger: the spine as normalized steps grouped into session trajectories. Writes nothing. [--json] (v1.94.0)
+  evolve         Recommend-only evolution planner over the experience ledger; nothing is ever applied automatically. Subcommands: adopt. (v1.94.0)
+  model          SLM-factory governance: validates + hash-pins host-repo model manifests; Máddu governs the factory, never runs it. (v1.95.0)
+  export         Read-side spine → OpenTelemetry (OTLP/JSON) log export. maddu export --otel [--since <eventId>] (v1.96.0)
 
 Flags:
   --version      Print framework version.
@@ -103,8 +108,388 @@ Docs:
 `);
 }
 
+// ── Mutation witness (buzz-steals S1, v1.116.0) ─────────────────────────────
+// Runtime proof that every mutating verb RECORDED something: the guard's
+// verdict runs in a process 'exit' handler (commands call process.exit()
+// directly — same seam as invocation receipts), where a breach (exit 0, zero
+// spine appends, zero declared no-ops) is spooled synchronously to
+// .maddu/state/mutation-breaches/ and forces exit 1; the NEXT dispatcher run
+// drains the spool onto the spine BEFORE arming the command's own witness
+// context (a drain append must never credit the upcoming command). FAIL-OPEN
+// on older installs: lib or _tiers unloadable → guard never arms, dispatch
+// unchanged. Ordering law (plan-review r1 F1): (1) register the inert exit
+// handler → (2) arm receipts → (3) drain with NO witness ctx active →
+// (4) create/arm the command ctx → (5) dispatch inside runWithWitness.
+// Resolve the ONE runtime-lib directory this invocation's commands will use —
+// MUST mirror commands/_libroot.mjs#resolveLibDir: cwd-installed repo first,
+// then the layout relative to this bin. Two rules matter:
+//   1. SAME DIR, not same name: the witness lib holds process-wide state, so
+//      bin and the command handlers must import the same module instance (a
+//      divergent order imported two instances and every credit landed in the
+//      wrong one — found by the S1 calibration pass).
+//   2. NO cross-dir fallback for the witness itself: if the chosen dir's
+//      runtime predates S1 (no mutation-witness.mjs), its spine never
+//      credits — arming a guard from a NEWER tree would false-breach every
+//      appending verb on that old install. Missing in the chosen dir ⇒ inert.
+import { statSync } from 'node:fs';
+function pickLibDir() {
+  for (const d of [
+    join(process.cwd(), 'maddu', 'runtime', 'lib'),         // installed repo at cwd (what commands resolve)
+    join(repoRoot, 'runtime', 'lib'),                       // consumer install (bin = <repo>/maddu/bin)
+    join(repoRoot, 'template', 'maddu', 'runtime', 'lib'),  // source checkout
+  ]) {
+    try { if (statSync(d).isDirectory()) return d; } catch {}
+  }
+  return null;
+}
+async function loadOptionalLib(name) {
+  const dir = pickLibDir();
+  if (!dir) return null;
+  try { return await import(pathToFileURL(join(dir, name)).href); } catch { return null; }
+}
+
+async function prepareMutationWitness(ws) {
+  try {
+    ws.lib = await loadOptionalLib('mutation-witness.mjs');
+    ws.receipts = await loadOptionalLib('invocation-receipts.mjs');
+    if (!ws.lib || typeof ws.lib.evaluateWitness !== 'function') { ws.lib = null; return; }
+    // Inert holder: registered FIRST (before the receipts handler) so a
+    // breach-forced exitCode=1 is what receipts record; inert while ctx null.
+    process.on('exit', (code) => {
+      try {
+        const ctx = ws.ctx;
+        if (!ctx) return;
+        const exitCode = typeof process.exitCode === 'number' ? process.exitCode
+          : (typeof code === 'number' ? code : 0);
+        // THE EXIT-CODE FLOOR, decided here rather than by a second handler.
+        // Node runs `exit` listeners in registration order, so a clamp
+        // registered elsewhere would win or lose depending on where its line
+        // sits — an invisible dependency that a refactor could flip with no
+        // test able to name why. This handler already computes the final code,
+        // so it is where the floor belongs.
+        //
+        // WHY `hooks fire` IS EXEMPT. For that verb the exit code was doing two
+        // incompatible jobs. Claude Code reads a non-zero exit as "the hook
+        // failed your tool call" and acts on it. NOBODY reads it as "a breach
+        // occurred", because hooks run invisibly — so the breach signal was
+        // riding a channel where it is useless as a diagnostic and harmful as a
+        // control. The breach is still RECORDED: recordBreachSync above has
+        // already spooled it and the next mutating invocation drains it onto the
+        // spine. What is dropped is the signal, not the evidence.
+        //
+        // Narrow on purpose: only a `fire` with a real event. `hooks fire bogus`
+        // and a bare `hooks fire` still exit 2, because a settings-file typo is
+        // the one thing an operator MUST be told about, and that exit is their
+        // only notice of it.
+        // argv is [node, maddu.mjs, <verb>, <sub>, <event>] — the event is [4].
+        const FIRE_EVENTS = ['session-start', 'session-end', 'pre-tool-use', 'pre-compact'];
+        const fireEvent = process.argv[4];
+        const isHookFire = ctx.verb === 'hooks' && ctx.sub === 'fire'
+          && FIRE_EVENTS.includes(fireEvent);
+
+        // Record the breach FIRST and unconditionally — the floor must never
+        // suppress the evidence, only the channel it used to travel on.
+        //
+        // ASKED ABOUT THE CODE THIS RUN WILL ACTUALLY EXIT WITH, not the one the
+        // core happened to leave behind. `evaluateWitness` reports a breach only
+        // when exitCode === 0, because a command that failed owes no append. The
+        // floor below then rewrites any non-zero code to 0 — so a core that
+        // called `process.exit(7)` with zero appends and no declared no-op was
+        // evaluated at 7 (no breach, nothing recorded) and then exited 0. The run
+        // reported success, wrote nothing to the spine, and left no evidence it
+        // had happened: the floor had quietly converted a loud wrong answer into
+        // a silent unwitnessed success, which is the one outcome the mutation
+        // witness exists to make impossible.
+        //
+        // The guarantee is about what a run CLAIMS, and after the floor this run
+        // claims success. So the witness is evaluated against the post-floor
+        // code. The original code is not lost — it is named on stderr below.
+        const effectiveExitCode = isHookFire ? 0 : exitCode;
+        const { breach } = ws.lib.evaluateWitness(ctx, { exitCode: effectiveExitCode });
+        if (breach) {
+          const stateRoot = ws.receipts?.resolveStateRootSync?.(process.cwd(), process.env) ?? null;
+          const breachId = ws.lib.recordBreachSync({ stateRoot, ctx, exitCode });
+          process.stderr.write(`maddu: MUTATION_UNWITNESSED — ${ctx.verb ?? ctx.label} exited 0 with zero spine appends and no declared no-op${breachId ? ` (${breachId})` : ''}\n`);
+        }
+
+        if (isHookFire) {
+          // The floor applies to ANY non-zero code, not just a breach rewrite:
+          // a core that calls process.exit(7) itself reaches here too, and it
+          // would fail the tool call just as surely. One terse line on stderr so
+          // the run is not silent, and never a stack — a hook's stderr is read
+          // by a human debugging, not parsed by a machine.
+          //
+          // NOT EVERY CLAMP IS ANNOUNCED. `exitCode` above is read from
+          // process.exitCode, and process.exit(code) assigns that before this
+          // listener runs. A fire core that sets process.exitCode = N and then
+          // RETURNS, never calling process.exit, is clamped without a word: the
+          // commands/hooks.mjs fall-through calls process.exit(0) explicitly,
+          // its interceptor sees the literal 0 (not N), and that exit resets
+          // process.exitCode to 0 before this floor reads it. The intent N is
+          // overwritten by a path that has nothing to say about it. Every
+          // shipped arm ends in process.exit, so the path is unreachable today —
+          // but the suites that read this sentence's ABSENCE as proof that no
+          // clamp happened (harness-hook-core, session-lifecycle) rest on that
+          // staying true. Documented, not fixed: a fix belongs with a change
+          // that makes the path reachable.
+          if (exitCode !== 0) {
+            process.stderr.write(`maddu: hooks fire ${fireEvent} would have exited ${exitCode}; forced to 0 so the tool call is not failed. See \`maddu doctor\`.\n`);
+          }
+          process.exitCode = 0;
+          return;
+        }
+        if (breach) process.exitCode = 1;
+      } catch {}
+    });
+  } catch { ws.lib = null; }
+}
+
+// Read-shape matching (plan-review r4 F1): a _tiers.mjs `readShapes` entry is
+// a string (single leading token; '(bare)' = no token-shaped first arg) or
+// { tokens: [...], requiredFlags: [...] } — leading tokens are matched as a
+// PREFIX (trailing sub-tokens do not defeat the match) AND every required
+// flag must be present. Anything unmatched on a mutating verb is mutating
+// (mutation wins).
+function matchesReadShape(shape, rest) {
+  const first = typeof rest[0] === 'string' && !rest[0].startsWith('-') ? rest[0] : null;
+  if (typeof shape === 'string') {
+    return shape === '(bare)' ? first === null : first === shape;
+  }
+  if (!shape || !Array.isArray(shape.tokens)) return false;
+  for (let i = 0; i < shape.tokens.length; i++) {
+    if (rest[i] !== shape.tokens[i]) return false;
+  }
+  for (const f of shape.requiredFlags ?? []) {
+    if (!rest.includes(f)) return false;
+  }
+  return true;
+}
+
+// THE one invocation-shape classifier — shared by arming AND drain-failure
+// handling (Codex diff-review r1 F7: a divergent drain classifier treated
+// every mixed-tier verb as mutating and blocked `plan list` on a broken
+// drain). Returns 'read' | 'mutating' | null (unknown verb → guard inert).
+async function resolveInvocationMode(raw, rest) {
+  let tiers = null;
+  try { tiers = (await import(pathToFileURL(join(repoRoot, 'commands', '_tiers.mjs')).href)).default; } catch {}
+  const entry = tiers?.[raw];
+  if (!entry) return null;
+  const isRead = entry.tier === 'read-only'
+    || (Array.isArray(entry.readShapes) && entry.readShapes.some((s) => matchesReadShape(s, rest)));
+  return isRead ? 'read' : 'mutating';
+}
+
+async function armCommandWitness(ws, raw, rest) {
+  try {
+    if (!ws.lib) return;
+    const mode = await resolveInvocationMode(raw, rest);
+    if (mode === null) return; // unknown tier → guard stays inert (census owns parity)
+    const subRaw = Array.isArray(rest) && typeof rest[0] === 'string' && /^[a-z][a-z0-9-]{0,31}$/i.test(rest[0]) ? rest[0].toLowerCase() : null;
+    const isRead = mode === 'read';
+    // Grammar-gated session attribution (sid-surface-census: raw session-env
+    // reads must be inline-gated; a malformed inherited id is dropped to null).
+    // Grammar alone let a CLOSED id own every breach row this guard wrote
+    // (audit C2). The witness names an ACTOR, so it takes the same three-state
+    // ambient policy as the command actors it sits beside; fail-open to the
+    // old grammar-only read if the resolver cannot be loaded.
+    const isRefId = (v) => typeof v === 'string' && /^[\w.-]{1,128}$/.test(v);
+    let witnessSid = isRefId(process.env.MADDU_SESSION_ID) ? process.env.MADDU_SESSION_ID : null;
+    try {
+      const { resolveReceiptSid } = await import(pathToFileURL(join(repoRoot, 'commands', '_spine.mjs')).href);
+      if (typeof resolveReceiptSid === 'function') {
+        const answer = await resolveReceiptSid();
+        // Same distinction as the receipt path: keep the grammar-gated env
+        // reading when resolution was unavailable, rather than blanking the
+        // witness actor (round 1 F4).
+        if (answer !== undefined) witnessSid = answer;
+      }
+    } catch {}
+    const ctx = ws.lib.createWitnessContext(`cli:${raw}${subRaw ? ' ' + subRaw : ''}`, {
+      mode: isRead ? 'read' : 'mutating',
+      surface: 'cli', verb: raw, sub: subRaw,
+      sessionId: witnessSid,
+    });
+    ws.lib.armCliWitness(ctx);
+    ws.ctx = ctx;
+  } catch {}
+}
+
+// Drain spooled breaches onto the spine (step 3 — runs with NO witness ctx
+// armed). A drain failure blocks a MUTATING dispatch (exit 1, spool
+// retained); read-shaped dispatches warn and proceed so `maddu doctor` can
+// always diagnose a broken drain. Pinned recovery exception (plan-review r5
+// F1): a drain refused by the S2 identity-conflict gate does not block the
+// exact ceremony invocation `spine identity resolve`.
+async function drainMutationBreaches(ws, raw, rest) {
+  if (!ws.lib || typeof ws.lib.drainBreachesToSpine !== 'function') return;
+  let res = null;
+  try {
+    const stateRoot = ws.receipts?.resolveStateRootSync?.(process.cwd(), process.env);
+    if (!stateRoot) return;
+    // The drain runs when bare rows OR claim files exist (Codex diff r3 F1:
+    // a crashed drainer leaves ONLY `<id>.json.draining.…` — the fast path
+    // must still enter so reclaim can rename it back and this run drains
+    // it). Quarantined .corrupt rows alone never trigger a drain — they are
+    // the census gate's evidence, not drainable work.
+    const spoolNames = ws.lib.listBreachesSync(stateRoot);
+    if (!spoolNames.some((n) => n.endsWith('.json') || /\.json\.draining\./.test(n))) return;
+    const spine = await loadOptionalLib('spine.mjs');
+    if (!spine) { res = { failed: 1, errors: [{ error: 'spine lib unloadable' }] }; }
+    else {
+      // breachId idempotency (r1 F5): a crashed prior drain may have appended
+      // without unlinking — scan the spine before re-appending. Drains with
+      // rows are rare; a full read here is acceptable.
+      const hasBreachId = async (id) => {
+        try {
+          const all = await spine.readAll(stateRoot);
+          return all.some((e) => e.type === 'MUTATION_UNWITNESSED' && e.data?.breachId === id);
+        } catch { return false; }
+      };
+      res = await ws.lib.drainBreachesToSpine(stateRoot, stateRoot, (spec) => spine.append(stateRoot, spec), { hasBreachId });
+    }
+  } catch (err) { res = { failed: 1, errors: [{ error: err?.message || String(err) }] }; }
+  if (!res || !res.failed) return;
+  const isCeremony = raw === 'spine' && rest[0] === 'identity' && rest[1] === 'resolve';
+  const conflictOnly = Array.isArray(res.errors) && res.errors.length > 0 && res.errors.every((e) => e.code === 'WS_IDENTITY_CONFLICT');
+  if (isCeremony && conflictOnly) return;
+  // Second pinned recovery exception (diff-funnel r8-F2): on an UNATTACHED
+  // clone (sync partitions, no replica identity) every append — including
+  // the drain's — refuses with REPLICA_UNATTACHED, and the one command that
+  // repairs that state is `spine sync init`. Blocking it on the drain would
+  // deadlock the recovery exactly like the conflict/ceremony case. The spool
+  // is retained and drains on the first invocation after attachment.
+  const isSyncInit = raw === 'spine' && rest[0] === 'sync' && rest[1] === 'init';
+  const unattachedOnly = Array.isArray(res.errors) && res.errors.length > 0 && res.errors.every((e) => e.code === 'REPLICA_UNATTACHED');
+  if (isSyncInit && unattachedOnly) return;
+  // Third pinned exception — and the one that is about containment rather than
+  // deadlock. `hooks fire <event>` runs inside a foreign harness that reads a
+  // non-zero exit as "this hook failed your tool call". The drain runs BEFORE
+  // `armCommandWitness` sets ws.ctx, so the hook-fire exit floor further down
+  // cannot reach this exit: the handler returns early on a null ctx. A single
+  // corrupt row in the breach spool therefore blocked the operator's edit
+  // without the hook core being reached at all — containment defeated one layer
+  // above the layer that implements it.
+  //
+  // The spool is RETAINED and the failure is still announced on stderr, so no
+  // evidence is lost and the next mutating invocation is still blocked; what is
+  // dropped is only this path's ability to fail somebody else's tool call.
+  const isHookFire = raw === 'hooks' && rest[0] === 'fire'
+    && ['session-start', 'session-end', 'pre-tool-use', 'pre-compact'].includes(rest[1]);
+  if (isHookFire) {
+    console.error(`maddu: mutation-breach drain failed (${res.failed} row(s): ${res.errors?.[0]?.error ?? 'unknown'}) — spool retained; hook fire proceeding so the tool call is not failed. Resolve before the next mutating command.`);
+    return;
+  }
+  const detail = res.errors?.[0]?.error ?? 'unknown';
+  const mode = await resolveInvocationMode(raw, rest); // shared classifier (r1 F7)
+  if (mode !== 'read') {
+    console.error(`maddu: mutation-breach drain failed (${res.failed} row(s): ${detail}) — spool retained; resolve before mutating`);
+    process.exit(1);
+  }
+  console.error(`maddu: warning — mutation-breach drain failed (${res.failed} row(s): ${detail}); read-only dispatch proceeding`);
+}
+
+// ── Invocation receipts (usage-audit Tier 2, v1.101.0) ──────────────────────
+// Every CLI entry records one execution receipt to
+// `.maddu/state/invocation-receipts.ndjson` — the audit's verb stats were
+// transcript MENTIONS; this is the execution signal. FAIL-OPEN at every step:
+// the lib may be absent (older install), the cwd may have no .maddu, the
+// write may fail — none of it ever blocks or noises the verb. Recording
+// happens in a process 'exit' handler because commands call process.exit()
+// directly; state-root resolution also runs at exit so `maddu init` (no
+// .maddu at entry, one at exit) is recorded too.
+// v1.139.0 (register C2): a verb that MINTS a session returns
+// { sessionId, created: true }. The receipt for that invocation must name the
+// minted session - the pre-dispatch resolver froze its answer before the
+// session existed. Only a grammar-valid id from a created:true result is
+// accepted; anything else leaves the pre-dispatch answer in force.
+let mintedSessionId = null;
+function noteMintedSession(result) {
+  if (!result || typeof result !== 'object' || result.created !== true) return;
+  const id = result.sessionId;
+  if (typeof id === 'string' && /^[\w.-]{1,128}$/.test(id)) mintedSessionId = id;
+}
+// The session this invocation ACTED AS, when the command itself established
+// it: a minted id captured from the dispatch result, or — for paths that exit
+// before returning (the SessionStart hook in lib/harness/fire-core.mjs) — the
+// id the lib published on a process-global. Grammar-gated either way.
+function actingSessionId() {
+  if (mintedSessionId) return mintedSessionId;
+  const g = globalThis.__madduActingSessionId;
+  return (typeof g === 'string' && /^[\w.-]{1,128}$/.test(g)) ? g : null;
+}
+
+async function armInvocationReceipt(raw, rest) {
+  try {
+    let lib = null;
+    for (const p of [
+      join(repoRoot, 'runtime', 'lib', 'invocation-receipts.mjs'), // consumer install (maddu/bin → maddu/runtime/lib)
+      join(repoRoot, 'template', 'maddu', 'runtime', 'lib', 'invocation-receipts.mjs'), // source checkout
+    ]) {
+      try { lib = await import(pathToFileURL(p).href); break; } catch {}
+    }
+    if (!lib || typeof lib.recordInvocationSync !== 'function') return;
+    // Normalized verb only — an unknown command's raw text is caller input
+    // and never persisted (it could be prose or a pasted secret).
+    let verb;
+    if (!raw || raw === '--help' || raw === '-h') verb = 'help';
+    else if (raw === '--version' || raw === '-v' || raw === 'version') verb = 'version';
+    else if (COMMANDS.includes(raw)) verb = raw;
+    else verb = '(unknown)';
+    // Subcommand only for a KNOWN verb and only when the first arg LOOKS like
+    // one (token shape) — this keeps free text (slice-stop messages, flag
+    // values, whatever followed a typo'd command) out of the corpus.
+    const subRaw = COMMANDS.includes(raw) && Array.isArray(rest) && typeof rest[0] === 'string' ? rest[0] : null;
+    const sub = subRaw && /^[a-z][a-z0-9-]{0,31}$/i.test(subRaw) ? subRaw.toLowerCase() : null;
+    const t0 = Date.now();
+    // Attribution is decided HERE — async, before the command runs — because
+    // the exit handler below is synchronous and cannot replay the spine to ask
+    // whether an ambient id is still alive. Fail-open to unresolved (the old
+    // env/cache derivation) only when the resolver itself is unavailable.
+    let resolvedSid = null, attributionResolved = false;
+    try {
+      const { resolveReceiptSid } = await import(pathToFileURL(join(repoRoot, 'commands', '_spine.mjs')).href);
+      if (typeof resolveReceiptSid === 'function') {
+        const answer = await resolveReceiptSid();
+        // Round 1 F4: undefined means the resolver could not run — NOT that
+        // nobody was acting. Treating it as an answer passed an authoritative
+        // null downstream and suppressed the writer's own env/cache
+        // derivation, losing attribution exactly where this path failed.
+        if (answer !== undefined) { resolvedSid = answer; attributionResolved = true; }
+      }
+    } catch {}
+    process.on('exit', (code) => {
+      try {
+        const stateRoot = lib.resolveStateRootSync(process.cwd(), process.env);
+        if (!stateRoot) return;
+        lib.recordInvocationSync({
+          stateRoot, verb, sub,
+          // Prefer the LIVE process.exitCode: the mutation-witness handler
+          // (registered first) may have amended it to 1 on a breach, and the
+          // frozen `code` arg predates that amendment.
+          exitCode: typeof process.exitCode === 'number' ? process.exitCode
+            : (typeof code === 'number' ? code : 0),
+          durationMs: Date.now() - t0,
+          // Hand over an answer only when we actually have one: omitting the
+          // key lets the writer keep its own derivation on the fail-open path,
+          // rather than recording an authoritative null we never determined.
+          // A session MINTED by this very invocation (register / session
+          // register) outranks the pre-dispatch answer, which was frozen
+          // before the session existed (v1.139.0, register C2).
+          ...(actingSessionId() ? { sessionId: actingSessionId() }
+            : attributionResolved ? { sessionId: resolvedSid } : {}),
+        });
+      } catch {}
+    });
+  } catch {}
+}
+
 async function main() {
   const [, , raw, ...rest] = process.argv;
+  // Witness ordering law: inert exit handler FIRST, receipts second — so a
+  // breach-forced exit 1 is what telemetry records.
+  const witnessState = { ctx: null, lib: null, receipts: null };
+  await prepareMutationWitness(witnessState);
+  await armInvocationReceipt(raw, rest);
 
   if (!raw || raw === '--help' || raw === '-h') {
     printHelp();
@@ -128,15 +513,26 @@ async function main() {
   // plan, lane, install) detect --help at the top of their handler — route
   // through them so the operator sees the more specific text. Everything
   // else falls back to the global discovery surface (`maddu help`).
+  //
+  // Mutation-witness census pin: the two --help arms below are the ONLY
+  // unguarded invocation sites, and both are read-only by construction
+  // (they render usage text). The canonical dispatch below is the single
+  // guarded site — command-tier-discipline asserts this arity.
   if (rest.includes('--help') || rest.includes('-h')) {
-    const VERBS_WITH_OWN_HELP = new Set(['start', 'stop', 'workspace', 'plan', 'lane', 'install', 'task', 'review', 'self-test', 'agents']);
+    // Every module that ships its own help handler must be listed here, or the
+    // dispatcher falls through to the generic guide and that handler is
+    // unreachable from the CLI (audit 2026-09-07, finding E). `trust` was the
+    // sharpest case: commands/trust.mjs told the user to run `maddu trust
+    // --help`, which printed the generic guide instead of trust's own usage.
+    const VERBS_WITH_OWN_HELP = new Set(['start', 'stop', 'workspace', 'plan', 'lane', 'install', 'task', 'review', 'self-test', 'agents',
+      'bridges', 'global', 'hooks', 'insights', 'plugin', 'trust']);
     if (VERBS_WITH_OWN_HELP.has(raw)) {
-      const mod = await import(pathToFileURL(join(repoRoot, 'commands', `${raw}.mjs`)).href);
+      const mod = await import(pathToFileURL(join(repoRoot, 'commands', `${raw}.mjs`)).href); // census-pinned --help site 1
       await mod.default(rest);
       return;
     }
     try {
-      const helpMod = await import(pathToFileURL(join(repoRoot, 'commands', 'help.mjs')).href);
+      const helpMod = await import(pathToFileURL(join(repoRoot, 'commands', 'help.mjs')).href); // census-pinned --help site 2
       await helpMod.default([]);
       return;
     } catch {
@@ -145,12 +541,76 @@ async function main() {
     }
   }
 
+  // A1 unknown-flag guard: parseFlags accepts any --key, so a typo'd or stale
+  // flag is silently ignored and falls through to ambient resolution (how
+  // `session close --session-id` closed the wrong session, defect A2). Every
+  // --token in rest is definitively a flag key (a parseFlags VALUE can never
+  // start with --), checked against the generated per-verb allowlist. Unknown
+  // → exit 2 (strict by default since v1.122.0); MADDU_STRICT_FLAGS=0 is the
+  // temporary warn-only opt-out.
+  // FAIL-OPEN: artifact or guard module absent/unreadable (older install) →
+  // guard inert. Runs BEFORE the drain so the warning lands even when a
+  // broken drain blocks the dispatch.
+  try {
+    const guard = await import(pathToFileURL(join(repoRoot, 'commands', '_flag-guard.mjs')).href);
+    const allowlists = JSON.parse(await readFile(join(repoRoot, 'commands', '_flag-allowlists.json'), 'utf8'));
+    const findings = guard.checkUnknownFlags({ verb: raw, rest, allowlists });
+    if (findings.length) {
+      // STRICT BY DEFAULT (A1 flip, operator-approved after the v1.120.0 warn
+      // soak): an unknown flag exits 2 — a typo'd or stale flag silently
+      // falling through to ambient resolution is how `--session-id` once
+      // closed the wrong session at exit 0. MADDU_STRICT_FLAGS=0 is the
+      // temporary opt-out for callers mid-migration; '1' remains accepted.
+      const strict = process.env.MADDU_STRICT_FLAGS !== '0';
+      // Flag NAMES are caller-typed text echoed to stderr — a pasted token
+      // (`--ghp_…`) must come back redacted, never verbatim (same law as
+      // commands/spine.mjs#redactFlagNames; fail-CLOSED to '(unprintable)').
+      // Suggestions come from the allowlist, never from caller input.
+      let redact = () => '(unprintable)';
+      try {
+        const scan = await loadOptionalLib('secret-scan.mjs');
+        if (scan && typeof scan.redactText === 'function') redact = (n) => scan.redactText(String(n)).text;
+      } catch {}
+      for (const f of findings) {
+        console.error(`maddu: unknown flag --${redact(f.key)} for "${raw}"${f.suggestion ? ` — did you mean --${f.suggestion}?` : ''}`);
+      }
+      if (strict) {
+        console.error(`maddu: unknown flags are an error (strict by default since v1.122.0); set MADDU_STRICT_FLAGS=0 to temporarily warn instead`);
+        process.exit(2);
+      }
+      console.error(`maddu: unknown flags IGNORED (MADDU_STRICT_FLAGS=0) — this opt-out is temporary; fix the flag`);
+    }
+  } catch {}
+
+  // Ordering law (see prepareMutationWitness): drain BEFORE the command's
+  // witness ctx exists, arm, then dispatch inside the ALS context.
+  await drainMutationBreaches(witnessState, raw, rest);
+  await armCommandWitness(witnessState, raw, rest);
+
   const commandPath = join(repoRoot, 'commands', `${raw}.mjs`);
   const mod = await import(pathToFileURL(commandPath).href);
-  await mod.default(rest);
+  // v1.139.0 (register C2, verify-round regression note): the command's return
+  // value is KEPT. A verb that mints a session (`register`, `session register`)
+  // returns { sessionId, created: true }; the exit-time receipt for that very
+  // invocation must carry the minted id, not the pre-dispatch answer (which
+  // was frozen before the session existed — the previous active id, or null).
+  let result;
+  if (witnessState.ctx && witnessState.lib) {
+    result = await witnessState.lib.runWithWitness(witnessState.ctx, () => mod.default(rest)); // the ONE guarded dispatch site
+  } else {
+    result = await mod.default(rest); // guard inert (older install / lib unloadable)
+  }
+  noteMintedSession(result);
 }
 
 main().catch((err) => {
+  // A malformed EXPLICIT id flag (--session / --parent, PR-B) is a clean user
+  // error: render the message without a stack, exit 2. The raw value is never
+  // in err.message (no injection surface).
+  if (err && err.code === 'INVALID_EXPLICIT_ID') {
+    console.error(err.message);
+    process.exit(2);
+  }
   console.error(err?.stack || err?.message || err);
   process.exit(1);
 });

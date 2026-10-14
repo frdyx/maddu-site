@@ -44,16 +44,24 @@ export function renderSkillInjectionsCard(injections) {
   const wrap = el('div', {});
   const sorted = injections.slice().sort((a, b) => String(b.ts || '').localeCompare(String(a.ts || '')));
   for (const inj of sorted.slice(0, 100)) {
+    // Projection shape: { ts, sessionId, skillIds[], triggers[], tags[], totalBytes }.
+    const skillIds = Array.isArray(inj.skillIds) ? inj.skillIds : [];
+    const triggers = Array.isArray(inj.triggers) ? inj.triggers : [];
+    const tags = Array.isArray(inj.tags) ? inj.tags : [];
+    const context = [
+      triggers.length ? `triggers: ${triggers.join(', ')}` : null,
+      tags.length ? `tags: ${tags.join(', ')}` : null,
+    ].filter(Boolean).join(' · ');
     wrap.appendChild(el('div', { class: 'panel-row' }, [
       el('div', { class: 'panel-row-head' }, [
-        el('span', { class: 'mono' }, inj.skillId || inj.skill || '(no skill)'),
-        el('span', { class: 'tag tone-neutral' }, inj.sliceId || '(no slice)'),
+        el('span', { class: 'mono' }, skillIds.length ? skillIds.join(', ') : '(no skill)'),
+        el('span', { class: 'tag tone-neutral' }, `${inj.totalBytes || 0} B`),
       ]),
       el('div', { class: 'panel-row-meta' }, [
         el('span', { class: 'mono' }, inj.sessionId || ''),
         el('span', { class: 'dim' }, inj.ts || ''),
       ]),
-      inj.reason ? el('div', { class: 'panel-row-detail' }, inj.reason) : null,
+      context ? el('div', { class: 'panel-row-detail' }, context) : null,
     ]));
   }
   return wrap;
@@ -93,7 +101,7 @@ export function renderModelRoutingLanes(lanes) {
   }
   const rows = lanes.filter((l) => l.defaults && l.defaults.modelPreference != null);
   if (!rows.length) {
-    return placeholder('No lane modelPreference set', 'Lanes inherit the global default. Set `defaults.modelPreference` in `.maddu/lanes/catalog.json` to override per lane.');
+    return placeholder('No lane modelPreference set', 'No lane default set — the runtime descriptor’s modelPreference (if any) applies. Set `defaults.modelPreference` in `.maddu/lanes/catalog.json` to declare one per lane.');
   }
   const wrap = el('div', {});
   for (const lane of rows) {
@@ -109,7 +117,7 @@ export function renderModelRoutingLanes(lanes) {
 
 export function renderModelRoutingPipelines(pipelines) {
   if (!pipelines.length) {
-    return placeholder('No pipelines with stage hints', 'Pipeline stages can declare `modelPreference` to route different stages to different models.');
+    return placeholder('No pipelines with stage hints', 'Pipeline stages can declare `modelPreference` per stage (declarative today — not yet fed into spawn resolution).');
   }
   const wrap = el('div', {});
   for (const p of pipelines.slice(-10).reverse()) {
@@ -125,7 +133,7 @@ export function renderModelRoutingPipelines(pipelines) {
     ]));
   }
   if (!wrap.childNodes.length) {
-    return placeholder('No stage-level modelPreference set', 'Add `modelPreference` to a pipeline stage to route just that stage to a specific model.');
+    return placeholder('No stage-level modelPreference set', 'Add `modelPreference` to a pipeline stage to declare a per-stage preference (declarative today — not yet fed into spawn resolution).');
   }
   return wrap;
 }

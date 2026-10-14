@@ -12,14 +12,33 @@
 // so handleBridge falls through. `reply()` is the sendJson-then-return-true
 // shim that preserves the original `return sendJson(...)` flow verbatim.
 
-import { append, ensureSpine, EVENT_TYPES, genSessionId } from './spine.mjs';
+import { append, ensureSpine, EVENT_TYPES, genSessionId, isSid, isRefId, isClaimLane } from './spine.mjs';
+import { registerSessionUnique, closeSessionIfActive } from './session-lifecycle.mjs';
+import { withCloseLock, isLockFailed } from './session-lifecycle.mjs';
 import { project } from './projections.mjs';
+import { claimLane, releaseLane } from './lane-ownership.mjs';
 import { pathsFor } from './paths.mjs';
 import { LANE_SLUG_RE } from './worktrees.mjs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { sendJson, readBody } from './http-util.mjs';
+import { redactLeaves } from './secret-scan.mjs';
 
 const reply = (res, code, body) => { sendJson(res, code, body); return true; };
+
+// Map the lane-ownership statuses shared by claim + release (PR-C) to a bridge
+// error reply. Returns true when it replied, false when the status is
+// route-specific (the caller handles it). 503 lock / 409 spine-corrupt / 500
+// partial mirror the §3.3a surfacing contract.
+function replyOwnershipError(res, r) {
+  switch (r.status) {
+    case 'lock': return reply(res, 503, { error: 'lane lock busy — retry' });
+    case 'spine-corrupt': return reply(res, 409, { error: 'spine has malformed lines — mutation refused; run maddu spine verify' });
+    case 'partial': return reply(res, 500, { error: 'append failed mid-transaction', partial: true, stage: r.stage });
+    case 'unregistered': return reply(res, 409, { error: 'session not registered or not active — register before claiming' });
+    case 'session-closed': return reply(res, 409, { error: 'session is closed — register a fresh session' });
+    default: return false;
+  }
+}
 
 // ── sessions ──────────────────────────────────────────────────────────
 export async function routeSessions({ req, res, path, repoRoot }) {
@@ -29,8 +48,13 @@ export async function routeSessions({ req, res, path, repoRoot }) {
   }
   if (path === '/bridge/sessions/register' && req.method === 'POST') {
     const body = (await readBody(req)) || {};
-    const sessionId = body.id || genSessionId();
-    const ev = await append(repoRoot, {
+    // v1.111.0: explicit ids are strict-grammar validated and duplicate-
+    // rejected through the close-locked uniqueness transaction — a same-id
+    // registration after a close must never resurrect the closed session.
+    if (body.id !== undefined && body.id !== null && !isSid(body.id)) {
+      return reply(res, 400, { error: 'invalid session id (must match ses_[A-Za-z0-9_]{1,64}) — omit id to generate one' });
+    }
+    const makeEvent = (sessionId) => ({
       type: EVENT_TYPES.SESSION_REGISTERED,
       actor: sessionId,
       lane: null,
@@ -41,29 +65,43 @@ export async function routeSessions({ req, res, path, repoRoot }) {
         runtime: body.runtime || null
       }
     });
-    return reply(res, 200, { ok: true, sessionId, event: ev });
+    const r = await registerSessionUnique(repoRoot, { id: body.id ?? undefined, makeEvent });
+    if (r.status === 'exists') return reply(res, 409, { error: 'session id already exists — omit id to register a new session' });
+    if (r.status === 'invalid-id') return reply(res, 400, { error: 'invalid session id (must match ses_[A-Za-z0-9_]{1,64}) — omit id to generate one' });
+    if (r.status === 'lock') return reply(res, 503, { error: 'session lock busy — retry' });
+    if (r.status === 'spine-corrupt') return reply(res, 409, { error: 'spine has malformed lines — explicit-id registration refused; run maddu spine verify' });
+    return reply(res, 200, { ok: true, sessionId: r.sessionId, event: r.event });
   }
   if (path === '/bridge/sessions/heartbeat' && req.method === 'POST') {
     const body = (await readBody(req)) || {};
-    if (!body.sessionId) return reply(res, 400, { error: 'sessionId required' });
-    const ev = await append(repoRoot, {
+    if (!isRefId(body.sessionId)) return reply(res, 400, { error: 'sessionId required (string, [\\w.-]{1,128})' });
+    // Heartbeat appends take the close lock (v1.111.0) so a janitor close
+    // can never interleave between its liveness check and this append.
+    // Lock timeout → append anyway (fail toward liveness: dropping the
+    // heartbeat could get a LIVE session janitor-closed, strictly worse
+    // than re-opening the race in an already-degraded stuck-lock state).
+    const doAppend = () => append(repoRoot, {
       type: EVENT_TYPES.SESSION_HEARTBEAT,
       actor: body.sessionId,
       lane: body.lane || null,
       data: { focus: body.focus || null }
     });
+    let ev = await withCloseLock(repoRoot, doAppend);
+    if (isLockFailed(ev)) ev = await doAppend();
     return reply(res, 200, { ok: true, event: ev });
   }
   if (path === '/bridge/sessions/close' && req.method === 'POST') {
     const body = (await readBody(req)) || {};
-    if (!body.sessionId) return reply(res, 400, { error: 'sessionId required' });
-    const ev = await append(repoRoot, {
-      type: EVENT_TYPES.SESSION_CLOSED,
-      actor: body.sessionId,
-      lane: null,
-      data: { handoff: body.handoff || null }
+    if (!isRefId(body.sessionId)) return reply(res, 400, { error: 'sessionId required (string, [\\w.-]{1,128})' });
+    // v1.111.0: serialized conditional close; handoff strings normalize to
+    // the schema's object shape inside the helper.
+    const r = await closeSessionIfActive(repoRoot, {
+      sessionId: body.sessionId,
+      eventType: EVENT_TYPES.SESSION_CLOSED,
+      data: { handoff: body.handoff ?? null },
     });
-    return reply(res, 200, { ok: true, event: ev });
+    if (r.status === 'closed') return reply(res, 200, { ok: true, event: r.event });
+    return reply(res, 409, { error: `close refused: ${r.status}`, status: r.status });
   }
   return false;
 }
@@ -80,29 +118,35 @@ export async function routeLanes({ req, res, path, repoRoot }) {
   if (path === '/bridge/lanes/claim' && req.method === 'POST') {
     const body = (await readBody(req)) || {};
     if (!body.lane || !body.sessionId) return reply(res, 400, { error: 'lane and sessionId required' });
-    const proj = await project(repoRoot);
-    const existing = proj.claims.find((c) => c.lane === body.lane);
-    if (existing && existing.sessionId !== body.sessionId) {
-      return reply(res, 409, { error: 'lane already claimed', currentClaim: existing });
-    }
-    const ev = await append(repoRoot, {
-      type: EVENT_TYPES.LANE_CLAIMED,
-      actor: body.sessionId,
-      lane: body.lane,
-      data: { focus: body.focus || null }
-    });
-    return reply(res, 200, { ok: true, event: ev });
+    // PR-B: input grammar (isRefId sessionId, isClaimLane lane) — NOT LANE_SLUG_RE
+    // (preserve `auto/…` + ad-hoc). Ownership/locking is unchanged (→ PR-C).
+    if (!isRefId(body.sessionId)) return reply(res, 400, { error: 'invalid sessionId (string, [\\w.-]{1,128})' });
+    if (!isClaimLane(body.lane)) return reply(res, 400, { error: 'invalid lane (1-128 chars, no control characters)' });
+    // PR-C: serialized, mode-aware claim through the ownership transaction.
+    // Refuses on ANY active rival owner (both modes) and requires an active
+    // REGISTERED session (decision b — an unregistered actor cannot participate
+    // in the close-cascade ordering, so tolerating it would manufacture an
+    // immediately-orphaned "successful" claim). Deliberate contract change.
+    const r = await claimLane(repoRoot, { sid: body.sessionId, lane: body.lane, focus: body.focus || null });
+    if (r.status === 'claimed') return reply(res, 200, { ok: true, event: r.event });
+    if (r.status === 'already-claimed') return reply(res, 409, { error: 'lane already claimed', currentClaim: r.holder });
+    return replyOwnershipError(res, r) || reply(res, 500, { error: 'claim failed', status: r.status });
   }
   if (path === '/bridge/lanes/release' && req.method === 'POST') {
     const body = (await readBody(req)) || {};
     if (!body.lane || !body.sessionId) return reply(res, 400, { error: 'lane and sessionId required' });
-    const ev = await append(repoRoot, {
-      type: EVENT_TYPES.LANE_RELEASED,
-      actor: body.sessionId,
-      lane: body.lane,
-      data: {}
-    });
-    return reply(res, 200, { ok: true, event: ev });
+    if (!isRefId(body.sessionId)) return reply(res, 400, { error: 'invalid sessionId (string, [\\w.-]{1,128})' });
+    if (!isClaimLane(body.lane)) return reply(res, 400, { error: 'invalid lane (1-128 chars, no control characters)' });
+    // PR-C headline fix: release iff the actor OWNS the lane (incl. a superseded
+    // owner). The old route appended LANE_RELEASED unconditionally — in default
+    // mode a release clears the lane, so ANY caller could evict ANY lane's real
+    // holder (an authorization hole, not merely a race). 404 no-owners /
+    // 409 owned-by-others.
+    const r = await releaseLane(repoRoot, { sid: body.sessionId, lane: body.lane });
+    if (r.status === 'released') return reply(res, 200, { ok: true, event: r.event });
+    if (r.status === 'no-owners') return reply(res, 404, { error: 'no active claim on lane held by this session', lane: body.lane });
+    if (r.status === 'owned-by-others') return reply(res, 409, { error: 'lane owned by another session', currentClaim: r.holder });
+    return replyOwnershipError(res, r) || reply(res, 500, { error: 'release failed', status: r.status });
   }
   // Set per-lane defaults: runtime, model, optional provider.
   if (path === '/bridge/lanes/defaults' && req.method === 'POST') {
@@ -122,7 +166,7 @@ export async function routeLanes({ req, res, path, repoRoot }) {
     for (const k of Object.keys(defaults)) if (defaults[k] == null) delete defaults[k];
     if (Object.keys(defaults).length === 0) delete lane.defaults;
     else lane.defaults = defaults;
-    await writeFile(paths.laneCatalog, JSON.stringify(catalog, null, 2) + '\n');
+    await writeFile(paths.laneCatalog, JSON.stringify(redactLeaves(catalog), null, 2) + '\n');
     await append(repoRoot, {
       type: 'LANE_DEFAULTS_SET',
       actor: body.by || null,
@@ -147,7 +191,7 @@ export async function routeLanes({ req, res, path, repoRoot }) {
     if (body.defaults && typeof body.defaults === 'object') lane.defaults = body.defaults;
     catalog.lanes = catalog.lanes || [];
     catalog.lanes.push(lane);
-    await writeFile(paths.laneCatalog, JSON.stringify(catalog, null, 2) + '\n');
+    await writeFile(paths.laneCatalog, JSON.stringify(redactLeaves(catalog), null, 2) + '\n');
     await append(repoRoot, { type: 'LANE_ADDED', actor: body.by || null, lane: lane.id, data: { lane } });
     return reply(res, 200, { ok: true, lane });
   }
@@ -174,7 +218,7 @@ export async function routeLanes({ req, res, path, repoRoot }) {
     }
     if (Object.keys(policy).length === 0) delete lane.policy;
     else lane.policy = policy;
-    await writeFile(paths.laneCatalog, JSON.stringify(catalog, null, 2) + '\n');
+    await writeFile(paths.laneCatalog, JSON.stringify(redactLeaves(catalog), null, 2) + '\n');
     await append(repoRoot, { type: 'LANE_POLICY_SET', actor: body.by || null, lane: id, data: { policy: lane.policy || null } });
     return reply(res, 200, { ok: true, lane });
   }
@@ -210,8 +254,11 @@ export async function routeLanes({ req, res, path, repoRoot }) {
     const before = (catalog.lanes || []).length;
     catalog.lanes = (catalog.lanes || []).filter((l) => l.id !== id);
     if (catalog.lanes.length === before) return reply(res, 404, { error: 'lane not found' });
-    await writeFile(paths.laneCatalog, JSON.stringify(catalog, null, 2) + '\n');
-    await append(repoRoot, { type: 'LANE_REMOVED', actor: null, lane: id, data: {} });
+    await writeFile(paths.laneCatalog, JSON.stringify(redactLeaves(catalog), null, 2) + '\n');
+    // data.ok matches the shape event-schema.mjs has always documented for
+    // LANE_REMOVED — this emitter historically wrote `{}` against it (Tier-4a
+    // roadmap finding; the type had never fired anywhere, so no consumer broke).
+    await append(repoRoot, { type: 'LANE_REMOVED', actor: null, lane: id, data: { ok: true } });
     return reply(res, 200, { ok: true });
   }
   return false;

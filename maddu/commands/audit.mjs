@@ -36,7 +36,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseFlags } from './_args.mjs';
-import { findRepoRoot } from './_resolve.mjs';
+import { findRepoRoot, findStateRoot } from './_resolve.mjs';
 import { exists } from './_libroot.mjs';
 
 const ANSI = {
@@ -126,6 +126,11 @@ const GATE_IDS = {
   // the import graph can't see). Baselined monoliths may only shrink; a new or
   // grown one fails. Skips when no contract / mass config.
   mass: 'architecture-mass',
+  // PR-2 gate campaign (funnel r2 #2) — acceptance-proven: the declared-
+  // verification readout. Doctor and CI already run every builtin gate; audit
+  // running a curated subset that silently omitted it made "renders wherever
+  // gates run" false on exactly one surface.
+  acceptance: 'acceptance-proven',
   // v1.19.0 — generated-artifacts-current: every single-sourced artifact is
   // byte-equal to a fresh render of its authored source, and no payload file is
   // an orphan (no source). The enforcement arm of the generated-artifact
@@ -145,7 +150,7 @@ function gateRunToCheck(run) {
 // Run one or all of the reusable gates via the gate runner. repoRoot is the
 // cwd repo (used by the runner for ctx); the coherence gates resolve the
 // framework source from their own __dirname regardless.
-async function runGateChecks(repoRoot, onlyGateId) {
+async function runGateChecks(repoRoot, onlyGateId, roots = null) {
   const gatesLib = await loadGatesLib();
   if (!gatesLib?.runGates) {
     return [{ level: 'WARN', label: 'gate runner', detail: 'gates.mjs not available' }];
@@ -153,7 +158,7 @@ async function runGateChecks(repoRoot, onlyGateId) {
   const checks = [];
   const ids = onlyGateId ? [onlyGateId] : Object.values(GATE_IDS);
   for (const id of ids) {
-    const result = await gatesLib.runGates(repoRoot, { onlyId: id, emitEvents: false });
+    const result = await gatesLib.runGates(repoRoot, { onlyId: id, emitEvents: false, ...(roots ? { roots } : {}) });
     if (result.runs.length === 0) {
       checks.push({ level: 'WARN', label: id, detail: 'gate not found' });
     } else {
@@ -324,18 +329,21 @@ const RULE_GATES = {
   '9 trigger-gauntlet':   { gates: ['command-tier-discipline'] },
 };
 
+// A2 (audit 2026-09-07): this used to read each gate file as TEXT and take the
+// first `id: '...'` it found. In can-read-old-state.mjs that match is fixture
+// data — `sessions: [{ id: 'ses_x' }]` — so the traceability set contained a
+// session id and not the gate, and any rule that came to reference that gate
+// would have reported a dangling ref for a gate that is right there. Ask the
+// loader for the ids the definitions actually export instead.
 async function presentGateIds() {
-  const dir = join(frameworkRoot(), 'template', 'maddu', 'runtime', 'gates', 'builtin');
-  const ids = new Set();
-  let files = [];
-  try { files = (await readdir(dir)).filter((f) => f.endsWith('.mjs')); } catch { return ids; }
-  for (const f of files) {
-    let src = '';
-    try { src = await readFile(join(dir, f), 'utf8'); } catch { continue; }
-    const m = src.match(/id:\s*'([^']+)'/);
-    if (m) ids.add(m[1]);
+  const gatesLib = await loadGatesLib();
+  if (!gatesLib || typeof gatesLib.loadBuiltinGateIds !== 'function') {
+    // Pre-A2 runtime: report nothing rather than fall back to the regex. The
+    // caller renders an empty set as a visible skip, which is the honest
+    // answer — a wrong id set is worse than no id set.
+    return new Set();
   }
-  return ids;
+  try { return await gatesLib.loadBuiltinGateIds(); } catch { return new Set(); }
 }
 
 async function checkRuleGateTraceability() {
@@ -553,34 +561,55 @@ async function checkGovernanceBudget() {
 
   const verdict = lib.budgetVerdict({ counts, manifest });
 
-  // Latency half: the last recorded self-test duration (source-only; absent on a
-  // consumer or fresh checkout → SKIP, never a false alarm).
+  // Latency half: the last recorded self-test run, judged against the baseline
+  // for ITS profile (v1.138.0, register F1). Every latency state is rendered —
+  // OK, WARN, SKIP (no run recorded) and UNSUPPORTED (a run the manifest has no
+  // baseline for) each name themselves in the detail. Before this, SKIP printed
+  // nothing and was indistinguishable from "within budget" (register CR 12).
   let durationMs = null;
+  let profile = null;
+  let lastRunPresent = false;
   const lastRunPath = join(frameworkRoot(), '.maddu', 'state', 'self-test-last-run.json');
   if (await exists(lastRunPath)) {
-    try { const doc = JSON.parse(await readFile(lastRunPath, 'utf8')); durationMs = Number(doc?.durationMs) || null; } catch {}
+    lastRunPresent = true;
+    try {
+      const doc = JSON.parse(await readFile(lastRunPath, 'utf8'));
+      durationMs = Number(doc?.durationMs) || null;
+      profile = typeof doc?.profile === 'string' ? doc.profile : null;
+    } catch {}
   }
-  const latency = lib.latencyVerdict({ durationMs, selfTest: manifest.selfTest });
+  const latency = lastRunPresent
+    ? lib.latencyVerdict({ durationMs, profile, selfTest: manifest.selfTest })
+    : { level: 'SKIP', message: `no self-test run recorded (budgeted profiles: ${lib.supportedLatencyProfiles(manifest.selfTest).join(', ') || 'none'})` };
+  const latencyClause = `latency ${latency.level}: ${latency.message}`;
 
   const summary = lib.summarizeBudget(verdict);
   if (verdict.level === 'FAIL') {
     const detail = verdict.over
       .map((r) => `${r.category} ${r.count} over cap ${r.cap}${r.waivers ? `+${r.waivers}w` : ''} — retire/merge one or add a waiver`)
       .join('; ');
-    return { level: 'FAIL', label: 'governance budget', detail: `${detail} (${summary})` };
+    return { level: 'FAIL', label: 'governance budget', detail: `${detail} (${summary}) · ${latencyClause}` };
   }
   const warns = [];
   if (verdict.level === 'WARN') {
     warns.push(verdict.warn.map((r) => `${r.category} carried by ${r.waivers} waiver(s) (${r.count}/${r.cap})`).join('; '));
   }
-  if (latency.level === 'WARN') warns.push(latency.message);
+  // WARN: over the profile's ceiling. UNSUPPORTED: a run happened that the
+  // budget cannot judge — that is a gap in the manifest or the report, and it
+  // is surfaced as WARN rather than hidden inside a PASS.
+  const latencyWarns = latency.level === 'WARN' || latency.level === 'UNSUPPORTED';
+  if (latencyWarns) warns.push(latencyClause);
   if (warns.length) {
-    return { level: 'WARN', label: 'governance budget', detail: `${warns.join('; ')} (${summary})` };
+    // A count-side WARN (a waiver-carried category) used to swallow the latency
+    // clause entirely (funnel r1 #6, pre-existing) — an OK or SKIP latency still
+    // rides along here so the clause really is rendered on every path.
+    const tail = latencyWarns ? '' : ` · ${latencyClause}`;
+    return { level: 'WARN', label: 'governance budget', detail: `${warns.join('; ')} (${summary})${tail}` };
   }
-  return { level: 'PASS', label: 'governance budget', detail: `${summary}${latency.level === 'OK' ? ` · ${latency.message}` : ''}` };
+  return { level: 'PASS', label: 'governance budget', detail: `${summary} · ${latencyClause}` };
 }
 
-const SUBCOMMANDS = new Set(['events', 'commands', 'cockpit', 'slash', 'docs', 'charter', 'defaults', 'brief', 'traceability', 'invariants', 'architecture', 'mass', 'capability-docs', 'generated', 'budget', 'positioning']);
+const SUBCOMMANDS = new Set(['events', 'commands', 'cockpit', 'slash', 'docs', 'charter', 'defaults', 'brief', 'traceability', 'invariants', 'architecture', 'mass', 'capability-docs', 'generated', 'budget', 'positioning', 'acceptance']);
 
 export default async function audit(argv) {
   const { flags, positional } = parseFlags(argv);
@@ -608,6 +637,21 @@ export default async function audit(argv) {
   if (!sub || sub === 'architecture') checks.push(...await runGateChecks(repoRoot, GATE_IDS.architecture));
   if (!sub || sub === 'mass') checks.push(...await runGateChecks(repoRoot, GATE_IDS.mass));
   if (!sub || sub === 'generated') checks.push(...await runGateChecks(repoRoot, GATE_IDS.generated));
+  // The acceptance gate reads the SHARED spine (funnel r3 #2, explicit pair
+  // per r4): from an attached worktree the proof record lives at the
+  // pointer's target while the digests describe the tree the operator is
+  // standing in; every other audit check here is checkout-scoped and keeps
+  // `repoRoot` alone.
+  if (!sub || sub === 'acceptance') {
+    try {
+      checks.push(...await runGateChecks(repoRoot, GATE_IDS.acceptance,
+        { workRoot: repoRoot, stateRoot: (await findStateRoot(process.cwd())) || repoRoot }));
+    } catch (err) {
+      // Misconfigured state override/pointer (funnel r5 #1): a hard finding,
+      // never a silent fallback to a state other commands refuse.
+      checks.push({ level: 'FAIL', label: 'acceptance proven', detail: err.message });
+    }
+  }
 
   // Audit-only checks.
   if (!sub || sub === 'slash') checks.push(await checkSlashOnRamp());
