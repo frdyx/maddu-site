@@ -23,6 +23,15 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v1.153.0',
+    id: 'v1-153-0',
+    date: '2026-10-13',
+    type: 'polish',
+    headline: 'Tone without side stripes — the cockpit loses its generated-UI tell',
+    summary: 'Cockpit design. A thick coloured border down one side of a card is the most recognisable tell of generated UI, and the cockpit had **twenty-two** of them — nineteen flagged by impeccable’s `side-tab` rule plus three thinner 2 px ones. They are gone, along with the four layout-property animations the same detector flagged. A surface now says ok / warn / danger / accent with its **1 px top hairline plus a corner glow of the same hue** — one registered `@property --m-tone` drives both, so glow and border share the lit edge and cross-fade together when a live surface changes tone. Toasts, approval and proposal cards, the conductor’s next command, boss-strip tiles, chain-integrity strips and portfolio cards are converted; claims-table rows drop the stripe entirely because the state pill already says it in words. Rail groups now collapse by animating `grid-template-rows` instead of `max-height` (no more 800 px cap, collapsed links leave the tab order), and bar fills lose a `transition: width` that never ran. A new row, `cockpit-no-side-stripes`, is a regression tripwire for the ways cockpit code writes borders — red at base on all 22, with its known gaps listed in its header. **No CLI, bridge, event or gate change.**',
+    note: 'Selection state is kept on purpose: the transparent 2 px left border that only the selected item in the rail, workbench list and docs nav colours is state on a list row, not decoration on a card.',
+  },
+  {
     version: 'v1.152.0',
     id: 'v1-152-0',
     date: '2026-09-22',
