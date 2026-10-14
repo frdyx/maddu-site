@@ -36,7 +36,7 @@ The page itself never scrolls — only the rail and the route body do. The compo
 
 ### `#orientation` *(v0.16, Sessions panel v0.17)*
 
-Turn-start digest. Goal, phase, active session, last slice, counters, open follow-ups, plus the rendered handoff markdown from the most recent slice-stop. **v0.17** adds a **Sessions panel** showing the live `sessionsTree` projection — parent sessions and their auto-registered children inline, with stale/closed indicators driven by the inline janitor. Top of the **Decide** group. Reads `GET /bridge/orientation` + (for v0.17) `GET /bridge/agent-context`; both are pure projections from the spine, deterministic across restarts. Pair with the CLI: `maddu brief` prints the orientation digest, `maddu session tree` prints the same tree the panel renders. Set goal/phase with `maddu goal set` / `maddu phase set`. See [20-governance.md](20-governance.md#turn-start-orientation) and [21-agent-onboarding.md](21-agent-onboarding.md).
+Turn-start digest. Goal, phase, active session, last slice, counters, open follow-ups, plus the rendered handoff markdown from the most recent slice-stop. **v0.17** adds a **Sessions panel** showing the live `sessionsTree` projection — parent sessions and their auto-registered children inline, with stale/closed indicators driven by the inline janitor. Top of the **Decide** group. Reads `GET /bridge/orientation` for the digest and the rendered handoff, and `GET /bridge/projection` for the Sessions panel (the `sessionsTree` and janitor activity live on the projection, not on the orientation response); both are pure projections from the spine, deterministic across restarts. Agents read a terser twin through `maddu brief --for-agent` (and its bridge form, listed under *Agent context* in [05-bridge-endpoints.md](05-bridge-endpoints.md)); the cockpit does not fetch that one. Pair with the CLI: `maddu brief` prints the orientation digest, `maddu session tree` prints the same tree the panel renders. Set goal/phase with `maddu goal set` / `maddu phase set`. See [20-governance.md](20-governance.md#turn-start-orientation) and [21-agent-onboarding.md](21-agent-onboarding.md).
 
 ### `#gates` *(v0.16)*
 
@@ -45,6 +45,16 @@ Recent `GATE_RAN` events with summary counts (ok / fail / warn / last run). One 
 ### `#reviews` *(v0.16)*
 
 Post-stop reviews. Verdict counts (`CLEAN`/`P1`/`P2`/`P3`/`INFO`), recent `SLICE_REVIEWED` events, open follow-ups. Per-review markdown archived at `.maddu/reviews/<slice-event-id>.md`. Configured via `.maddu/config/review-policy.json`; the reviewer is a runtime with `kind: 'reviewer'`. Non-clean verdicts auto-open `FOLLOWUP_OPENED` events that surface in `#orientation`. Reads `GET /bridge/reviews?limit=N&verdict=P2`. See [20-governance.md](20-governance.md#post-stop-review-lane).
+
+### The Operator Plane routes *(v1.97.0)*
+
+Five read-only routes for the operator on the hook — the person who may not read the code (see [52-oversight.md](52-oversight.md), [53-operator-plane.md](53-operator-plane.md)). Each is a display-time projection; none writes to the spine.
+
+- **`#oversight`** — what a skill was **fed vs withheld**, with a plain-language *why* per item; on-goal drift; record-intact. Reads `GET /bridge/oversight`; mirror of `maddu spine oversight`.
+- **`#digest`** — "while you were away": what changed since you last looked (slices landed, gates failing, goal state). Reads `GET /bridge/digest`; mirror of `maddu orient --digest`.
+- **`#project`** — a single project's state, focused, for the one-repo operator. Reads `GET /bridge/project-cockpit`.
+- **`#decisions`** — the decision/approval ledger, each row's `sha` tied to the tamper chain (a decision you can prove wasn't back-dated). Reads `GET /bridge/decisions`.
+- **`#portfolio`** — the cross-workspace wall: every registered workspace at once and **which need a human**. Reads `GET /bridge/_all/portfolio` (fans out over all workspaces).
 
 ### `#workbench`
 
@@ -134,6 +144,10 @@ Bridge config, lane catalog, provider auth shortcuts, MCP registry shortcuts. Th
 
 Pipeline runs only. Last 10 `PIPELINE_*` runs with stage trail (✓ for completed stages, … for running). Status tag tones: ok / warn / neutral. Reads `GET /bridge/pipelines`. In v0.18 this route bundled teams + pipelines + cost + a cheatsheet into one 4-card grid; v0.19.2 split each into its own route (see below). The slash-command cheatsheet moved to `#conductor` as a small "Slash-command quick reference" card.
 
+### `#teams` *(v0.19.2, team-sync panel #12c)*
+
+Lane-ownership map: one card per catalog lane (held/free, holder session, slice-stop frequency, policy), each opening in the Inspector. Reads `GET /bridge/lanes` + `GET /bridge/projection`. On a repo in [git-native team sync](49-team-sync.md), two additions light up (both absent on a default single-machine repo): a lane with concurrent claims across replicas carries a **contended** pill naming the superseded sessions (the earliest claim in the merged order holds), and a **Team sync** panel lists the replica partitions on disk — this checkout vs foreign — plus every contended lane with holder and superseded claimants. Data rides the projection's read-time `contentions` field and the bridge's sync-mode `teamSync` decoration; nothing is written to the spine.
+
 ### `#cost` *(v0.19.2)*
 
 Token + call rollup per runtime. `TOKEN_USAGE_REPORTED` rolled up with calls + input/output sums and an explicit "unreported" count (never zero-filled). Reads `GET /bridge/cost`. Empty-state hints at the worker minimum schema (`{ runtime, sessionId, model, ts }`) and `maddu cost --unreported-count`.
@@ -161,6 +175,24 @@ Reads `GET /bridge/runtimes`, `GET /bridge/lanes`, and `GET /bridge/pipelines`. 
 Last-run timestamps for the stress harness and upgrade matrix. Each row carries a tone tag — `ok` if recent, `warn (Nd)` if older than the threshold (7 days for stress, 14 for upgrade matrix; matches the doctor gates). Reads `GET /bridge/test-status`, which reads the canonical state files written by `scripts/test/stress-harness.mjs` et al.
 
 All v0.19.2 routes refresh on the bridge event stream with 400 ms debounce — same pattern as the Claims map.
+
+### `#experience` *(EXP)*
+
+The [experience ledger + evolve planner](50-experience-evolve.md), read-only. Two panels: **Experience ledger** — totals strip (events / steps / trajectories / signals / env steps), signal rollups by kind and attachment (trailing unattached gates called out, never dropped), the latest trajectories with **trajectory-level signals surfaced inline** as badges, and recent signal-bearing steps — every trajectory and step row opens in the Inspector with its signal sources linked as related events. **Evolve planner** — the recommend-only plan: recommendation cards with category / detector / confidence / evidence count and the `maddu evolve adopt <recId>` hint, or the honest no-op rendered as a first-class result with its full "why", plus the scanned counters. Reads `GET /bridge/experience` (one fetch feeds both panels); renders nothing it cannot shape-validate; adoption stays a CLI verb — the cockpit never writes.
+
+### `#model` *(SLM)*
+
+The [SLM-factory registry](51-slm-governance.md), read-only. Totals strip
+(datasets / runs / checkpoints / evals / releases) with unacknowledged
+critical regressions called out in red, checkpoints on the promotion ladder
+with their spine-DERIVED stage (foreign checkpoints honestly badged), pending
+promotion proposals (decide + confirm stay CLI verbs — the cockpit never
+advances a stage), and recent releases/rollbacks with their rollback plans.
+Every checkpoint row opens in the Inspector with its evals as evidence and
+the `regression ack` recovery verb named on unacknowledged criticals. Reads
+`GET /bridge/model`; renders nothing it cannot shape-validate; a repo with
+no model events gets a first-class "not governing an SLM factory" card, not
+an error.
 
 ## Common operator flows
 

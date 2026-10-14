@@ -13,6 +13,7 @@ import { mkdir, readFile, writeFile, appendFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathsFor } from './paths.mjs';
 import { append, EVENT_TYPES, makeId } from './spine.mjs';
+import { redactLeaves } from './secret-scan.mjs';
 import { listGlobalSchedules, recordGlobalScheduleFire } from './global.mjs';
 
 function scheduleFile(repoRoot) {
@@ -53,7 +54,9 @@ export async function readSchedule(repoRoot, id) {
 
 async function writeRecord(repoRoot, rec) {
   await ensureFile(repoRoot);
-  await appendFile(scheduleFile(repoRoot), JSON.stringify(rec) + '\n');
+  // Write-boundary redaction: a schedule record persists caller command/natural
+  // text. Value-pattern scrub only; clean records are unchanged.
+  await appendFile(scheduleFile(repoRoot), JSON.stringify(redactLeaves(rec)) + '\n');
 }
 
 export async function saveSchedule(repoRoot, patch, by = null) {
@@ -121,7 +124,7 @@ function parseField(field, min, max) {
   throw new Error(`unsupported cron field: "${field}"  (supports *, N, a,b,c, */N)`);
 }
 
-export function parseCron(expr) {
+function parseCron(expr) {
   const parts = expr.trim().split(/\s+/);
   if (parts.length !== 5) throw new Error(`cron must have 5 fields, got "${expr}"`);
   return [
@@ -145,7 +148,7 @@ function fieldMatches(spec, value) {
   return false;
 }
 
-export function cronMatches(expr, date = new Date()) {
+function cronMatches(expr, date = new Date()) {
   const fields = parseCron(expr);
   return fieldMatches(fields[0], date.getMinutes())
       && fieldMatches(fields[1], date.getHours())
@@ -312,7 +315,7 @@ export async function tick(repoRoot, now = new Date(), { onFire = null } = {}) {
 // Governance Phase 4: shared trigger gauntlet — used by tick + any future
 // auto-trigger surface. Returns `{ fired: true, cooldownMs }` on green;
 // `{ fired: false, reason }` on refusal.
-export async function evaluateCommandTrigger(repoRoot, target, triggerId, nowMs) {
+async function evaluateCommandTrigger(repoRoot, target, triggerId, nowMs) {
   // 1. Resolve tier from commands/_tiers.mjs (installed or dev).
   const tier = await resolveTier(repoRoot, target);
   if (!tier) return { fired: false, reason: `command "${target}" has no tier in _tiers.mjs` };

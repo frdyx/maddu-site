@@ -23,7 +23,7 @@ import { join, dirname } from 'node:path';
 import { createServer, request as httpRequest } from 'node:http';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseFlags } from './_args.mjs';
-import { findRepoRoot } from './_resolve.mjs';
+import { findRepoRoot, findStateRoot } from './_resolve.mjs';
 import { exists, readMadduJson, frameworkVersion } from './_manifest.mjs';
 
 const ANSI = {
@@ -59,20 +59,23 @@ function tag(level) {
 // frdyx/maddu or the npm-extracted package), as opposed to a consumer
 // install produced by `maddu init`? The framework source has no
 // `maddu.json` install marker by design — it IS the framework, it was
-// never installed into anything. Detect it structurally so the
-// missing-marker check can be informational here without weakening the
-// real FAIL for a genuinely broken consumer install. Signals (all three):
-//   - package.json `name === "maddu"`
-//   - a `template/maddu/` source tree (only the source layout has this)
-//   - a `commands/` CLI handler dir at the root
+// never installed into anything. The structural test lives in ONE place
+// (runtime/lib/layout.mjs); doctor and three gates used to keep private
+// copies of it, which is how three of them ended up with no copy at all
+// and reported the source repo as a broken install.
+// Resolved through resolveRuntimeLib, NOT _libroot: _libroot resolves against
+// process.cwd() and the framework's template/, so an INSTALLED CLI invoked
+// from a directory that is not itself an install (checking another repo)
+// would find neither and silently answer 'not the framework source' — which
+// would report a source checkout's intentionally absent maddu.json as FAIL.
+// resolveRuntimeLib looks beside the CLI, which is where the lib actually is,
+// and is what every other runtime-lib load in this file already uses.
 async function isFrameworkSourceRepo(repoRoot) {
-  try {
-    const pkg = JSON.parse(await readFile(join(repoRoot, 'package.json'), 'utf8'));
-    if (pkg.name !== 'maddu') return false;
-  } catch { return false; }
-  if (!(await exists(join(repoRoot, 'template', 'maddu')))) return false;
-  if (!(await exists(join(repoRoot, 'commands')))) return false;
-  return true;
+  const p = await resolveRuntimeLib('layout.mjs');
+  if (!p) return false;
+  const layout = await import(pathToFileURL(p).href);
+  if (!layout?.isFrameworkSourceRepo) return false;
+  return layout.isFrameworkSourceRepo(repoRoot);
 }
 
 // v1.1.0 Phase 3 — print the current governance mode as a banner so
@@ -262,7 +265,11 @@ async function runRepoChecks(repoRoot, label, gateOpts = {}) {
           }
         }
       }
-      if (!gateOpts.onlyId && !gateOpts.severity) return checks;
+      // B1: doctor used to RETURN here unless a specific gate was asked for,
+      // so in the framework source repo it never ran a single gate — the one
+      // place the framework is developed was the one place doctor could not
+      // see its own gate rail. Continue to the gate run; the consumer-install
+      // shape checks below still don't apply here (see `sourceGateOnly`).
       sourceGateOnly = true;
     } else {
       checks.push({ level: 'FAIL', label: `${tagLabel}maddu.json`, detail: `missing at ${repoRoot}` });
@@ -294,12 +301,18 @@ async function runRepoChecks(repoRoot, label, gateOpts = {}) {
   }
 
   // ── Gate runner — built-in gates + operator gates ──
+  // `repoRoot` stays the CHECKOUT root every gate has always read (funnel r4
+  // #2 — re-rooting it regressed install/pin gates from worktrees); the
+  // resolved pair rides the explicit `roots` override so pair-aware gates
+  // (acceptance-proven) read the shared spine, and an explicit target is
+  // never mispaired with the invoker's standing worktree (r4 #3).
   const gatesLib = await loadGatesLib();
   if (gatesLib?.runGates) {
     const result = await gatesLib.runGates(repoRoot, {
       onlyId: gateOpts.onlyId,
       severity: gateOpts.severity,
       emitEvents: true,
+      roots: { workRoot: repoRoot, stateRoot: gateOpts.stateRoot || repoRoot },
     });
     for (const run of result.runs) checks.push(gateRunToCheck(run, tagLabel));
     // State containment isn't a gate (no security-relevant invariant; it's
@@ -479,7 +492,24 @@ export default async function doctor(argv) {
     }
     repoTargets = regResult.workspaces.map((w) => ({ repoRoot: w.path, label: workspaceDoctorLabel(w) }));
   } else {
-    const cwdRepo = await findRepoRoot(process.cwd());
+    // TWO roots, two scopes (gate funnel r2 #1, narrowed r3 #1): checkout
+    // checks (install integrity, package rules) keep the nearest `.maddu`
+    // holder — the tree the operator is standing in — while the GATES read
+    // the SHARED spine the `.maddu-state-root` pointer names; using the state
+    // root for everything would scan the primary checkout's files from a
+    // worktree and falsely pass its edits.
+    const workRepo = await findRepoRoot(process.cwd());
+    let stateRepo = null;
+    try {
+      stateRepo = await findStateRoot(process.cwd());
+    } catch (err) {
+      // A misconfigured MADDU_STATE_ROOT / pointer is a hard finding, not a
+      // silent fallback (funnel r5 #1) — every other command refuses this
+      // state, so doctor must not report health against a substitute.
+      console.log(`${tag('FAIL')}  ${err.message}`);
+      process.exit(1);
+    }
+    const cwdRepo = workRepo || stateRepo;
     if (!cwdRepo) {
       if (regResult.workspaces.length > 0) {
         console.log(`${tag('WARN')}  not inside a .maddu/ repo; pass --all to check every registered workspace.`);
@@ -488,7 +518,7 @@ export default async function doctor(argv) {
         process.exit(1);
       }
     } else {
-      repoTargets = [{ repoRoot: cwdRepo, label: null }];
+      repoTargets = [{ repoRoot: cwdRepo, stateRoot: stateRepo || cwdRepo, label: null }];
     }
   }
 
@@ -507,8 +537,8 @@ export default async function doctor(argv) {
     onlyId: typeof flags.gate === 'string' ? flags.gate : undefined,
     severity: typeof flags.severity === 'string' ? flags.severity : undefined,
   };
-  for (const { repoRoot, label } of repoTargets) {
-    checks.push(...await runRepoChecks(repoRoot, label, gateOpts));
+  for (const { repoRoot, stateRoot, label } of repoTargets) {
+    checks.push(...await runRepoChecks(repoRoot, label, { ...gateOpts, stateRoot: stateRoot || repoRoot }));
   }
 
   // ── Port availability (machine-wide, not per-workspace) ──
@@ -579,6 +609,29 @@ export default async function doctor(argv) {
       if (verbose) console.error(`  (could not load spine.mjs: ${err.message})`);
     }
   }
+
+  // Activation funnel (usage-audit Tier 3): where this install is on the
+  // ritual path + the ONE next action. Printed AFTER the DOCTOR_REPORT
+  // append so a first green run counts toward the stage it reports (a fresh
+  // repo whose doctor just passed reads 'healthy', not 'installed'). Passive
+  // gate/doctor traffic does not count as adoption. Read-only; best-effort.
+  try {
+    const funnelLibPath = await resolveRuntimeLib('activation-funnel.mjs');
+    if (funnelLibPath) {
+      const funnelMod = await import(pathToFileURL(funnelLibPath).href);
+      for (const { repoRoot } of repoTargets) {
+        const fn = await funnelMod.deriveFunnel(repoRoot);
+        if (!fn) continue;
+        const t = fn.tallies;
+        const where = repoTargets.length > 1 ? `  ${ANSI.dim}${repoRoot}${ANSI.reset}` : '';
+        console.log();
+        console.log(`  ${ANSI.bold}Activation:${ANSI.reset}  ${fn.stage} (stage ${fn.stageIndex + 1}/6)${where}  ${ANSI.dim}sessions ${t.sessions} · lane claims ${t.claims} · slice-stops ${t.sliceStops}${ANSI.reset}`);
+        if (fn.stage !== 'repeating') {
+          console.log(`  ${ANSI.bold}Next:${ANSI.reset}        ${fn.nextAction}`);
+        }
+      }
+    }
+  } catch {}
 
   process.exit(counts.FAIL > 0 ? 1 : 0);
 }

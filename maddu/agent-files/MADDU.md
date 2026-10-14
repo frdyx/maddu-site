@@ -84,7 +84,7 @@ every run. Full rationale in `maddu/docs/hard-rules.md`; the stable charter is
 - **Slice-stop on every meaningful unit of work.** This is what feeds
   hindsight, pattern projection, and the operator's audit trail.
 - **Scope-lock available** for high-stakes slices —
-  `./maddu/run slice scope-declare --slice <id> --scope path1,path2,...`
+  `./maddu/run slice scope-declare --slice-id <id> --paths path1,path2,...`
   refuses edits outside the declared set until you expand the scope
   explicitly.
 - **Auto-trigger discipline.** Mutating commands fired by triggers must
@@ -101,8 +101,11 @@ two close matches, ask **one** clarifying question — not three.
 work, the default is `maddu pipeline run <name> "<goal>"` — not an ad-hoc
 autopilot. Pipelines walk the canonical flow (orient → plan → coordinate
 → slice → test → review → land → account) and populate the feature
-surfaces. Three default pipelines ship: `ship-a-feature` (the default,
-for end-to-end feature work), `fix-a-bug` (something broken), and
+surfaces. The runner is a bookkeeper — it records the stage trail and
+leaves each stage's work to you. Four default pipelines ship:
+`ship-a-feature` (the default, for end-to-end feature work), `fix-a-bug`
+(something broken), `plan-exec-verify-fix` (the end-to-end work shape:
+plan → exec → verify → fix), and
 `plan-and-delegate` (fan-out across disjoint lanes — its coordinate
 stage spawns a tracked Máddu worker per phase via `coordinator
 --runtime <name>`, so the fan-out is visible to Máddu; requires a
@@ -135,9 +138,13 @@ runtime descriptor, see `maddu runtime list`). Reserve ad-hoc
 | "learn from my mistakes", "what went wrong", "review past failures", "mine my sessions" | `/maddu-learn` (→ `learn run`/`digest`: judges failure→success pairs and **auto-writes** project facts) |
 | "am I claiming done without proof", "hedged completions", "did we verify what we shipped", "reflect on slice quality" | `/maddu-learn` (→ `learn scan`: **read-only** report of hedged-completion-without-observed-proof slices; writes nothing) |
 | "what corrections do we have", "learned project facts" | `/maddu-memory` (then `--kind correction`) |
+| "wiki", "lane wiki", "is the wiki up to date", "backfill the wiki" | `maddu wiki drift` (then `maddu wiki sync` to backfill missing entries) |
 | "blueprint this project", "export how we built X", "make a reusable handoff/recipe", "reproduce this as a system" | `/maddu-blueprint` |
 | "what shortcuts did we take", "technical debt", "deferred work", "what needs upgrading" | `/maddu-debt` |
 | "architecture drift", "did we break the layering", "diagram the architecture", "import boundaries", "module dependencies" | `/maddu-architecture` |
+| "show my trajectory", "experience ledger", "what did this session actually do", "normalized work record", "trajectories" | `maddu experience list` (then `maddu experience show <id>` / `maddu experience stats` — **read-only** spine→steps projection; step ids are event ids, nothing is written) |
+| "how should we improve", "what should we change", "evolve from experience", "improvement recommendations", "what patterns keep repeating" | `maddu evolve plan` (**recommend-only** — evidence-backed recommendations from the experience projection; NOTHING applies without the operator running `maddu evolve adopt <rec-id>`) |
+| "record the dataset/training run/eval", "register a checkpoint", "promote the model", "model rollback", "model registry", "SLM factory governance" | `maddu model` (records what your ML tools did — `dataset snapshot` / `train start`/`complete` / `checkpoint register` / `eval record` / `promote` (rides approvals) / `release` / `rollback` / `status`; stages are **derived from the spine**, and Máddu never trains, serves, or evaluates) |
 | "I need a tool for …", "connect to <service>", "use the <X> MCP", "the runtime can't do <external thing>" | `/maddu-mcp` (register/enable the MCP server, then proceed) |
 
 **When a task needs a capability the runtime lacks** (calling an external
@@ -213,7 +220,7 @@ Exceptions:
 
 ## What NOT to touch
 
-- `.maddu/events/` — append-only NDJSON; only via `maddu events append`.
+- `.maddu/events/` — append-only NDJSON; written only by `maddu` verbs — never hand-edit or append directly.
 - `.maddu/state/` — read-only projection of events; never hand-edit.
 - `.maddu/sessions/` — owned by `maddu session register/heartbeat/close`.
 - `.maddu/inbox/` — append-only; only via `maddu mailbox send` or `POST /bridge/inbox`.
@@ -239,7 +246,7 @@ Press `?` inside the cockpit for the full docs index.
 4. Append a question to the operator inbox:
 
    ```bash
-   ./maddu/run mailbox send --lane harness --text "QUESTION: <what's blocking>"
+   ./maddu/run mailbox send harness --type question --subject "QUESTION: <what's blocking>"
    ```
 
    The cockpit operator sees it.

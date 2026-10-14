@@ -1,6 +1,10 @@
 # Hard rules
 
-Máddu enforces nine invariants. `maddu doctor` verifies them on every install and every upgrade.
+Máddu enforces nine invariants. `maddu doctor` mechanically verifies the seven
+that have an enforcing gate on every install and every upgrade; Rules 3 (no
+hosted backends) and 7 (three-layer brand boundary) are enforced **by
+construction** — there is no project surface for a gate to scan, so no doctor
+gate exists for them (see [39-rule-gate-traceability.md](39-rule-gate-traceability.md)).
 
 ## Scope: these rules govern Máddu, not your product
 
@@ -30,7 +34,7 @@ cockpit), not your application.
 
 ---
 
-These rules are non-negotiable *for the framework* because each one prevents a specific failure mode observed in prior agent-orchestration systems we studied (AionUi, Hermes, and others — see [`research/`](research/)). A repo whose **Máddu layer** violates any of them is not a sound Máddu install.
+These rules are non-negotiable *for the framework* because each one prevents a specific failure mode observed in prior agent-orchestration systems we studied (AionUi, Hermes, and others). A repo whose **Máddu layer** violates any of them is not a sound Máddu install.
 
 ## 1. Files-only state
 
@@ -52,7 +56,7 @@ No SQLite. No embedded DB. No hosted DB. No binary blobs masquerading as state. 
 
 **Derived ≠ projected.** A projection *summarizes* events that exist in the spine — it never *infers* state that has no anchor event. If the system makes a decision (auto-approving a tool call, auto-firing a schedule, auto-releasing a lane), that decision must be appended to the spine as its own event, with a `triggered_by` field pointing at the rule that produced it. Synthesizing decisions at read time would break audit immutability (a projector change could rewrite historical decisions) and cross-machine determinism (a fresh replay on another machine could land different outcomes). The bridge handles auto-approvals via `lib/approvals.mjs::maybeAutoDecide`; the projector consumes the resulting `APPROVAL_DECIDED` events but never manufactures them.
 
-**Verifiable, not just declared.** The spine's status as source of truth is a promise the framework makes — and one it must let the operator check. `maddu spine verify` walks every segment under `.maddu/events/` and confirms: NDJSON parseability (distinguishing a torn final line from interior corruption), event-id uniqueness, segment continuity, timestamp monotonicity within each segment, referential integrity across types (every `APPROVAL_DECIDED` resolves to a real `APPROVAL_REQUESTED`; every `LANE_RELEASED` traces to a matching `LANE_CLAIMED`, with never-claimed releases failing and duplicate releases warning; every `SESSION_CLOSED` references a registered session; etc.), and — since v1.14.0 — **forward chain-integrity**: each event carries a `prev_hash` (SHA-256 of the preceding event's stored line), and the verifier recomputes the chain and flags the first link that doesn't match, so an after-the-fact rewrite of interior history is detectable, not silent. The chain is forward-only (events written before v1.14.0 are unchained legacy and skipped) and tamper-evidence is **reported, never auto-repaired**. `maddu doctor` calls into the verifier on every run (up to a 50k-event cap, above which the operator runs `verify` manually) so a green doctor report is a real statement about the framework's bedrock. The verifier is strictly read-only — if it flags an issue, the operator decides how to address it (manual edit + slice-stop, checkpoint rollback, etc.). No auto-repair, ever.
+**Verifiable, not just declared.** The spine's status as source of truth is a promise the framework makes — and one it must let the operator check. `maddu spine verify` walks every segment under `.maddu/events/` and confirms: NDJSON parseability (distinguishing a torn final line from interior corruption), event-id uniqueness, segment continuity, timestamp monotonicity within each segment, referential integrity across types (every `APPROVAL_DECIDED` resolves to a real `APPROVAL_REQUESTED`; every `LANE_RELEASED` traces to a matching `LANE_CLAIMED`, with never-claimed releases failing and duplicate releases warning; every `SESSION_CLOSED` references a registered session; etc.), and — since v1.14.0 — **forward chain-integrity**: each event carries a `prev_hash` (SHA-256 of the preceding event's stored line), and the verifier recomputes the chain and flags the first link that doesn't match, so an after-the-fact rewrite of interior history is detectable, not silent. The chain is forward-only (events written before v1.14.0 are unchained legacy and skipped); since v1.98.0 the flat append is funnel-locked, so on a post-cutover chain a mismatch/strip is a **FAIL** (a determined recompute of the whole unkeyed chain stays out of scope), and tamper-detection is **reported, never auto-repaired**. `maddu doctor` calls into the verifier on every run (up to a 50k-event cap, above which the operator runs `verify` manually) so a green doctor report is a real statement about the framework's bedrock. The verifier is strictly read-only — if it flags an issue, the operator decides how to address it (manual edit + slice-stop, checkpoint rollback, etc.). No auto-repair, ever.
 
 ## 3. No hosted backends
 
@@ -80,17 +84,35 @@ OAuth tokens live in OS-appropriate device-bound paths:
 
 `maddu export` scrubs them from portable bundles. `maddu import` refuses to overwrite existing tokens. There is no "sync tokens across machines" feature, by design.
 
+Beyond tokens, secret-shaped **values** are stopped at every write boundary
+with one canonical redactor (`[REDACTED:<pattern-type>]`, no-op on clean
+text): tool argv, worker-spawn command/args, and — centrally — **every spine
+event's `data`** inside `spine.append` itself (plus the token wrapper's
+bypass path), so no emit site present or future can persist a raw
+pattern-matched secret. A key-aware rule also redacts a long single-token
+value under a sensitive key name (`password`, `apiKey`, `auth_token`, …) —
+note this deliberately over-redacts user-supplied keys like `passwordFile`;
+over-redaction is the safe direction. Lane mailboxes, persisted briefings,
+saved skill bodies, and the wrapper error log sweep their own writes; the
+import gateway refuses secret-bearing payloads outright. Two knowing
+exceptions: `.maddu/state/worker-logs/<id>.log` holds the raw provider
+stream on purpose (local-only, never served, exported, or synced), and
+redaction is write-time only — spine events AND local store entries written
+before their sweep existed stay as-written (for the spine, the export and
+team-sync gates still refuse to share them; the local stores have no such
+backstop but never leave the machine).
+
 **Why:** Tokens are device credentials, not portable identity.
 
 ## 7. Three-layer brand boundary
 
 Three brand domains exist in any Máddu installation:
 
-1. **Framework shell brand** — what the cockpit looks like. Owned by Máddu. Tokens in `maddu/cockpit/tokens.css`. Typography: IBM Plex Sans / Plex Sans Condensed / Plex Mono. Aesthetic: Scandinavian tech, sci-fi dark noir.
+1. **Framework shell brand** — what the cockpit looks like. Owned by Máddu. Tokens are the `--m-*` custom properties declared in `maddu/cockpit/cockpit.css`. Typography: IBM Plex Sans / Plex Sans Condensed / Plex Mono. Aesthetic: Scandinavian tech, sci-fi dark noir.
 2. **App brand** — the brand of whatever application the host repo is building. Owned by the project. Lives wherever the project keeps app brand data.
 3. **Content brand** — per-campaign, per-asset, per-output brand. Owned by the project's content authors.
 
-These never mix. Cockpit tokens never leak into app brand. App brand never leaks into content. Content brand never leaks into cockpit. This boundary is enforced **by construction**: the framework ships only the cockpit shell brand (`maddu/cockpit/tokens.css`) and never writes app or content brand. App and content brand are project-owned with no fixed framework path, so there is no runtime doctor gate for this rule — it is traced as *enforced-by-construction* in [39-rule-gate-traceability.md](39-rule-gate-traceability.md).
+These never mix. Cockpit tokens never leak into app brand. App brand never leaks into content. Content brand never leaks into cockpit. This boundary is enforced **by construction**: the framework ships only the cockpit shell brand (`maddu/cockpit/cockpit.css`) and never writes app or content brand. App and content brand are project-owned with no fixed framework path, so there is no runtime doctor gate for this rule — it is traced as *enforced-by-construction* in [39-rule-gate-traceability.md](39-rule-gate-traceability.md).
 
 **Why:** Prior systems (notably AionUi) repeatedly leaked cockpit aesthetics into user-saved brand profiles. The boundary makes that impossible by construction.
 

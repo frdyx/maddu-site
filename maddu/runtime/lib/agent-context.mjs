@@ -15,8 +15,8 @@
 // matcher (returns at most MAX_SKILLS) and the rendered output (truncates
 // each body to MAX_BYTES_PER_SKILL). The `skill-injection-bounded` gate
 // verifies these constants are honored on every orientation read.
-export const MAX_INJECTED_SKILLS = 3;
-export const MAX_INJECTED_BYTES_PER_SKILL = 8192; // 8 KB per skill
+const MAX_INJECTED_SKILLS = 3;
+const MAX_INJECTED_BYTES_PER_SKILL = 8192; // 8 KB per skill
 
 // Pure matcher. Given a list of skills (each with `triggers: [str]?` and
 // `tags: [str]?` in their parsed frontmatter) and a context object with
@@ -140,6 +140,19 @@ export function renderAgentContextText(ctx) {
     lines.push(`Recent slice-stops (${ctx.recentSliceStops.length}):`);
     for (const s of ctx.recentSliceStops) {
       lines.push(`  ${s.id}  ${s.summary || '—'}`);
+    }
+  }
+  // v1.115.0 memory-recall track — approved facts fed back into context.
+  // Only `trust: approved` facts ever appear here (recall.mjs is the single
+  // eligibility seam; the memory-injection-bounded gate re-verifies bounds).
+  if (ctx.recallPacket?.items?.length) {
+    lines.push('');
+    lines.push(`Recalled facts (approved, ${ctx.recallPacket.items.length} of budget ${ctx.recallPacket.budget?.maxItems ?? '?'}):`);
+    for (const it of ctx.recallPacket.items) {
+      lines.push(`  [${it.kind}] ${it.text}${it.lane ? `  (lane:${it.lane})` : ''}`);
+    }
+    if (ctx.recallPacket.withheldTotal > 0) {
+      lines.push(`  (${ctx.recallPacket.withheldTotal} relevant fact(s) withheld — \`maddu memory recall\` to review)`);
     }
   }
   if (ctx.sessionsTreeSummary?.total) {

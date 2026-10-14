@@ -130,7 +130,15 @@ async function importFromClaudeCode(repoRoot, spine, flags) {
   if (files.length === 0) {
     return { ok: true, message: 'no transcript files found', imported: 0, skipped: 0, scanned: 0 };
   }
-  const sessionFilter = flags.session && flags.session !== true ? String(flags.session) : null;
+  // CP1b: --session here is a transcript-id SUBSTRING selector (not a resolved
+  // session id), so it is NOT isRefId-gated. But an OWNED bare/empty/repeated
+  // flag must be a usage error, not silently collapse to null (= import ALL
+  // transcripts) or String(array).
+  if (Object.hasOwn(flags, 'session') &&
+      (flags.session === true || flags.session === '' || Array.isArray(flags.session))) {
+    return { ok: false, message: 'invalid --session: pass a transcript-id substring, not a bare/empty/repeated flag' };
+  }
+  const sessionFilter = (typeof flags.session === 'string' && flags.session.length > 0) ? flags.session : null;
   const sinceMs = flags.since && flags.since !== true ? new Date(flags.since).getTime() : null;
   const dryRun = !!flags['dry-run'];
   const existing = await loadExistingHashes(spine, repoRoot);
@@ -157,6 +165,10 @@ async function importFromClaudeCode(repoRoot, spine, flags) {
       const importHash = hashLine(entry.sessionUuid, lineNumber, parsed.message?.usage || {});
       if (existing.has(importHash)) { skipped++; fileSkipped++; continue; }
       if (!dryRun) {
+        // S4 cost provenance: transcript imports ALWAYS omit pricingIdentity —
+        // a transcript records usage numbers, not the endpoint; it cannot
+        // distinguish api.anthropic.com from Bedrock/Vertex. Imported rows
+        // land in the unpriced bucket (reason: no-pricing-identity) by design.
         await spine.append(repoRoot, {
           type: spine.EVENT_TYPES.TOKEN_USAGE_REPORTED,
           actor: entry.sessionUuid,
@@ -216,6 +228,13 @@ export default async function usage(argv) {
     if (!result.ok) {
       console.error(result.message);
       process.exit(1);
+    }
+    // Mutation-witness declared no-op (Codex diff r4 F8): a normal run that
+    // imported zero rows (no transcripts / fully deduplicated) is a graceful
+    // append-free success; the dry-run shape is read-classified in _tiers.
+    if (!result.dryRun && result.imported === 0) {
+      const { loadLibOptional } = await import('./_libroot.mjs');
+      (await loadLibOptional('mutation-witness.mjs'))?.witnessNoop?.('idempotent-nothing-to-import');
     }
     const tag = result.dryRun ? '[dry-run] ' : '';
     console.log(`${tag}Claude Code transcript import:`);

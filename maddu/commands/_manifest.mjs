@@ -2,14 +2,16 @@
 // and read/write maddu.json.
 //
 // Framework-owned: everything under template/maddu/ — these get overwritten by
-// `maddu upgrade`. Plus the seed file .maddu/lanes/catalog.json.
+// `maddu upgrade`.
 //
 // NOT framework-owned (never touched by upgrade):
 //   .maddu/events/  .maddu/state/  .maddu/sessions/  .maddu/inbox/
-//   .maddu/archive/  .maddu/lanes/claims.json  .maddu/lanes/project/
-//   .maddu/briefs/project/  .maddu/wiki/project/  .maddu/harness/project/
+//   .maddu/archive/  .maddu/lanes/catalog.json (a one-time init seed —
+//   operator-owned from the moment it exists; Tier 4b)  .maddu/lanes/claims.json
+//   .maddu/lanes/project/  .maddu/briefs/project/  .maddu/wiki/project/
+//   .maddu/harness/project/
 
-import { readdir, readFile, stat, writeFile, mkdir, copyFile, chmod } from 'node:fs/promises';
+import { readdir, readFile, stat, writeFile, mkdir, copyFile, chmod, rename, unlink } from 'node:fs/promises';
 import { join, dirname, relative, sep } from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -18,7 +20,7 @@ import { platform } from 'node:os';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const FRAMEWORK_ROOT = join(__dirname, '..');
 export const TEMPLATE_ROOT = join(FRAMEWORK_ROOT, 'template');
-export const TEMPLATE_MADDU = join(TEMPLATE_ROOT, 'maddu');
+const TEMPLATE_MADDU = join(TEMPLATE_ROOT, 'maddu');
 
 // Layout detection (v0.17.1).
 //
@@ -42,7 +44,7 @@ export const TEMPLATE_MADDU = join(TEMPLATE_ROOT, 'maddu');
 // meaningless and historically silently broken (init would crash mid-way;
 // upgrade would no-op every file). v0.17.1 refuses these calls early with
 // a clear actionable error.
-export async function detectFrameworkLayout() {
+async function detectFrameworkLayout() {
   if (await exists(TEMPLATE_MADDU)) return 'source';
   if (await exists(join(FRAMEWORK_ROOT, 'runtime'))) return 'installed';
   return 'unknown';
@@ -78,13 +80,53 @@ export async function requireSourceLayout(commandName) {
 
 export async function exists(p) { try { await stat(p); return true; } catch { return false; } }
 
-export async function readJson(p) {
+// exists() collapses every stat failure to false, which is right for "should I
+// bother" questions and WRONG for "is it safe to forget this file". A path whose
+// attributes are momentarily unreadable (ACL, sharing violation, transient FS
+// error) is not the same as a path that is gone, and treating it as gone lets a
+// still-present framework file be dropped from the manifest and left unmanaged.
+// Only ENOENT/ENOTDIR is absence.
+export async function absent(p) {
+  try { await stat(p); return false; }
+  catch (err) { return err && (err.code === 'ENOENT' || err.code === 'ENOTDIR'); }
+}
+
+async function readJson(p) {
   return JSON.parse(await readFile(p, 'utf8'));
 }
 
+// ATOMIC. Write to a sibling temp file, then rename over the target — rename is
+// atomic on both NTFS and POSIX, so a reader sees either the whole old file or
+// the whole new one, never a prefix.
+//
+// An in-place writeFile truncates first, so a kill or a full disk mid-write left
+// TRUNCATED JSON. For maddu.json that was unrecoverable rather than merely
+// annoying: `maddu upgrade` and the install-integrity gate both parse it before
+// they consult the interrupted-upgrade marker, so the advertised recovery
+// command died on a SyntaxError and the gate reported the file "missing" while
+// it sat on disk. The state the marker exists to describe became unreachable
+// through the file that has to be read to reach it.
 export async function writeJson(p, obj) {
   await mkdir(dirname(p), { recursive: true });
-  await writeFile(p, JSON.stringify(obj, null, 2) + '\n');
+  // Sweep this writer's own earlier leftovers first. A kill between the write
+  // and the rename below leaves the temp file behind — the reader never sees it,
+  // but "always cleaned up" would be false and repeated failed upgrades would
+  // accumulate residue beside the manifest. Only this pid's files are swept, so
+  // a concurrent writer's in-flight temp is never touched.
+  const dir = dirname(p), base = `${p.split(/[\\/]/).pop()}.tmp-${process.pid}-`;
+  try {
+    for (const name of await readdir(dir)) {
+      if (name.startsWith(base)) { try { await unlink(join(dir, name)); } catch {} }
+    }
+  } catch { /* the sweep is housekeeping — never why a write fails */ }
+  const tmp = `${p}.tmp-${process.pid}-${Date.now()}`;
+  try {
+    await writeFile(tmp, JSON.stringify(obj, null, 2) + '\n');
+    await rename(tmp, p);
+  } catch (err) {
+    try { await unlink(tmp); } catch {}
+    throw err;
+  }
 }
 
 async function* walk(dir) {
@@ -152,11 +194,26 @@ export async function sha256OfFile(p) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-// Read maddu.json from a target repo. Returns null if the file doesn't exist.
+// Read maddu.json from a target repo. THREE outcomes, matching the identical
+// read in the install-integrity gate — `null` only for genuine absence, a throw
+// with `.unreadable = true` when the file is there but this process cannot read
+// it, and a plain JSON SyntaxError when it is there and damaged.
+//
+// It used to gate on `exists()`, which collapses every stat failure to false, so
+// an ACL or sharing violation returned null and every caller said "maddu.json is
+// missing" about a file sitting right there — sending the operator to
+// re-scaffold instead of to the permission problem. `absent()` exists precisely
+// to keep that distinction; this was the one place still throwing it away.
 export async function readMadduJson(repoRoot) {
   const p = join(repoRoot, 'maddu.json');
-  if (!(await exists(p))) return null;
-  return await readJson(p);
+  if (await absent(p)) return null;
+  try { return JSON.parse(await readFile(p, 'utf8')); }
+  catch (err) {
+    if (err instanceof SyntaxError) throw err;
+    const e = new Error(`maddu.json could not be read (${(err && err.code) || 'error'})`);
+    e.unreadable = true;
+    throw e;
+  }
 }
 
 export async function writeMadduJson(repoRoot, obj) {

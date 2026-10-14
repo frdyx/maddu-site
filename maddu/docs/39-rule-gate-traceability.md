@@ -36,7 +36,8 @@ id that no longer exists.
   project-defined surface for a gate to scan, so the rule is enforced by the
   absence of relay code, not by a runtime check.
 - **Rule 7 (three-layer brand boundary).** Framework shell brand lives only in
-  `maddu/cockpit/tokens.css`. App brand and content brand are **project-owned**
+  the `--m-*` custom properties in `maddu/cockpit/cockpit.css`. App brand and
+  content brand are **project-owned**
   and have no fixed framework path — so a doctor gate cannot mechanically know
   where to look without project-specific configuration. The boundary is enforced
   by construction (the framework never writes app/content brand; the cockpit
@@ -58,7 +59,8 @@ to a **charter-coherence concern** (keeping the surface honest — the charter's
 - **Supply-chain / trust (rules #4, #6):** `dependency-freshness`,
   `dep-pinning-respected`, `mcp-provenance-verified`, `mcp-template-shape`,
   `secret-scan-active`, `worker-env-policy-coherent`, `skill-provenance-required`,
-  `skill-injection-bounded`, `skill-candidates-bounded`, `tracked-source-drift`,
+  `skill-no-external-refs`, `skill-injection-bounded`, `skill-candidates-bounded`,
+  `tracked-source-drift`,
   `learn-corrections-coherent` (on-disk `maddu learn` block bullets all trace to
   `LEARN_CORRECTION_WRITTEN` spine events — no hand-injected corrections).
 - **Lane / session discipline (rule #8):** `rule-8-no-duplicate-claims`,
@@ -81,6 +83,19 @@ to a **charter-coherence concern** (keeping the surface honest — the charter's
   deterministic hedged-claim-without-observed-proof check at every slice-stop
   (warn tier; a model checking a model is a second opinion, a deterministic
   check against declared deliverables is evidence).
+- **Declared-verification honesty (verification posture):** `acceptance-proven`
+  — does the active goal's every verifiable success condition hold a *live*
+  RED→GREEN acceptance proof against a frozen declared oracle
+  ([56-acceptance-proof.md](56-acceptance-proof.md))? Warn tier and permanently
+  so: `maddu ci pin` refuses warn-severity gates, and the actor who can green a
+  proof can re-declare the goal underneath it. It traces to the same
+  charter-coherence concern as `tracked-source-drift` — an actor must not be the
+  sole witness to its own verdict — and covers the half `tracked-source-drift`
+  explicitly does not: whether the declared *oracle* was ever observed to reject
+  anything. **This row is documentation.** `checkRuleGateTraceability` never
+  reads this file; the mapping it enforces lives in `commands/audit.mjs`
+  (`RULE_GATES`), so nothing here is mechanically checked and this row proves
+  nothing on its own.
 
 No built-in gate is unjustified; no hard rule is unenforced (rules 3 and 7 by
 documented construction). The `maddu audit` sub-check holds this true over time.

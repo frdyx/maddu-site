@@ -24,7 +24,7 @@
 //   - a one-table markdown job summary appended to GITHUB_STEP_SUMMARY
 
 import { mkdir, readFile, writeFile, appendFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 
 import { parseFlags } from './_args.mjs';
 import { loadSpineLib, resolveRepoRoot } from './_spine.mjs';
@@ -36,10 +36,43 @@ async function readJsonIfPresent(path) {
   try { return JSON.parse(await readFile(path, 'utf8')); } catch { return null; }
 }
 
+// MADDU_CI_PROFILE — a test/CI-only seam that redirects WHERE `maddu ci` reads
+// and writes its pinned profile, so a self-test (scripts/test/ci-command.mjs) can
+// exercise pin/exit contracts against the real source gates WITHOUT mutating the
+// repo's own .maddu/config/ci.json (the shared-file leak this closes). It affects
+// ONLY `maddu ci`; other profile readers (e.g. commands/_gates-before-done.mjs)
+// ignore it by design. Resolved against cwd if relative.
+function ciProfileOverride() {
+  const raw = (process.env.MADDU_CI_PROFILE || '').trim();
+  return raw ? resolve(raw) : null;
+}
+
+// STRICT override read: a MISSING file means "unpinned" (the intended initial
+// state), but a present-but-unreadable / non-JSON / wrong-shaped override is a
+// hard error — never a silent green (Codex). Returns requiredGates | null.
+async function readOverrideProfile(path) {
+  let raw;
+  try { raw = await readFile(path, 'utf8'); }
+  catch (e) { if (e && e.code === 'ENOENT') return null; throw new Error(`MADDU_CI_PROFILE unreadable (${path}): ${e && e.message}`); }
+  let parsed;
+  try { parsed = JSON.parse(raw); }
+  catch { throw new Error(`MADDU_CI_PROFILE is not valid JSON (${path})`); }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || !Array.isArray(parsed.requiredGates)) {
+    throw new Error(`MADDU_CI_PROFILE has no requiredGates array (${path})`);
+  }
+  return parsed.requiredGates;
+}
+
 // The pinned profile lives in the consumer's maddu.json (`ci.requiredGates`);
 // the framework source checkout has no maddu.json by design, so it falls back
 // to .maddu/config/ci.json. Read order mirrors write order.
 async function readCiProfile(repoRoot) {
+  // Override wins over both real files (test/CI seam). Its read is strict —
+  // a bad override throws (caller surfaces a nonzero diagnostic), never green.
+  const override = ciProfileOverride();
+  if (override) {
+    return { requiredGates: await readOverrideProfile(override), source: 'MADDU_CI_PROFILE' };
+  }
   const marker = await readJsonIfPresent(join(repoRoot, 'maddu.json'));
   if (Array.isArray(marker?.ci?.requiredGates)) {
     return { requiredGates: marker.ci.requiredGates, source: 'maddu.json' };
@@ -52,6 +85,14 @@ async function readCiProfile(repoRoot) {
 }
 
 async function writeCiProfile(repoRoot, requiredGates) {
+  // Override wins over both real files (test/CI seam) — the pin lands in the temp
+  // profile, never the repo's own ci.json / maddu.json.
+  const override = ciProfileOverride();
+  if (override) {
+    await mkdir(dirname(override), { recursive: true });
+    await writeFile(override, JSON.stringify({ requiredGates }, null, 2) + '\n');
+    return 'MADDU_CI_PROFILE';
+  }
   const markerPath = join(repoRoot, 'maddu.json');
   const marker = await readJsonIfPresent(markerPath);
   if (marker) {
@@ -115,17 +156,35 @@ export default async function ciCmd(argv) {
 
   // ── pin ─────────────────────────────────────────────────────────────────--
   if (sub === 'pin') {
-    const green = runs.filter((r) => r.status !== 'fail').map((r) => r.gateId).sort();
-    const excluded = runs.filter((r) => r.status === 'fail').map((r) => r.gateId).sort();
+    // Mutation-witness declared no-op: pin writes the required-gate profile
+    // (maddu.json / .maddu/config/ci.json) — a config write, no spine event.
+    const { loadLibOptional } = await import('./_libroot.mjs');
+    (await loadLibOptional('mutation-witness.mjs'))?.witnessNoop?.('control-plane-config-write:ci-pin');
+    // audit P4 — pin ONLY fail-capable gates (severity !== 'warn'). A warn-severity
+    // gate can never red `maddu ci`, so pinning it as "required" is a misnomer that
+    // re-introduces the green-because-wrong-scope hole. Pinning keys on severity,
+    // not this run's status: a fail-capable gate that merely warned this run stays
+    // eligible. (The required-resolution check below enforces the same invariant.)
+    const green = runs.filter((r) => r.status !== 'fail' && r.severity !== 'warn').map((r) => r.gateId).sort();
+    const excluded = runs.filter((r) => r.status === 'fail' || r.severity === 'warn').map((r) => r.gateId).sort();
     const target = await writeCiProfile(repoRoot, green);
     if (flags.json) {
       process.stdout.write(JSON.stringify({ pinned: green, excluded, target }, null, 2) + '\n');
       return;
     }
     console.log(`maddu ci pin  ${C.dim}pinned ${green.length} gate(s) as required → ${target}${C.reset}`);
-    if (excluded.length) {
-      console.log(`  ${C.yellow}excluded ${excluded.length} currently-failing gate(s):${C.reset} ${excluded.join(', ')}`);
+    // Two different exclusions, two different truths (gate funnel r2 #3): a
+    // FAILING fail-capable gate is fixable and re-pinnable; a warn-severity
+    // gate is structurally unpinnable however green it runs, and calling it
+    // "currently-failing" tells the operator to fix something that isn't broken.
+    const failing = runs.filter((r) => r.status === 'fail').map((r) => r.gateId).sort();
+    const advisory = excluded.filter((id) => !failing.includes(id));
+    if (failing.length) {
+      console.log(`  ${C.yellow}excluded ${failing.length} currently-failing gate(s):${C.reset} ${failing.join(', ')}`);
       console.log(`  ${C.dim}fix them and re-run \`maddu ci pin\` to include them.${C.reset}`);
+    }
+    if (advisory.length) {
+      console.log(`  ${C.dim}excluded ${advisory.length} advisory (warn-severity) gate(s) — never pinnable: ${advisory.join(', ')}${C.reset}`);
     }
     console.log(`  ${C.dim}from now on \`maddu ci\` exits nonzero only when a pinned gate fails — framework`);
     console.log(`  upgrades can add gates without changing this repo's CI verdict until you re-pin.${C.reset}`);
@@ -139,12 +198,26 @@ export default async function ciCmd(argv) {
 
   // ── verdict ─────────────────────────────────────────────────────────────--
   const strict = flags.strict === true;
-  const profile = await readCiProfile(repoRoot);
+  let profile;
+  try { profile = await readCiProfile(repoRoot); }
+  catch (e) { console.error(`maddu ci: ${e && e.message}`); process.exit(2); }
   const requiredSet = profile.requiredGates ? new Set(profile.requiredGates) : null;
   const failed = runs.filter((r) => r.status === 'fail');
   const failedRequired = requiredSet ? failed.filter((r) => requiredSet.has(r.gateId)) : [];
+
+  // audit P4 — fail-closed required-gate RESOLUTION. A pinned required id that no
+  // longer resolves to exactly one runnable gate (deleted / renamed / a broken
+  // operator override that left nothing runnable), or resolves to a warn-severity
+  // gate that can never red, is itself a RED — otherwise a required guarantee can
+  // silently vanish and CI stays green. Checked against the POST-OVERRIDE resolved
+  // runs (runGates already dedupes by id, operator wins), never raw definitions.
+  // v1.146.0 (P0 audit A3-002): the resolver lives in runtime/lib/required-gates.mjs
+  // and is shared with the goal-done / plan-complete check, which used to omit it.
+  const requiredGatesLib = await loadLib('required-gates.mjs');
+  const requiredIntegrity = requiredGatesLib.requiredGateIntegrity(runs, profile.requiredGates).map((f) => f.message);
+
   const red = strict ? failed : failedRequired;
-  const exitCode = red.length ? 1 : 0;
+  const exitCode = (red.length || requiredIntegrity.length) ? 1 : 0;
 
   // ── learn-scan advisory (never affects the exit code in v1) ────────────────
   let scan = null;
@@ -164,9 +237,12 @@ export default async function ciCmd(argv) {
     ? `pinned (${requiredSet.size} required via ${profile.source})`
     : 'unpinned (exit 0 unless --strict)';
   const counts = `${result.summary.ok} ok · ${result.summary.warn} warn · ${result.summary.fail} fail of ${result.summary.total}`;
+  const redReason = red.length
+    ? `${red.length} ${strict ? '' : 'required '}gate(s) failing`
+    : `${requiredIntegrity.length} required gate(s) unresolved/warn-only`;
   const verdictLine = exitCode === 0
     ? `**green** — ${counts} · mode: ${mode}`
-    : `**red** — ${red.length} ${strict ? '' : 'required '}gate(s) failing · ${counts}`;
+    : `**red** — ${redReason} · ${counts}`;
 
   if (flags.json) {
     process.stdout.write(JSON.stringify({
@@ -174,6 +250,7 @@ export default async function ciCmd(argv) {
       requiredGates: profile.requiredGates, profileSource: profile.source,
       summary: result.summary,
       failed: failed.map((r) => ({ gateId: r.gateId, severity: r.severity, required: requiredSet ? requiredSet.has(r.gateId) : null, message: r.message })),
+      requiredIntegrity,
       scan: scan ? { scanned: scan.scanned, hedgedWithoutProof: scan.cumulativeCount, live: scan.crossed } : null,
     }, null, 2) + '\n');
     process.exit(exitCode);
@@ -184,6 +261,9 @@ export default async function ciCmd(argv) {
   for (const r of failed) {
     const tag = requiredSet && requiredSet.has(r.gateId) ? ` ${C.red}[required]${C.reset}` : '';
     console.log(`  ${statusMark(r.status)}  ${r.gateId}${tag}${r.message ? `  ${C.dim}${r.message}${C.reset}` : ''}`);
+  }
+  for (const problem of requiredIntegrity) {
+    console.log(`  ${C.red}✗${C.reset}  ${C.red}[required-integrity]${C.reset} ${C.dim}${problem}${C.reset}`);
   }
   const warns = runs.filter((r) => r.status === 'warn');
   for (const r of warns) console.log(`  ${statusMark(r.status)}  ${r.gateId}${r.message ? `  ${C.dim}${r.message}${C.reset}` : ''}`);

@@ -147,10 +147,25 @@ async function policy(sub, rest, lib) {
 }
 
 export default async function globalCmd(argv) {
+  // --help before anything else (funnel r1 F1). The dispatcher routes here on a
+  // help flag ANYWHERE in argv and forwards argv unchanged; without this guard
+  // `global policy add --tool bash --decision deny --help` performed the
+  // MACHINE-SCOPE policy write instead of describing it. Exit 0 — help was
+  // asked for and given; the exit-2 below is for a genuinely malformed call.
+  if (argv.includes('--help') || argv.includes('-h')) { printHelp(); return; }
   const verb = argv[0];
   const sub = argv[1];
   const rest = argv.slice(2);
   if (!verb || !sub) { printHelp(); process.exit(2); }
+
+  // Mutation-witness declared no-op (Codex diff-review r1 F3): every write
+  // this verb performs targets the MACHINE-SCOPE global config
+  // (~/.config/maddu/global) — no workspace spine owns those mutations.
+  // Read subverbs are already read shapes; the declaration is harmless there.
+  {
+    const { loadLibOptional } = await import('./_libroot.mjs');
+    (await loadLibOptional('mutation-witness.mjs'))?.witnessNoop?.('machine-scope:global-config');
+  }
 
   const lib = await loadGlobalLib();
 

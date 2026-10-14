@@ -22,7 +22,7 @@ import { readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseFlags } from './_args.mjs';
-import { loadLib } from './_libroot.mjs';
+import { loadLib, loadLibOptional } from './_libroot.mjs';
 import { frameworkOwnedFiles, sha256OfFile, frameworkVersion } from './_manifest.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -88,6 +88,9 @@ export default async function fleet(argv) {
   for (const r of rows) {
     const live = LIVENESS[r.liveness] || LIVENESS.abandoned;
     const ver = r.version ? `v${r.version}` : 'v?';
+    // Version source per the Tier-1 SSOT contract: fleet and insights share
+    // one resolver and each surface always says where its answer came from.
+    const verSrc = ` ${C.dim}· ver from ${r.versionSource || 'unknown'}${C.reset}`;
     const behindTag = r.behind ? `${C.yellow}↓ behind${C.reset}` : (r.version === latest ? `${C.dim}latest${C.reset}` : '');
     const ageD = ageDaysFrom(r.lastActivity, now);
     const ageStr = ageD == null ? `${C.dim}—${C.reset}` : `${ageD}d`;
@@ -96,7 +99,15 @@ export default async function fleet(argv) {
     const gate = r.gatePassRate;
     const gateStr = gate ? `${gate.ok}/${gate.total} gates` : `${C.dim}no gates${C.reset}`;
     const caught = r.caught && r.caught.total ? `${C.cyan}⚿ ${r.caught.total}${C.reset}` : `${C.dim}⚿ 0${C.reset}`;
-    console.log(`  ${live.dot} ${pad(r.label, 22)} ${pad(ver, 9)} ${pad(behindTag, 18)} ${pad(curStr, 14)} ${pad(ageStr, 6)} ${pad(gateStr, 12)} ${C.dim}·${C.reset} ${caught}`);
+    // Activation funnel (Tier 3): lifetime furthest ritual stage. 'repeating'
+    // is the goal state; anything earlier is a parked install with one obvious
+    // next step (`maddu doctor` inside the repo prints it).
+    const fn = r.funnel;
+    const funnelStr = !fn ? `${C.dim}—${C.reset}`
+      : fn.stage === 'repeating' ? `${C.green}${fn.stage}${C.reset}`
+        : (fn.stage === 'slice' || fn.stage === 'claimed') ? `${C.cyan}${fn.stage}${C.reset}`
+          : `${C.yellow}${fn.stage}${C.reset}`;
+    console.log(`  ${live.dot} ${pad(r.label, 22)} ${pad(ver, 9)} ${pad(behindTag, 18)} ${pad(funnelStr, 18)} ${pad(curStr, 14)} ${pad(ageStr, 6)} ${pad(gateStr, 12)} ${C.dim}·${C.reset} ${caught}${verSrc}`);
     if (r.lastSlice && r.lastSlice.summary) {
       console.log(`     ${C.dim}↳ ${r.lastSlice.summary.replace(/^SLICE STOP:\s*/i, '')}${C.reset}`);
     }
@@ -115,6 +126,19 @@ export default async function fleet(argv) {
   }
   if (a.caught && a.caught.total > 0) {
     console.log(`  ${C.cyan}⚿${C.reset} ${a.caught.total} fault(s) caught by guardrails across active repos ${C.dim}(${a.caught.hard} hard · ${a.caught.soft} soft · recent window)${C.reset}`);
+  }
+  // Activation-funnel headline (Tier 3): where every install is parked on the
+  // ritual path — lifetime furthest stage, never decays. Passive gate/doctor
+  // traffic does not count as adoption.
+  if (report.funnel) {
+    const f = report.funnel;
+    const seq = ['installed', 'healthy', 'session', 'claimed', 'slice', 'repeating']
+      .map((s) => `${f[s] || 0} ${s}`).join(' → ');
+    const parked = (f.installed || 0) + (f.healthy || 0);
+    console.log(`  ${C.bold}funnel${C.reset} ${C.dim}${seq}${C.reset}`);
+    if (parked > 0) {
+      console.log(`    ${C.yellow}⚠${C.reset} ${parked} install(s) never started the ritual ${C.dim}(no session/claim/slice-stop — run \`maddu doctor\` inside each for the one next action)${C.reset}`);
+    }
   }
 }
 
@@ -253,6 +277,17 @@ function renderPlan(rows, summary, srcVersion, report, flags) {
 }
 
 // Run a child Máddu verb against a target repo, capturing exit + tail output.
+// Mutation-witness (S1, census-pinned): the mutation lands on the TARGET
+// repo's spine under the child dispatcher's own guard — the parent's counter
+// stays 0 by design, so each delegated run declares itself.
+let _witnessDelegated = null;
+async function witnessDelegatedRun(repoPath) {
+  if (_witnessDelegated === null) {
+    const mw = await loadLibOptional('mutation-witness.mjs');
+    _witnessDelegated = mw?.witnessDelegated ?? (() => {});
+  }
+  _witnessDelegated('fleet-upgrade', repoPath);
+}
 function runIn(repoPath, args, timeout) {
   const r = spawnSync('node', [SOURCE_BIN, ...args], { cwd: repoPath, encoding: 'utf8', timeout });
   const tail = ((r.stdout || '') + (r.stderr || '')).trim().split('\n').slice(-4).join('\n');
@@ -266,6 +301,13 @@ async function applyDelivery(rows, up, srcVersion, flags) {
     process.exit(2);
   }
   if (targets.length === 0) {
+    // Mutation-witness declared no-op (Codex diff r4 F5): a run with nothing
+    // eligible is a graceful append-free success — an excuse, not a
+    // delegation.
+    {
+      const mw = await loadLibOptional('mutation-witness.mjs');
+      mw?.witnessNoop?.('fleet-apply:no-eligible-targets');
+    }
     console.log(`${C.green}✓${C.reset} no eligible behind repos to deliver to.`);
     return;
   }
@@ -300,6 +342,7 @@ async function applyDelivery(rows, up, srcVersion, flags) {
     }
 
     // 3. Deliver via the proven single-repo engine (no --force: respect local edits).
+    await witnessDelegatedRun(r.path); // declared: mutation lands on the target repo's spine
     const delivery = runIn(r.path, ['upgrade'], 180000);
     if (!delivery.ok) {
       console.log(`${C.red}delivery failed${C.reset} ${C.dim}(exit ${delivery.status})${C.reset}`);
@@ -320,6 +363,14 @@ async function applyDelivery(rows, up, srcVersion, flags) {
 
     console.log(`${C.green}✓ delivered${C.reset} ${C.dim}(${snap.files.length} byte(s) snapshotted · doctor green)${C.reset}`);
     results.push({ id: r.id, delivered: true, doctorOk: true, halted: false });
+  }
+
+  // All-skipped run (every target became busy / snapshot-failed before any
+  // delegation): a graceful append-free success (r4 F5) — the delivered
+  // paths already declared via witnessDelegatedRun.
+  if (!results.some((r) => r.delivered) && !halted) {
+    const mw = await loadLibOptional('mutation-witness.mjs');
+    mw?.witnessNoop?.('fleet-apply:nothing-delivered');
   }
 
   const summary = up.summarizeApply(results);

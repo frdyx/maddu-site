@@ -105,10 +105,16 @@
   --m-space-6: 24px;
   --m-space-8: 32px;
   --m-space-10: 40px;
+  --m-space-12: 48px;
+  --m-space-16: 64px;
+  --m-space-20: 80px;
+  --m-space-24: 96px;
 
-  --m-radius-sm:   2px;
-  --m-radius:      4px;
-  --m-radius-lg:   8px;
+  /* Radii softened to the canonical Máddu navy-noir scale (Claude Design
+   * tokens.css): 4 / 8 / 16 — rounder cards, inputs, chips. Pill unchanged. */
+  --m-radius-sm:   4px;
+  --m-radius:      8px;
+  --m-radius-lg:   16px;
   --m-radius-pill: 999px;
 
   /* ─── TYPOGRAPHY ───────────────────────────────────────────────────────
@@ -133,6 +139,72 @@
   --m-rail-w: 240px;     /* bumped from 220 toward OMC's 268; gives nav labels more air */
   --m-foot-h: 36px;
   --m-head-h: 56px;
+
+  /* ─── MOTION ───────────────────────────────────────────────────────────
+   * From the canonical navy-noir tokens — replaces the ad-hoc 120ms/.15s
+   * scattered through the chrome. Durations + shared easing curves. */
+  --m-dur-fast: 120ms;
+  --m-dur:      200ms;
+  --m-dur-slow: 320ms;
+  --m-ease:     cubic-bezier(.2, .6, .2, 1);
+  --m-ease-out: cubic-bezier(0, .6, .3, 1);
+  --m-ease-in:  cubic-bezier(.5, 0, 1, .5);
+
+  /* ─── Z-INDEX SCALE ────────────────────────────────────────────────────*/
+  --m-z-base: 0;
+  --m-z-raised: 1;
+  --m-z-nav: 100;
+  --m-z-dropdown: 200;
+  --m-z-overlay: 900;
+  --m-z-modal: 1000;
+  --m-z-toast: 1100;
+
+  /* ═══ CANONICAL DESIGN-SYSTEM TOKENS (--s-*) ═══════════════════════════
+   * The cockpit is the dark-noir face of the shared "Máddu navy-noir"
+   * design system (claude.ai/design · tokens.css). Its hand-built --m-*
+   * palette is the source of truth for the DARK theme; here we expose the
+   * canonical --s-* names as aliases onto it, so design-system component
+   * classes (.callout, .chip, .kpi, .btn variants, table.data, .progress,
+   * .spinner, .skeleton …) drop into the cockpit and theme correctly to the
+   * console's dark palette — no second palette, no drift. Components read
+   * --s-* semantic tokens only; never a hard-coded hex, radius, or font. */
+  --s-bg-0: var(--m-bg-0);          /* navy canvas / stage */
+  --s-bg-1: var(--m-bg-3);          /* DS "surface/card" → cockpit nested-card */
+  --s-bg-2: var(--m-bg-2);          /* DS "inset/section" → cockpit panel */
+  --s-fg-0: var(--m-fg-0);
+  --s-fg-1: var(--m-fg-1);
+  --s-fg-2: var(--m-fg-2);
+  --s-fg-3: var(--m-fg-3);
+  --s-primary:    var(--m-accent);      /* lime — the one loud interactive fill */
+  --s-on-primary: #06121F;              /* dark ink on lime (canonical) */
+  --s-accent:     var(--m-accent-2);    /* electric blue — halos, info, links */
+  --s-ok: var(--m-ok);         --s-ok-ink: var(--m-ok);
+  --s-warn: var(--m-warn);     --s-warn-ink: var(--m-warn);
+  --s-danger: var(--m-danger); --s-danger-ink: var(--m-danger);
+  --s-line: var(--m-line);
+  --s-line-soft: var(--m-line-soft);
+  --s-sh-sm: var(--m-shadow-sm);
+  --s-sh-md: var(--m-shadow-md);
+  --s-sh-lg: 0 20px 56px rgba(0, 0, 0, 0.65);
+  --s-halo:  var(--m-glow-accent-2);
+  --s-radius-sm: var(--m-radius-sm);
+  --s-radius:    var(--m-radius);
+  --s-radius-lg: var(--m-radius-lg);
+  --s-radius-pill: var(--m-radius-pill);
+  --s-space-1: var(--m-space-1);   --s-space-2: var(--m-space-2);
+  --s-space-3: var(--m-space-3);   --s-space-4: var(--m-space-4);
+  --s-space-5: var(--m-space-5);   --s-space-6: var(--m-space-6);
+  --s-space-8: var(--m-space-8);   --s-space-10: var(--m-space-10);
+  --s-space-12: var(--m-space-12); --s-space-16: var(--m-space-16);
+  --s-space-20: var(--m-space-20); --s-space-24: var(--m-space-24);
+  --s-font:  var(--m-font-sans);
+  --s-serif: var(--m-font-mono);
+  --s-dur-fast: var(--m-dur-fast); --s-dur: var(--m-dur); --s-dur-slow: var(--m-dur-slow);
+  --s-ease: var(--m-ease); --s-ease-out: var(--m-ease-out); --s-ease-in: var(--m-ease-in);
+  --s-z-base: var(--m-z-base); --s-z-raised: var(--m-z-raised); --s-z-nav: var(--m-z-nav);
+  --s-z-dropdown: var(--m-z-dropdown); --s-z-overlay: var(--m-z-overlay);
+  --s-z-modal: var(--m-z-modal); --s-z-toast: var(--m-z-toast);
+  --s-focus-ring: var(--m-accent);
 }
 
 * { box-sizing: border-box; }
@@ -221,16 +293,17 @@ button, .m-btn {
   color: var(--m-fg-0);
   background: var(--m-bg-2);
   border: 1px solid var(--m-bg-3);
-  border-radius: 4px;
+  border-radius: var(--m-radius);
   padding: 6px 12px;
   cursor: pointer;
   line-height: 1.4;
-  transition: border-color 120ms, color 120ms, background 120ms;
+  transition: border-color var(--m-dur-fast) var(--m-ease), color var(--m-dur-fast) var(--m-ease), background var(--m-dur-fast) var(--m-ease), box-shadow var(--m-dur-fast) var(--m-ease);
 }
 button:hover, .m-btn:hover {
   border-color: var(--m-accent);
   color: var(--m-accent);
   background: var(--m-bg-2);
+  box-shadow: var(--m-glow-accent);   /* R2: DS halo lift on hover */
 }
 button:focus-visible, .m-btn:focus-visible {
   outline: none;
@@ -315,12 +388,6 @@ button.is-ghost:hover, .m-btn.is-ghost:hover {
   gap: 10px;
   padding: 18px 18px 22px;
   border-bottom: 1px solid var(--m-line-soft);
-}
-.rail-mark-glyph {
-  font-family: var(--m-font-mono);
-  color: var(--m-brand);                /* burnt orange ghost accent — brand anchor */
-  font-size: 18px;
-  text-shadow: var(--m-glow-brand);     /* subtle orange bloom on the glyph only */
 }
 .rail-mark-svg {
   display: block;
@@ -739,12 +806,13 @@ button.is-ghost:hover, .m-btn.is-ghost:hover {
   pointer-events: none;          /* let clicks fall through the gaps */
 }
 .toast {
+  --m-tone: var(--m-accent-2);
   pointer-events: auto;
-  background: rgba(0, 8, 18, 0.86);
+  background: var(--m-tone-glow), rgba(0, 8, 18, 0.86);
   backdrop-filter: blur(18px) saturate(120%);
   -webkit-backdrop-filter: blur(18px) saturate(120%);
   border: 1px solid var(--m-line);
-  border-left: 3px solid var(--m-accent-2);
+  border-top-color: var(--m-tone);
   padding: 10px 14px;
   font-family: var(--m-font-mono);
   font-size: 12px;
@@ -759,9 +827,9 @@ button.is-ghost:hover, .m-btn.is-ghost:hover {
   animation: toast-in 200ms ease-out;
   transition: opacity 220ms ease-out, transform 220ms ease-out;
 }
-.toast.ok    { border-left-color: var(--m-ok); }
-.toast.warn  { border-left-color: var(--m-warn); color: var(--m-warn); }
-.toast.err   { border-left-color: var(--m-danger); color: var(--m-danger); }
+.toast.ok    { --m-tone: var(--m-ok); }
+.toast.warn  { --m-tone: var(--m-warn); color: var(--m-warn); }
+.toast.err   { --m-tone: var(--m-danger); color: var(--m-danger); }
 .toast.dismissing { opacity: 0; transform: translateX(16px); }
 @keyframes toast-in {
   0%   { transform: translateX(20px); opacity: 0; }
@@ -785,16 +853,49 @@ button.is-ghost:hover, .m-btn.is-ghost:hover {
 .view p { color: var(--m-fg-2); margin: 0 0 18px; max-width: 70ch; }
 
 .view .panel {
+  --m-tone: var(--m-accent-2);
   position: relative;
   background:
-    radial-gradient(circle at top right, var(--m-accent-2-glow-bg), transparent 55%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--m-tone) 6%, transparent), transparent 55%),
     radial-gradient(circle at bottom left, var(--m-accent-glow-bg), transparent 50%),
     var(--m-bg-2);
   border: 1px solid var(--m-line);
-  border-top-color: var(--m-accent-2);
+  border-top-color: var(--m-tone);
   border-top-width: 1px;
+  /* R2 (DS surface): rounded + lifted — the canonical navy-noir .surface
+   * treatment, keeping the signature glow + electric-blue top hairline. */
+  border-radius: var(--m-radius-lg);
+  box-shadow: var(--m-shadow-sm);
   padding: var(--m-space-5);
   margin-bottom: var(--m-space-5);
+}
+
+/* ── Tone surfaces ─────────────────────────────────────────────────────
+   How a surface says ok / warn / danger / accent: its 1 px top hairline takes
+   the tone and a glow of the same hue lights the top-right corner — one light
+   source, the `.view .panel` signature (docs/DESIGN-SYSTEM.md "Tone surfaces").
+   Never a thick stripe down one side; scripts/test/cockpit-no-side-stripes.mjs
+   holds that line. Set --m-tone on the element and --m-tone-glow derives from
+   it there. --m-tone is a registered <color>, so the hairline and the glow
+   cross-fade together when a live surface changes tone. */
+@property --m-tone {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
+.m-tone, .toast, .approval, .docs-toc, .docs-backlinks, .conductor-next,
+.boss-strip-tile, .boss-strip-next, .proposal-card, .team-sync-contention {
+  --m-tone-glow: radial-gradient(circle at top right,
+    color-mix(in srgb, var(--m-tone) 10%, transparent), transparent 60%);
+}
+/* The class form, for surfaces a view builds inline (chain-integrity strips,
+   portfolio cards): `class: 'm-tone', style: '--m-tone:var(--m-ok)'`. */
+.m-tone {
+  --m-tone: var(--m-accent-2);
+  border: 1px solid var(--m-line);
+  border-top-color: var(--m-tone);
+  border-radius: var(--m-radius-sm);
+  background: var(--m-tone-glow);
 }
 .view .panel-head {
   display: flex;
@@ -818,12 +919,6 @@ button.is-ghost:hover, .m-btn.is-ghost:hover {
 /* v0.18 — backbone view layout. Reuses existing tokens; no new color
    palette introduced. Two-column grid on wide screens, single column
    on narrow. */
-.view .panel-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-  gap: var(--m-space-5);
-  margin-top: var(--m-space-4);
-}
 .view .panel-row {
   border-top: 1px solid var(--m-line);
   padding: 10px 0;
@@ -1069,20 +1164,25 @@ button.is-ghost:hover, .m-btn.is-ghost:hover {
 .event-type.t-approval   { color: var(--m-event-approval); }
 .event-type.t-doctor     { color: var(--m-event-doctor); }
 .event-type.t-inbox      { color: var(--m-event-inbox); }
-.event-lane { color: var(--m-accent); }
+.event-lane { color: var(--m-accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .event-summary { color: var(--m-fg-1); }
 .event-actor { color: var(--m-fg-4); }
+/* Stream rows stay ONE line — a log, not a wall. The grid cells must be allowed
+ * to shrink (min-width:0) or a long slice-stop summary spills the column
+ * char-by-char (as in a narrow workbench pane). Full detail lives on the
+ * formatted detail views + the inspector. */
+.event-row > * { min-width: 0; }
+.event-row > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* approval cards */
 .approval {
+  --m-tone: var(--m-warn);
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 16px;
-  background:
-    linear-gradient(90deg, var(--m-warn-bg), transparent 25%),
-    var(--m-bg-2);
+  background: var(--m-tone-glow), var(--m-bg-2);
   border: 1px solid var(--m-line);
-  border-left: 3px solid var(--m-warn);
+  border-top-color: var(--m-tone);
   padding: 14px 18px;
   margin-bottom: 12px;
 }
@@ -1276,10 +1376,12 @@ button.is-ghost:hover, .m-btn.is-ghost:hover {
   border-radius: 3px;
   overflow: hidden;
 }
+/* No width transition on either bar: bar() and segBar() build each fill at
+   its final width and nothing resizes one in place (views rebuild on poll),
+   so a transition never ran — it could only ever have animated layout. */
 .widget-bar-fill {
   height: 100%;
   border-radius: 3px;
-  transition: width .3s ease;
 }
 
 /* Stacked-segment distribution bar */
@@ -1291,7 +1393,7 @@ button.is-ghost:hover, .m-btn.is-ghost:hover {
   border-radius: 4px;
   overflow: hidden;
 }
-.widget-segbar-seg { height: 100%; transition: width .3s ease; }
+.widget-segbar-seg { height: 100%; }
 .widget-segbar-legend {
   display: flex;
   flex-wrap: wrap;
@@ -1518,7 +1620,6 @@ button.is-ghost:hover, .m-btn.is-ghost:hover {
 .docs-article pre.md-code {
   background: var(--m-bg-1);
   border: 1px solid var(--m-bg-3);
-  border-left: 2px solid var(--m-accent-2);
   border-radius: var(--m-radius-md, 6px);
   padding: 12px 14px;
   margin: 0 0 16px;
@@ -1575,9 +1676,10 @@ button.is-ghost:hover, .m-btn.is-ghost:hover {
 
 /* Auto-TOC at top of an article */
 .docs-toc {
-  background: var(--m-bg-1);
+  --m-tone: var(--m-accent-2);
+  background: var(--m-tone-glow), var(--m-bg-1);
   border: 1px solid var(--m-bg-3);
-  border-left: 2px solid var(--m-accent-2);
+  border-top-color: var(--m-tone);
   border-radius: var(--m-radius-md, 6px);
   padding: 12px 16px;
   margin: 0 0 22px;
@@ -1642,9 +1744,10 @@ button.is-ghost:hover, .m-btn.is-ghost:hover {
 .docs-backlinks {
   margin: 36px 0 0;
   padding: 14px 16px;
-  background: var(--m-bg-1);
+  --m-tone: var(--m-accent);
+  background: var(--m-tone-glow), var(--m-bg-1);
   border: 1px solid var(--m-bg-3);
-  border-left: 2px solid var(--m-accent);
+  border-top-color: var(--m-tone);
   border-radius: var(--m-radius-md, 6px);
   max-width: 78ch;
 }
@@ -1695,6 +1798,7 @@ button.is-ghost:hover, .m-btn.is-ghost:hover {
 
 /* ── Conductor (Slice α) ───────────────────────────────────────────── */
 .conductor-next {
+  --m-tone: var(--m-accent);
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 14px;
@@ -1702,17 +1806,17 @@ button.is-ghost:hover, .m-btn.is-ghost:hover {
   padding: 18px 20px;
   margin: 0 0 16px;
   border: 1px solid var(--m-bg-3);
-  border-left: 3px solid var(--m-accent);
-  background: linear-gradient(135deg, var(--m-bg-2) 0%, var(--m-bg-1) 100%);
+  border-top-color: var(--m-tone);
+  background: var(--m-tone-glow), linear-gradient(135deg, var(--m-bg-2) 0%, var(--m-bg-1) 100%);
   border-radius: 4px;
-  transition: border-color .2s, background .2s;
+  transition: --m-tone .2s, border-color .2s, background .2s;
 }
-.conductor-next.tone-ok      { border-left-color: var(--m-ok); }
-.conductor-next.tone-warn    { border-left-color: var(--m-warn); }
-.conductor-next.tone-danger  { border-left-color: var(--m-danger); }
-.conductor-next.tone-accent  { border-left-color: var(--m-accent); }
-.conductor-next.tone-blue    { border-left-color: var(--m-accent-2); }
-.conductor-next.tone-neutral { border-left-color: var(--m-fg-3); }
+.conductor-next.tone-ok      { --m-tone: var(--m-ok); }
+.conductor-next.tone-warn    { --m-tone: var(--m-warn); }
+.conductor-next.tone-danger  { --m-tone: var(--m-danger); }
+.conductor-next.tone-accent  { --m-tone: var(--m-accent); }
+.conductor-next.tone-blue    { --m-tone: var(--m-accent-2); }
+.conductor-next.tone-neutral { --m-tone: var(--m-fg-3); }
 .next-command {
   display: contents;
 }
@@ -2203,10 +2307,6 @@ input[type="radio"] {
   letter-spacing: 0.6px;
   cursor: default;
 }
-.claims-row.tone-warn    { border-left: 3px solid var(--m-warn); }
-.claims-row.tone-danger  { border-left: 3px solid var(--m-danger); }
-.claims-row.tone-ok      { border-left: 3px solid var(--m-ok); }
-.claims-row.tone-accent  { border-left: 3px solid var(--m-accent); }
 .claims-lane    { color: var(--m-fg-0); }
 .claims-session { color: var(--m-fg-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .claims-focus   { color: var(--m-fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2245,18 +2345,19 @@ input[type="radio"] {
 }
 .boss-strip-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .boss-strip-tile {
+  --m-tone: var(--m-fg-3);
   padding: 8px 10px;
-  background: var(--m-bg-2);
+  background: var(--m-tone-glow), var(--m-bg-2);
   border: 1px solid var(--m-bg-3);
-  border-left: 3px solid var(--m-fg-3);
+  border-top-color: var(--m-tone);
   border-radius: 2px;
 }
-.boss-strip-tile.tone-ok      { border-left-color: var(--m-ok); }
-.boss-strip-tile.tone-warn    { border-left-color: var(--m-warn); }
-.boss-strip-tile.tone-danger  { border-left-color: var(--m-danger); }
-.boss-strip-tile.tone-accent  { border-left-color: var(--m-accent); }
-.boss-strip-tile.tone-blue    { border-left-color: var(--m-accent-2); }
-.boss-strip-tile.tone-neutral { border-left-color: var(--m-fg-3); }
+.boss-strip-tile.tone-ok      { --m-tone: var(--m-ok); }
+.boss-strip-tile.tone-warn    { --m-tone: var(--m-warn); }
+.boss-strip-tile.tone-danger  { --m-tone: var(--m-danger); }
+.boss-strip-tile.tone-accent  { --m-tone: var(--m-accent); }
+.boss-strip-tile.tone-blue    { --m-tone: var(--m-accent-2); }
+.boss-strip-tile.tone-neutral { --m-tone: var(--m-fg-3); }
 .boss-strip-value {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 18px;
@@ -2276,15 +2377,16 @@ input[type="radio"] {
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
+  --m-tone: var(--m-accent);
   border: 1px solid var(--m-bg-3);
-  border-left: 3px solid var(--m-accent);
-  background: var(--m-bg-2);
+  border-top-color: var(--m-tone);
+  background: var(--m-tone-glow), var(--m-bg-2);
 }
-.boss-strip-next.tone-ok      { border-left-color: var(--m-ok); }
-.boss-strip-next.tone-warn    { border-left-color: var(--m-warn); }
-.boss-strip-next.tone-danger  { border-left-color: var(--m-danger); }
-.boss-strip-next.tone-accent  { border-left-color: var(--m-accent); }
-.boss-strip-next.tone-blue    { border-left-color: var(--m-accent-2); }
+.boss-strip-next.tone-ok      { --m-tone: var(--m-ok); }
+.boss-strip-next.tone-warn    { --m-tone: var(--m-warn); }
+.boss-strip-next.tone-danger  { --m-tone: var(--m-danger); }
+.boss-strip-next.tone-accent  { --m-tone: var(--m-accent); }
+.boss-strip-next.tone-blue    { --m-tone: var(--m-accent-2); }
 .boss-strip-next-glyph { font-family: 'IBM Plex Mono', monospace; color: var(--m-accent); }
 .boss-strip-next-text  { color: var(--m-fg-0); font-family: 'IBM Plex Sans Condensed', sans-serif; flex: 1; }
 
@@ -2359,22 +2461,23 @@ input[type="radio"] {
 }
 
 .proposal-card {
+  --m-tone: var(--m-accent);
   border: 1px solid var(--m-bg-3);
-  border-left: 3px solid var(--m-accent);
-  background: var(--m-bg-2);
+  border-top-color: var(--m-tone);
+  background: var(--m-tone-glow), var(--m-bg-2);
   padding: 10px 12px;
   margin: 4px 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
   cursor: pointer;
-  transition: border-color .15s;
+  transition: --m-tone .15s, border-color .15s;
 }
-.proposal-card:hover { border-color: var(--m-accent-dim); }
-.proposal-card.tone-ok      { border-left-color: var(--m-ok); }
-.proposal-card.tone-warn    { border-left-color: var(--m-warn); }
-.proposal-card.tone-danger  { border-left-color: var(--m-danger); }
-.proposal-card.tone-accent  { border-left-color: var(--m-accent); }
+.proposal-card:hover { border-color: var(--m-accent-dim); border-top-color: var(--m-tone); }
+.proposal-card.tone-ok      { --m-tone: var(--m-ok); }
+.proposal-card.tone-warn    { --m-tone: var(--m-warn); }
+.proposal-card.tone-danger  { --m-tone: var(--m-danger); }
+.proposal-card.tone-accent  { --m-tone: var(--m-accent); }
 .proposal-head {
   display: flex;
   flex-wrap: wrap;
@@ -2405,14 +2508,18 @@ input[type="radio"] {
   gap: 6px;
   align-items: baseline;
   padding: 6px 8px;
-  background: var(--m-bg-1);
-  border-left: 2px solid var(--m-accent-2);
+  /* Nested inside a toned card, so it reads as a status chip (tinted fill +
+     tinted edge, the .pill language) rather than a second lit surface. */
+  --m-tone: var(--m-accent-2);
+  background: color-mix(in srgb, var(--m-tone) 6%, var(--m-bg-1));
+  border: 1px solid color-mix(in srgb, var(--m-tone) 30%, transparent);
+  border-radius: 2px;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 11px;
   color: var(--m-fg-1);
 }
-.proposal-enforcer.tone-ok     { border-left-color: var(--m-ok); }
-.proposal-enforcer.tone-danger { border-left-color: var(--m-danger); }
+.proposal-enforcer.tone-ok     { --m-tone: var(--m-ok); }
+.proposal-enforcer.tone-danger { --m-tone: var(--m-danger); }
 .proposal-precs {
   margin: 0; padding-left: 16px; color: var(--m-fg-2); font-size: 12px;
 }
@@ -2538,6 +2645,7 @@ input[type="radio"] {
 .workflow-edge { fill: none; stroke: var(--m-bg-3); stroke-width: 1.5; opacity: 0.65; }
 .workflow-node-rect {
   fill: var(--m-bg-1); stroke: var(--m-accent); stroke-width: 1.2;
+  /* impeccable-disable-next-line layout-transition -- stroke-width on an SVG rect only repaints; it moves no layout */
   transition: fill 120ms, stroke-width 120ms;
 }
 .workflow-node-label {
@@ -2565,13 +2673,14 @@ input[type="radio"] {
 .workflow-legend-go { color: var(--m-accent-2); text-align: right; }
 
 /* Roadmap depth */
-.kpi-strip { display: flex; flex-wrap: wrap; gap: 8px; }
+.kpi-strip { display: flex; flex-wrap: wrap; gap: var(--m-space-2); }
 .kpi-tile {
   flex: 1 1 140px;
   padding: 10px 12px;
-  border: 1px solid var(--m-bg-2);
-  border-radius: 8px;
+  border: 1px solid var(--m-line);
+  border-radius: var(--m-radius);
   background: var(--m-bg-1);
+  box-shadow: var(--m-shadow-sm);   /* R2: DS surface lift, consistent with panels */
 }
 .kpi-tile.tone-accent { border-color: var(--m-accent); }
 .kpi-tile.tone-ok     { border-color: var(--m-ok); }
@@ -2688,8 +2797,33 @@ input[type="radio"] {
 .team-lane-holder { font-size: 12px; color: var(--m-fg-0); }
 .team-lane-last { font-size: 11px; }
 .team-lane-policy { font-size: 10px; }
+.team-lane-contention { font-size: 12px; color: var(--m-fg-0); }
 
-.pill.tone-fg-3 { background: transparent; border: 1px solid var(--m-bg-3); color: var(--m-fg-3); }
+/* `.pill` is rendered in four tones — fg-3, warn, ok and accent — but only the
+   first two were ever styled, so `pill tone-ok` ("enabled YES") and
+   `pill tone-accent` (lane ids) painted nothing at all. The ok/accent pair
+   reads the same semantic tokens as the .next-command-pill family. */
+.pill.tone-fg-3  { background: transparent; border: 1px solid var(--m-bg-3); color: var(--m-fg-3); }
+.pill.tone-warn  { background: rgba(255, 184, 0, 0.08); border: 1px solid rgba(255, 184, 0, 0.36); color: var(--m-warn); }
+.pill.tone-ok    { background: var(--m-ok-bg); border: 1px solid var(--m-ok-border); color: var(--m-ok); }
+.pill.tone-accent { background: var(--m-accent-glow-bg); border: 1px solid var(--m-accent-dim); color: var(--m-accent); }
+
+/* ─── Team sync (#12c phase 6) — replicas × contentions panel on Teams ── */
+.team-sync { display: flex; flex-direction: column; gap: 12px; }
+.team-sync-replicas, .team-sync-contentions { display: flex; flex-direction: column; gap: 6px; }
+.team-sync-replica, .team-sync-contention {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--m-bg-2);
+  border-radius: 8px;
+  background: var(--m-bg-1);
+  font-size: 12px;
+}
+.team-sync-contention {
+  --m-tone: var(--m-warn);
+  border-top-color: var(--m-tone);
+  background: var(--m-tone-glow), var(--m-bg-1);
+}
 
 /* ─── Task #13 — Native select brand pass ──────────────────────────────
    Applies to every <select> in the cockpit. Trigger gets appearance:none
@@ -2801,7 +2935,19 @@ select option:hover,
   flex: 1 1 0;
 }
 
-.rail-group { display: flex; flex-direction: column; margin: 2px 0; }
+/* A group is exactly two rows — head, then list — so collapsing animates the
+   list's grid track (1fr → 0fr) instead of max-height: no layout thrash, no
+   800px cap a long group could hit. align-content: start keeps the space a
+   fractional track gives up mid-animation out of the head row, which would
+   otherwise stretch (31 → 138px at the midpoint, measured). */
+.rail-group {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  align-content: start;
+  margin: 2px 0;
+  transition: grid-template-rows 200ms ease;
+}
+.rail-group.collapsed { grid-template-rows: auto 0fr; }
 .rail-group-head {
   appearance: none;
   -webkit-appearance: none;
@@ -2860,12 +3006,19 @@ select option:hover,
 .rail-group.collapsed .rail-group-chev { transform: rotate(0deg); }
 .rail-group-list {
   display: flex; flex-direction: column; gap: 1px;
+  min-height: 0;
   overflow: hidden;
-  max-height: 800px;
-  transition: max-height 200ms ease, opacity 160ms;
+  transition: opacity 160ms;
   opacity: 1;
 }
-.rail-group.collapsed .rail-group-list { max-height: 0; opacity: 0; pointer-events: none; }
+/* visibility (flipped after the 200ms collapse) takes the hidden links out of
+   the tab order and the accessibility tree, matching aria-expanded="false". */
+.rail-group.collapsed .rail-group-list {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 160ms, visibility 0s 200ms;
+}
 
 .rail-link {
   grid-template-columns: 18px 1fr auto;
@@ -3574,3 +3727,107 @@ select option:hover,
   color: var(--m-fg-2);
   vertical-align: baseline;
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+ * Prose formatter (cockpit-prose.js) — turns Máddu's dense structured strings
+ * (slice-stops, handoff bodies, long summaries) into a scannable lead + labeled
+ * sections instead of a wall of text. Reads --s-*/--m-* tokens only.
+ * ════════════════════════════════════════════════════════════════════════ */
+.prose {
+  font-family: var(--m-font-mono); font-size: 12px; line-height: var(--m-line-body); color: var(--m-fg-1);
+  /* Never overflow horizontally — long unbroken tokens (paths, hashes, URLs,
+   * event ids) wrap instead of pushing the container wide. */
+  min-width: 0; max-width: 100%; overflow-wrap: anywhere; word-break: break-word;
+}
+.prose * { min-width: 0; }
+.prose-text, .prose-list li, .prose-para, .prose-lead { overflow-wrap: anywhere; word-break: break-word; }
+/* Grid content column must be allowed to shrink below its content width, or a
+ * long token in it forces the whole row to overflow. */
+.prose-sec > * { min-width: 0; }
+/* Lead — the slice's headline. Stronger than the body: accent hairline + heavier
+ * ink so it clearly separates the "what" from the labeled detail below. */
+.prose-lead {
+  color: var(--m-fg-0); font-family: var(--m-font-sans); font-size: 14px; font-weight: 600;
+  line-height: 1.35; margin-bottom: var(--m-space-2);
+}
+.prose-para {
+  margin: 0 0 var(--m-space-2); color: var(--m-fg-1);
+  font-family: var(--m-font-sans); font-size: 13px; line-height: var(--m-line-body);
+}
+.prose-para:last-child { margin-bottom: 0; }
+.prose-subhead {
+  color: var(--m-fg-0); font-family: var(--m-font-sans); font-size: 13px; font-weight: 600;
+  margin: var(--m-space-2) 0 var(--m-space-1); letter-spacing: -0.01em;
+}
+.prose-subhead:first-child { margin-top: 0; }
+.prose-bullet {
+  position: relative; padding-left: 14px; margin-bottom: 2px;
+  font-family: var(--m-font-sans); font-size: 13px; color: var(--m-fg-1); line-height: var(--m-line-body);
+}
+.prose-bullet::before { content: '•'; position: absolute; left: 2px; color: var(--m-accent-2); }
+.prose-code {
+  font-family: var(--m-font-mono); font-size: 11px; background: var(--m-bg-3);
+  border: 1px solid var(--m-line-soft); border-radius: var(--m-radius-sm); padding: 0 4px; color: var(--m-fg-0);
+}
+.prose-para strong, .prose-bullet strong, .prose-lead strong { color: var(--m-fg-0); font-weight: 600; }
+.prose-sections { display: flex; flex-direction: column; }
+.prose-sec {
+  display: grid; grid-template-columns: 58px 1fr; gap: var(--m-space-2);
+  align-items: baseline; padding: 2px 0; border-top: 1px solid var(--m-line-soft);
+}
+.prose-sec:first-child { border-top: 0; }
+.prose-key {
+  font-family: var(--m-font-mono); font-size: 9.5px; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--m-fg-3); padding-top: 1px;
+}
+.prose-text { color: var(--m-fg-1); }
+.prose-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.prose-list li { position: relative; padding-left: 13px; color: var(--m-fg-1); }
+.prose-list li::before { content: '•'; position: absolute; left: 0; color: var(--m-accent-2); }
+/* Clause lines (a broken-up run-on Action/Reason) — no bullet dot, a quiet
+ * left rule instead, so the lines read as continuous prose, just wrapped. */
+.prose-clauses li { padding-left: 10px; }
+.prose-clauses li::before { content: ''; width: 2px; top: 3px; bottom: 3px; height: auto; background: var(--m-line); border-radius: 1px; }
+.prose-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.prose-chip {
+  font-family: var(--m-font-mono); font-size: 10px; color: var(--m-fg-2);
+  background: var(--m-bg-3); border: 1px solid var(--m-line-soft);
+  border-radius: var(--m-radius-pill); padding: 1px 8px; cursor: default;
+}
+.prose-chip:hover { color: var(--m-fg-0); border-color: var(--m-line); }
+.prose-extra { display: none; }
+.prose.prose-open .prose-extra { display: grid; }
+.prose-more {
+  margin-top: var(--m-space-1); font-family: var(--m-font-mono); font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--m-accent-2);
+  background: transparent; border: 0; padding: 2px 0; cursor: pointer;
+}
+.prose-more:hover { color: var(--m-accent); box-shadow: none; background: transparent; }
+/* Recent slice-stops trail (goal view) — each item is a formatted prose block. */
+.slice-trail { display: flex; flex-direction: column; }
+.slice-trail-item { padding: 8px 0; border-top: 1px solid var(--m-line-soft); }
+.slice-trail-item:first-child { border-top: 0; }
+/* Overflow safety net — long unbroken tokens wrap instead of scrolling sideways.
+ * Use break-word (not anywhere) so it never shrinks a table's min-content and
+ * collapses a short label column; the aggressive `anywhere` stays scoped to
+ * .prose above. Keep ledger LABELS on one line. */
+.view .panel { overflow-wrap: break-word; }
+.view .panel table.ledger td { overflow-wrap: break-word; }
+.view .panel table.ledger td.event-actor { white-space: nowrap; word-break: normal; overflow-wrap: normal; padding-right: 12px; }
+/* Compact card asides that carry a full summary (team lane cards) clamp to one
+ * line — the full record is on the detail views + the inspector, not crammed here. */
+.team-lane-last { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+/* Compact CARD summaries (queue, backbone previews) clamp to a few lines so a
+ * verbose summary can't grow the card into a wall; full detail on click. */
+.queue-card-summary, .queue-card-detail, .proposal-summary {
+  display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3;
+  -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
+}
+/* Inspector drawer — the universal detail surface. Never scroll sideways: long
+ * values + raw blocks wrap. */
+.inspector-body { overflow-wrap: anywhere; word-break: break-word; }
+.inspector-body pre, .inspector-body code { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+/* Raw source-doc renders (Skills body, Wiki pages, other non-code <pre>) wrap
+ * instead of scrolling sideways. Code blocks (.md-code) keep their intentional
+ * horizontal scroll for source fidelity. */
+.view pre:not(.md-code) { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; max-width: 100%; }

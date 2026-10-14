@@ -1,0 +1,158 @@
+// discipline-observed — surfaces Máddu's self-discipline enforcement in
+// `maddu doctor`: is the record being kept (session/lane/goal-or-plan present,
+// slice-stops current, work being committed), and — critically — is the
+// enforcement actually WIRED (the PreToolUse hook installed) for the configured
+// governance mode? Codex flagged that a repo can configure strict enforcement
+// yet never install the hook, so discipline silently does nothing.
+//
+// Read-only and severity 'warn' — this reports discipline; it never fails a
+// build. The hard enforcement happens at the PreToolUse hook, not here.
+
+import { dirname, join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const lib = (name) => pathToFileURL(join(__dirname, '..', '..', 'lib', name)).href;
+
+export default {
+  id: 'discipline-observed',
+  label: 'self-discipline rituals observed',
+  severity: 'warn',
+  description: 'Máddu\'s session rituals are current (session/lane/goal-or-plan present, slice-stops fresh, work committed) and — for enforcing governance modes — the PreToolUse enforcement hook is actually installed.',
+  run: async (ctx) => {
+    let discipline, governance, sessionActive, claudeHooks;
+    try {
+      discipline = await import(lib('discipline.mjs'));
+      governance = await import(lib('governance.mjs'));
+      sessionActive = await import(lib('session-active.mjs'));
+      claudeHooks = await import(lib('claude-hooks.mjs'));
+    } catch {
+      return { ok: true, message: 'discipline libs not available (older install) — skipped' };
+    }
+
+    const repoRoot = ctx.repoRoot;
+    const cfg = await governance.readEffectiveGovernance(repoRoot).catch(() => ({ mode: 'standard', overrides: {} }));
+    const enforcement = governance.effectiveValue(cfg, 'discipline-enforcement') || 'graduated';
+    const enforcing = enforcement === 'block' || enforcement === 'graduated';
+
+    // Is the PreToolUse enforcement hook actually wired?
+    let hookWired = false;
+    try {
+      const { settings } = await claudeHooks.loadSettings(repoRoot);
+      const groups = settings?.hooks?.PreToolUse || [];
+      hookWired = groups.some((g) => (g.hooks || []).some((h) => /maddu\.mjs.*hooks fire pre-tool-use|hooks fire pre-tool-use/.test(String(h.command || ''))));
+    } catch { /* fail-safe: treat as unknown */ }
+
+    // …and does that wiring actually LOAD? Until the hook-firing core moved to
+    // runtime/lib/harness/fire-core.mjs, a missing settings entry was the ONLY
+    // route to "configured but silently does nothing", so testing for it was a
+    // complete implementation of this gate's contract. The move opened a second
+    // route: an install whose settings are perfectly wired but whose core is
+    // absent, unreadable or unparseable fires a hook that contains its own
+    // failure, exits 0, and emits no decision at all. Enforcement is off and
+    // every readout still says "wired".
+    //
+    // install-integrity catches the file MISSING after a completed upgrade
+    // (critical), but only WARNS when it is present and corrupt — a broken
+    // module cannot be told apart from a deliberate local edit — and it cannot
+    // report a path its manifest never recorded, which is the state a crashed
+    // upgrade leaves behind. So the honest test is the direct one: import it.
+    // Importing is side-effect-free (the module only exports a factory) and
+    // fires no hook.
+    // The export is checked, not just the import: commands/hooks.mjs degrades
+    // on `typeof core?.fire !== 'function'`, so a module that loads but does
+    // not produce a usable core is just as dead as one that will not parse. A
+    // file truncated inside its own header comment block, for instance, is
+    // perfectly valid JavaScript that exports nothing.
+    let coreLoads = false, coreWhy = null;
+    try {
+      const mod = await import(lib('harness/fire-core.mjs'));
+      coreLoads = typeof mod.createHookFireCore === 'function';
+      if (!coreLoads) coreWhy = 'loaded but exports no createHookFireCore';
+    } catch (e) {
+      // Name the reason. "Not installed" sends the operator to `maddu upgrade`;
+      // a parse or resolution failure means the module is BROKEN rather than
+      // missing, and an upgrade would faithfully recopy it.
+      coreWhy = e && e.code === 'ERR_MODULE_NOT_FOUND' ? 'not installed' : String((e && (e.code || e.name)) || 'load failed');
+    }
+
+    // Gather current ritual state (best-effort; fail-open to a healthy read).
+    let sid = null;
+    try {
+      const a = await sessionActive.readActiveSessionVerified(repoRoot);
+      // v1.111.0 union (kind) with pre-v1.111 shape fallback.
+      if (a && (a.kind === 'active' || a.kind === 'unverified') && a.record) sid = a.record.sessionId;
+      else if (a && a.kind === undefined && !a.stale && a.sessionId) sid = a.sessionId;
+    } catch {}
+    let state = null;
+    try {
+      // Read the REAL counter when a session resolved (its baseline/init
+      // marker governs what counts as new); with no session, a synthetic
+      // counter with `baselineInit: true` keeps the gate's historical
+      // "count every dirty file" semantics — without the marker every
+      // observation would read as baseline initialization and the >= 15
+      // readout could never fire.
+      const counter = (sid && discipline.readCounter)
+        ? await discipline.readCounter(repoRoot, sid)
+        : { dirtyBaseline: [], editsSinceSlice: 0, baselineInit: true };
+      state = await discipline.gatherRitualState(repoRoot, sid, Date.now(), counter);
+    } catch {}
+
+    const problems = [];
+    if (enforcing && !hookWired) problems.push(`enforcement is "${enforcement}" but the PreToolUse hook is NOT installed — run \`maddu hooks install\` (discipline currently does nothing)`);
+    // Wired-but-unloadable has the same OUTCOME as not wired — discipline does
+    // nothing — so it is reported with the same weight, and a different remedy.
+    if (enforcing && hookWired && !coreLoads) problems.push(`enforcement is "${enforcement}" and the PreToolUse hook IS installed, but its fire-core does not load (${coreWhy}) — discipline currently does nothing; run \`maddu upgrade\`, and if that does not fix it the module is broken rather than missing`);
+
+    // audit P2 (C6c/F9): out-of-band config provenance. Replay the recorded
+    // governance changes and reconcile STORED config (mode + the discipline-
+    // enforcement override) against them. A mismatch means the config was changed
+    // without a recorded governance command (a possible out-of-band edit that would
+    // silently weaken enforcement). Compares STORED mode (not effective — phase
+    // escalation is effective-only and never tampering). Best-effort; warn-only.
+    try {
+      const spine = await import(lib('spine.mjs'));
+      const events = await spine.readAll(repoRoot);
+      let recMode = 'standard';           // readGovernance's default when unset
+      let recOverride = null;             // no discipline-enforcement override recorded
+      for (const e of events) {
+        if (e.type === 'GOVERNANCE_MODE_CHANGED') recMode = e.data?.to || recMode;
+        else if (e.type === 'GOVERNANCE_OVERRIDE_CHANGED' && e.data?.key === 'discipline-enforcement') {
+          recOverride = e.data.to == null ? null : String(e.data.to);
+        }
+      }
+      const stored = await governance.readGovernance(repoRoot);
+      const storedMode = stored.mode;
+      const storedOverride = stored.overrides && Object.prototype.hasOwnProperty.call(stored.overrides, 'discipline-enforcement')
+        ? String(stored.overrides['discipline-enforcement']) : null;
+      if (storedMode !== recMode || storedOverride !== recOverride) {
+        problems.push(`governance state not accounted for by any recorded change (possible out-of-band config edit): stored{mode:${storedMode}, enf-override:${storedOverride ?? 'none'}} vs recorded{mode:${recMode}, enf-override:${recOverride ?? 'none'}}`);
+      }
+    } catch { /* provenance reconcile is best-effort */ }
+
+    if (state) {
+      if (!state.session?.registered) problems.push('no active session registered');
+      if (!state.lane?.claimed) problems.push('no lane claimed');
+      if (!state.goalOrPlan?.active) problems.push('no active goal or open plan governs current work');
+      // Honest unknown (v1.111.0): a failed/invalid git observation or broken
+      // discipline config must NOT render as dirty=0 / "rituals observed" —
+      // report the observation problem instead (enforcement stays fail-open;
+      // this diagnostic just stops lying).
+      if (state.commit && state.commit.observed === false) {
+        problems.push('commit observation unavailable (git failure or invalid discipline config) — dirty state unknown');
+      } else if (state.commit && state.commit.newDirtyFiles >= 15) {
+        problems.push(`${state.commit.newDirtyFiles} uncommitted files piling up`);
+      }
+    }
+
+    const dirtyLabel = state && state.commit
+      ? (state.commit.observed === false ? 'unknown' : (state.commit.newDirtyFiles ?? '?'))
+      : '?';
+    const summary = state
+      ? `mode=${cfg.mode} enforcement=${enforcement} hook=${hookWired ? 'wired' : 'MISSING'} · session=${state.session?.registered ? 'ok' : 'none'} lane=${state.lane?.claimed ? 'ok' : 'none'} goal/plan=${state.goalOrPlan?.active ? 'ok' : 'none'} dirty=${dirtyLabel}`
+      : `mode=${cfg.mode} enforcement=${enforcement} hook=${hookWired ? 'wired' : 'MISSING'}`;
+
+    if (problems.length === 0) return { ok: true, message: `rituals observed — ${summary}` };
+    return { ok: false, message: `${problems.length} discipline gap(s) — ${summary}`, evidence: { problems } };
+  },
+};

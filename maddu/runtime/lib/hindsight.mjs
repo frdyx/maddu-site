@@ -11,14 +11,7 @@ import { appendFile, mkdir, readFile, writeFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathsFor } from './paths.mjs';
 import { readAll, append } from './spine.mjs';
-
-// v1.9.0 adds 'correction' — a durable lesson distilled by `maddu learn` from a
-// failed→succeeded tool-call pair (Headroom-style). Unlike the SLICE_STOP-derived
-// kinds, corrections originate from LEARN_CORRECTION_WRITTEN spine events and are
-// replayed on rebuild (see rebuildMemory) so they survive a memory rebuild.
-// v1.90.0 adds 'vendor' — a fact imported from a vendor tool's own memory
-// (VENDOR_MEMORY_IMPORTED events, import-only; see vendor-memory.mjs).
-export const FACT_KINDS = ['rule', 'constraint', 'discovery', 'followup', 'touched', 'gate', 'summary', 'correction', 'vendor'];
+import { redactLeaves } from './secret-scan.mjs';
 
 function memoryPath(repoRoot) {
   return join(pathsFor(repoRoot).state, 'memory.ndjson');
@@ -49,7 +42,7 @@ function tagsFor(ev, text) {
 }
 
 // Given a SLICE_STOP event, return an ordered array of fact records.
-export function extractFromSliceStop(ev) {
+function extractFromSliceStop(ev) {
   if (ev.type !== 'SLICE_STOP') return [];
   const facts = [];
   const d = ev.data || {};
@@ -117,18 +110,22 @@ export function extractFromSliceStop(ev) {
   }));
 }
 
-export async function ensureMemoryFile(repoRoot) {
+async function ensureMemoryFile(repoRoot) {
   const paths = pathsFor(repoRoot);
-  await mkdir(paths.statePrjDir, { recursive: true });
+  // Phase 1 fix (memory-recall track): mkdir the directory the file actually
+  // lives in (.maddu) — this previously created the unrelated .maddu/state.
+  await mkdir(paths.state, { recursive: true });
   const p = memoryPath(repoRoot);
   try { await stat(p); } catch { await writeFile(p, ''); }
   return p;
 }
 
-export async function appendFacts(repoRoot, facts) {
+async function appendFacts(repoRoot, facts) {
   if (!facts.length) return 0;
   const p = await ensureMemoryFile(repoRoot);
-  const lines = facts.map((f) => JSON.stringify(f)).join('\n') + '\n';
+  // Write-boundary redaction: memory facts are transcript/repo-derived and can
+  // carry a pasted secret. Value-pattern scrub only; clean facts are unchanged.
+  const lines = facts.map((f) => JSON.stringify(redactLeaves(f))).join('\n') + '\n';
   await appendFile(p, lines);
   return facts.length;
 }
@@ -238,6 +235,172 @@ export async function supersede(repoRoot, { priorId, fact, reason = null }) {
   return next;
 }
 
+// ── v1.115.0 fact trust states (memory-recall track) ────────────────────────
+// Every fact is implicitly `asserted` when extracted (no event). Operator
+// approval (MEMORY_FACT_APPROVED) makes it eligible for recall injection;
+// revocation (MEMORY_FACT_REVOKED) excludes it. Last event in spine order
+// wins. Trust is event-sourced — it survives rebuildMemory — and is NEVER
+// inferred from a fact's kind, actor, or hash-chain membership.
+
+// Canonical consumed-content serialization (Codex r1 blocker 2 + r2 blocker
+// 1): approval must bind to EVERYTHING agent context consumes or selection
+// keys on — text, kind, tags, lane, sourceEvent — not text alone, or a
+// mutable-file edit to `source.lane`/`tags` smuggles unapproved content (or
+// forces selection) past a text-only hash. The SAME serialization is the
+// byte measure for recall budgets and the gate's recompute (r2 blocker 2:
+// counting text bytes only let a tiny fact carry megabytes in its lane).
+// Type well-formedness (Codex r3 blocker 1): the canonical serialization is
+// injective ONLY over well-typed facts — `String(hugeObject)` and
+// `String('[object Object]')` collide, so coercion would let an approved
+// string be swapped for an arbitrary object under the same hash. A fact that
+// is not well-formed is NEVER approvable and never resolves to `approved`.
+const FACT_KEYS = new Set(['v', 'id', 'ts', 'kind', 'text', 'tags', 'source', 'supersedes']);
+const strOrNull = (x) => x === undefined || x === null || typeof x === 'string';
+
+function isWellFormedFact(f) {
+  if (!f || typeof f !== 'object' || Array.isArray(f)) return false;
+  // STRICT top-level keys (Codex r4 blocker 2): unknown properties are
+  // rejected — an extra `payload` field would ride spreads past a hash that
+  // cannot cover keys it does not know about.
+  for (const k of Object.keys(f)) if (!FACT_KEYS.has(k)) return false;
+  if (typeof f.id !== 'string' || typeof f.text !== 'string' || typeof f.kind !== 'string') return false;
+  if (!strOrNull(f.ts)) return false;
+  if (f.supersedes !== undefined && typeof f.supersedes !== 'string') return false;
+  if (f.v !== undefined && typeof f.v !== 'number') return false;
+  if (f.tags !== undefined && !(Array.isArray(f.tags) && f.tags.every((t) => typeof t === 'string'))) return false;
+  if (f.source !== undefined) {
+    // Source keys are writer-defined (r5 major 3: learn writes
+    // candidate/slug/session, vendor origin/file/dir, evolve
+    // recId/detector/evidence[]) — so keys are free but VALUES are typed:
+    // JSON primitives or bounded string arrays, ≤16 keys, no nesting. The
+    // whole-fact canonical hash below covers every one of them.
+    if (typeof f.source !== 'object' || f.source === null || Array.isArray(f.source)) return false;
+    const keys = Object.keys(f.source);
+    if (keys.length > 16) return false;
+    for (const k of keys) {
+      const v = f.source[k];
+      const okVal = v === null || typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean'
+        || (Array.isArray(v) && v.length <= 64 && v.every((x) => typeof x === 'string'));
+      if (!okVal) return false;
+    }
+  }
+  return true;
+}
+
+function canonicalFactContent(fact) {
+  // WHOLE-FACT deterministic serialization (Codex r5 blocker 1 ended the
+  // field-enumeration whack-a-mole: supersedes/candidate/v were consumed but
+  // unhashed). Fixed literal key order; source keys sorted; undefined
+  // normalized to null. isWellFormedFact strictly bounds the keyspace, so
+  // this is injective over validated facts.
+  const src = fact.source || {};
+  return JSON.stringify({
+    id: fact.id,
+    kind: fact.kind,
+    source: Object.fromEntries(Object.keys(src).sort().map((k) => [k, src[k] ?? null])),
+    supersedes: fact.supersedes ?? null,
+    tags: Array.isArray(fact.tags) ? fact.tags : [],
+    text: fact.text,
+    ts: fact.ts ?? null,
+    v: fact.v ?? null,
+  });
+}
+
+export function factContentHash(fact) {
+  return createHash('sha256').update(canonicalFactContent(fact), 'utf8').digest('hex');
+}
+
+export function factContentBytes(fact) {
+  return Buffer.byteLength(canonicalFactContent(fact), 'utf8');
+}
+
+// Single trust-resolution law (r2 major 4): EVERY surface that shows a trust
+// badge must apply the same hash validation — `approved` is only reportable
+// while the current content matches the approval's sha256. Raw trustStates
+// output is never a display state on its own.
+export function trustFor(fact, trustMap) {
+  const t = trustMap.get(fact.id);
+  if (!t) return { trust: 'asserted' };
+  if (t.state === 'approved') {
+    if (!isWellFormedFact(fact)) return { trust: 'asserted', trustNote: 'malformed-fact' };
+    if (t.sha256 !== factContentHash(fact)) return { trust: 'asserted', trustNote: 'approval-hash-mismatch' };
+  }
+  return { trust: t.state };
+}
+
+// Pure: fold trust transitions out of an event list. Returns
+// Map<factId, { state: 'approved'|'revoked', ts, reason, sha256 }> — absent =
+// asserted. Last event in spine order wins.
+export function trustStates(events) {
+  const out = new Map();
+  for (const ev of events) {
+    if (ev.type !== 'MEMORY_FACT_APPROVED' && ev.type !== 'MEMORY_FACT_REVOKED') continue;
+    const factId = ev.data?.factId;
+    if (!factId) continue;
+    out.set(factId, {
+      state: ev.type === 'MEMORY_FACT_APPROVED' ? 'approved' : 'revoked',
+      ts: ev.ts || null,
+      reason: ev.data?.reason || null,
+      sha256: ev.data?.sha256 || null,
+      evId: ev.id || null,
+    });
+  }
+  return out;
+}
+
+// Pure: fact ids retired by MEMORY_FACT_SUPERSEDED EVENTS (Codex r1 blocker
+// 1): the fact-file back-pointer view (currentFacts) misses a supersession
+// whose event landed but whose replacement fact never did (crash between the
+// two appends) — leaving a retired-on-the-spine fact "current" and
+// injectable. The spine wins (hard rule 2), so the injection-safety join
+// retires from events too.
+function supersededByEvents(events) {
+  const out = new Set();
+  for (const ev of events) {
+    if (ev.type === 'MEMORY_FACT_SUPERSEDED' && ev.data?.supersedes) out.add(ev.data.supersedes);
+  }
+  return out;
+}
+
+// Current facts joined with their trust state — THE injection-safety view
+// (recall packet + memory-injection-bounded gate both build on it). A fact is
+// `approved` ONLY if: an approval event is its latest trust transition AND
+// the event's sha256 matches the current text (tamper → falls back to
+// asserted). Facts retired by a MEMORY_FACT_SUPERSEDED event are excluded
+// even when the fact file missed the replacement (spine wins).
+export async function factsWithTrust(repoRoot) {
+  const [facts, events] = await Promise.all([currentFacts(repoRoot), readAll(repoRoot)]);
+  const trust = trustStates(events);
+  const retired = supersededByEvents(events);
+  return facts
+    .filter((f) => !retired.has(f.id))
+    .map((f) => ({ ...f, ...trustFor(f, trust) }));
+}
+
+// Record an approval/revocation. Refuses unknown fact ids so trust events
+// can't dangle; caller resolves id prefixes before this point. Revocation
+// requires a reason (witnessed); a null/absent reason is OMITTED from the
+// event (schema: `reason: string?` — absent or string, never null).
+export async function setFactTrust(repoRoot, { factId, approve, reason = null, actor = null }) {
+  const all = await readMemory(repoRoot);
+  const fact = all.find((f) => f.id === factId);
+  if (!fact) throw new Error(`unknown fact id: ${factId}`);
+  if (approve && !isWellFormedFact(fact)) throw new Error(`fact ${factId} is not well-formed — refusing to approve (non-string fields defeat the content hash)`);
+  if (!approve && !reason) throw new Error('revocation requires a reason');
+  await append(repoRoot, {
+    type: approve ? 'MEMORY_FACT_APPROVED' : 'MEMORY_FACT_REVOKED',
+    actor,
+    lane: fact.source?.lane || null,
+    data: {
+      factId,
+      kind: fact.kind,
+      ...(reason ? { reason } : {}),
+      ...(approve ? { sha256: factContentHash(fact) } : {}),
+    },
+  });
+  return fact;
+}
+
 // Re-extract the entire spine — truncates memory.ndjson and rebuilds. Used by
 // `maddu memory extract --rebuild`. v1.9.0: also replays correction facts
 // carried on LEARN_CORRECTION_WRITTEN events (destination:'memory'), so
@@ -281,13 +444,56 @@ export async function readMemory(repoRoot) {
 export async function searchMemory(repoRoot, query, { kind = null, limit = 50 } = {}) {
   const all = await readMemory(repoRoot);
   const q = (query || '').toLowerCase();
+  // Type-guarded filtering (r4 major 4): one corrupt row (object text,
+  // non-array tags) must not throw and disable the whole search surface.
+  const safeText = (f) => (typeof f.text === 'string' ? f.text : '');
+  const safeTags = (f) => (Array.isArray(f.tags) ? f.tags.filter((t) => typeof t === 'string') : []);
   let out = all;
-  if (kind) out = out.filter((f) => f.kind === kind);
+  if (kind) out = out.filter((f) => f && f.kind === kind);
   if (q) {
-    out = out.filter((f) =>
-      f.text.toLowerCase().includes(q) ||
-      f.tags.some((t) => t.toLowerCase().includes(q))
-    );
+    out = out.filter((f) => f && (
+      safeText(f).toLowerCase().includes(q) ||
+      safeTags(f).some((t) => t.toLowerCase().includes(q))
+    ));
   }
-  return out.slice(-limit);
+  // Clamp limit (r2 major 5): slice(-0) is slice(0) — the whole corpus; and
+  // callers (MCP) pass caller-controlled values.
+  const lim = Number.isFinite(Number(limit)) ? Math.min(Math.max(1, Math.floor(Number(limit))), 1000) : 50;
+  // Join trust states with hash validation (r2 major 4) and emit WHITELISTED
+  // rows only (r4 blocker 2): `...f` spreads carried unknown, unhashed
+  // properties (a megabyte `payload`) into MCP under an approved badge. Rows
+  // are shaped for size (r3 major 4); a match beyond the text cap gets a
+  // matchSnippet window so the hit stays visible (r4 minor 9). Trust is
+  // computed on the RAW row before shaping.
+  const trust = trustStates(await readAll(repoRoot));
+  const capStr = (s, n) => { const v = String(s ?? ''); return v.length > n ? v.slice(0, n) : v; };
+  return out.slice(-lim).map((f) => {
+    const text = safeText(f);
+    const row = {
+      v: typeof f.v === 'number' ? f.v : 1,
+      id: capStr(f.id, 256),
+      ts: strOrNull(f.ts) ? (f.ts ?? null) : null,
+      kind: capStr(f.kind, 64),
+      text: capStr(text, 2000),
+      tags: safeTags(f).slice(0, 32).map((t) => capStr(t, 64)),
+      source: {
+        event: capStr(f.source?.event, 128) || null,
+        lane: capStr(f.source?.lane, 128) || null,
+        actor: capStr(f.source?.actor, 128) || null,
+      },
+      ...(typeof f.supersedes === 'string' ? { supersedes: capStr(f.supersedes, 256) } : {}),
+      ...trustFor(f, trust),
+    };
+    if (text.length > 2000) {
+      row.textTruncated = true;
+      const at = q ? text.toLowerCase().indexOf(q) : -1;
+      if (at > 1800) {
+        const start = Math.max(0, at - 100);
+        // Window capped at 400 chars (r6 minor 5): a query-sized window would
+        // let a huge query bypass the row-shaping byte bound.
+        row.matchSnippet = ((start > 0 ? '…' : '') + text.slice(start, at + q.length + 100)).slice(0, 400) + (at + q.length + 100 < text.length ? '…' : '');
+      }
+    }
+    return row;
+  });
 }

@@ -15,32 +15,23 @@
 // is written at `maddu start` time and removed on graceful shutdown. Orphans
 // (process gone but entry still present) are pruned by `bridges list`.
 
-import { mkdir, readFile, writeFile, stat, chmod } from 'node:fs/promises';
+import { readFile, writeFile, stat, chmod } from 'node:fs/promises';
 import { join } from 'node:path';
-import { homedir, platform } from 'node:os';
+import { platform } from 'node:os';
+import { configDir, ensureConfigDir } from './config-dir.mjs';
+
+// Re-exported so bridge-auth.mjs (and any consumer) keeps one import site;
+// the derivation itself lives in config-dir.mjs (v1.139.0, register E3).
+export { configDir };
 
 const SCHEMA_VERSION = 1;
 
-export function configDir() {
-  if (platform() === 'win32') {
-    const appData = process.env.APPDATA || join(homedir(), 'AppData', 'Roaming');
-    return join(appData, 'maddu');
-  }
-  const xdg = process.env.XDG_CONFIG_HOME || join(homedir(), '.config');
-  return join(xdg, 'maddu');
-}
-
-export function registryPath() {
+function registryPath() {
   return join(configDir(), 'bridges-registry.json');
 }
 
 async function ensureDir() {
-  const d = configDir();
-  await mkdir(d, { recursive: true });
-  if (platform() !== 'win32') {
-    try { await chmod(d, 0o700); } catch {}
-  }
-  return d;
+  return ensureConfigDir();
 }
 
 function emptyRegistry() {
@@ -60,7 +51,7 @@ export async function readRegistry() {
   }
 }
 
-export async function writeRegistry(reg) {
+async function writeRegistry(reg) {
   await ensureDir();
   const f = registryPath();
   await writeFile(f, JSON.stringify(reg, null, 2) + '\n');
@@ -114,5 +105,3 @@ export async function pruneOrphans() {
   }
   return removed;
 }
-
-export { SCHEMA_VERSION };

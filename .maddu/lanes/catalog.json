@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "framework": "maddu",
+  "lanes": [
+    {
+      "id": "architecture",
+      "scope": "Design, planning, architectural briefs. Reads everything; writes plans and roadmaps."
+    },
+    {
+      "id": "frontend",
+      "scope": "User-facing UI — components, styles, client-side logic."
+    },
+    {
+      "id": "backend",
+      "scope": "Server-side code, APIs, data layer."
+    },
+    {
+      "id": "infra",
+      "scope": "Build, deploy, CI, ops, configuration."
+    },
+    {
+      "id": "tests",
+      "scope": "Test code, fixtures, harnesses."
+    },
+    {
+      "id": "docs",
+      "scope": "Project documentation, READMEs, contributor guides."
+    },
+    {
+      "id": "general",
+      "scope": "Catch-all for changes that do not fit another lane. Use sparingly — split into a real lane when patterns emerge."
+    }
+  ]
+}

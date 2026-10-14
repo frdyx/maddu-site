@@ -9,10 +9,11 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { append, EVENT_TYPES } from './spine.mjs';
 import { readRuntime } from './runtimes.mjs';
+import { redactText } from './secret-scan.mjs';
 
 const VALID_VERDICTS = new Set(['CLEAN', 'P1', 'P2', 'P3', 'INFO']);
 
-export function parseReview(text) {
+function parseReview(text) {
   const trimmed = String(text || '').trim();
   if (!trimmed) return normalize({ verdict: 'INFO', findings: [], body: '' });
 
@@ -68,7 +69,7 @@ function normalize(o) {
   return { verdict: safe, findings, body: typeof o.body === 'string' ? o.body : '' };
 }
 
-export async function writeReviewArchive(repoRoot, sliceEventId, { verdict, findings, body, reviewerRuntime, reviewedAt }) {
+async function writeReviewArchive(repoRoot, sliceEventId, { verdict, findings, body, reviewerRuntime, reviewedAt }) {
   const dir = path.join(repoRoot, '.maddu', 'reviews');
   await fs.mkdir(dir, { recursive: true });
   const yaml = [
@@ -86,7 +87,10 @@ export async function writeReviewArchive(repoRoot, sliceEventId, { verdict, find
     : '';
   const out = yaml + (body || `# Review of ${sliceEventId}`) + findingsBlock;
   const rel = path.posix.join('.maddu', 'reviews', `${sliceEventId}.md`);
-  await fs.writeFile(path.join(dir, `${sliceEventId}.md`), out);
+  // Write-boundary redaction: reviewer body/findings are runtime-produced prose
+  // that can echo a secret. Value-pattern scrub of the markdown; clean text is
+  // returned unchanged.
+  await fs.writeFile(path.join(dir, `${sliceEventId}.md`), redactText(out).text);
   return rel;
 }
 
@@ -98,7 +102,7 @@ function formatFinding(f, n) {
 }
 
 // Map verdict → follow-up severity (default policy).
-export const VERDICT_TO_FOLLOWUP = {
+const VERDICT_TO_FOLLOWUP = {
   CLEAN: null,
   P1:    'P1',
   P2:    'P2',
@@ -106,7 +110,7 @@ export const VERDICT_TO_FOLLOWUP = {
   INFO:  null,
 };
 
-export async function readReviewPolicy(repoRoot) {
+async function readReviewPolicy(repoRoot) {
   try {
     return JSON.parse(await fs.readFile(path.join(repoRoot, '.maddu', 'config', 'review-policy.json'), 'utf8'));
   } catch {

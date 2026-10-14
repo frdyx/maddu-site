@@ -224,6 +224,24 @@ export default async function sliceStop(argv) {
     console.error(`  deliverables: ${deliverables.missing.length} declared target(s) not found — ${deliverables.missing.join(', ')}`);
   }
 
+  // audit P3 [S3] — evaluate THIS claim now. A pre-append gate would miss the
+  // final slice-stop; here the stop is already appended, so read the events
+  // BEFORE it and evaluate it as the candidate. A confident verification claim
+  // ("all gates green", "tests pass") with no matching-family, in-lane proof
+  // event surfaces an immediate nudge. Best-effort, non-fatal, never blocks.
+  try {
+    const reflect = await loadLibOptional('reflect.mjs');
+    if (reflect && reflect.evaluateStop) {
+      const all = await spine.readAll(repoRoot);
+      const idx = all.findIndex((e) => e.id === ev.id);
+      const before = idx >= 0 ? all.slice(0, idx) : all;
+      const verdict = reflect.evaluateStop(before, { id: ev.id, lane: ev.lane, actor: sessionId, ts: ev.ts, data: ev.data });
+      if (verdict.flagged && verdict.kind === 'verification') {
+        console.error('  completion-claim: this slice asserts a verification outcome with no matching-family proof event in-lane — run/record the test or gate before stating done');
+      }
+    }
+  } catch { /* non-fatal */ }
+
   // Auto-revise the named plan if triggered_by carries a planId.
   if (triggered_by && triggered_by.planId) {
     try {
@@ -241,13 +259,59 @@ export default async function sliceStop(argv) {
     for (const n of ev.data.next) console.log(`    - ${n}`);
   }
 
-  // Hindsight: auto-extract facts from this slice-stop into .maddu/memory.ndjson.
+  // Materialize projections: hindsight memory + wiki, through the ONE shared
+  // seam both transports use (memory-recall track, Phase 1 — before this, CLI
+  // stops never reached the wiki). Falls back to hindsight-only on installs
+  // that predate slice-materialize.mjs. Never fatal to the stop.
   try {
-    const added = await hindsight.extractEvent(repoRoot, ev);
-    if (added > 0) console.log(`  hindsight: ${added} fact(s) → .maddu/state/memory.ndjson`);
+    const { loadLibOptional } = await import('./_libroot.mjs');
+    const materialize = await loadLibOptional('slice-materialize.mjs');
+    if (materialize?.materializeSliceStop) {
+      const m = await materialize.materializeSliceStop(repoRoot, ev);
+      if (m.memory.added > 0) console.log(`  hindsight: ${m.memory.added} fact(s) → .maddu/memory.ndjson`);
+      if (m.memory.error) console.error(`  hindsight failed (non-fatal): ${m.memory.error}`);
+      if (m.wiki.appended) console.log(`  wiki: ${m.wiki.page} updated`);
+      if (m.wiki.error) console.error(`  wiki failed (non-fatal): ${m.wiki.error}`);
+    } else {
+      const added = await hindsight.extractEvent(repoRoot, ev);
+      if (added > 0) console.log(`  hindsight: ${added} fact(s) → .maddu/memory.ndjson`);
+    }
   } catch (err) {
     console.error(`  hindsight failed (non-fatal): ${err.message}`);
   }
+
+  // Learn candidate detection (usage-audit Tier 5): preview what `maddu
+  // learn` would harvest from THIS slice's window, at the moment the
+  // operator/agent is already looking. Containment contract (see
+  // learn-slice-trigger.mjs): runs only AFTER the stop event is appended,
+  // inside try/catch — no detection outcome can affect the stop; bounded
+  // input; 1500ms cooperative deadline raced so this print never stalls the
+  // ritual. READ-ONLY (previews + one-liners onto existing learn verbs, no
+  // auto-writing) — which is why it carries no rule-#9 gauntlet entry.
+  // MADDU_TEST_LEARN_DETECTOR is a test-only hook ('throw'|'slow'), honored
+  // ONLY under MADDU_SELF_TEST=1 (Codex round 1: without the gate it would
+  // be a live switch in ordinary production invocations) — it exists so the
+  // isolation and deadline-race acceptance tests exercise the REAL failure
+  // paths through this exact call site.
+  try {
+    const lt = await loadLibOptional('learn-slice-trigger.mjs');
+    if (lt?.runDetectionPreview) {
+      const hook = process.env.MADDU_SELF_TEST === '1' ? (process.env.MADDU_TEST_LEARN_DETECTOR || null) : null;
+      const res = await lt.runDetectionPreview(repoRoot, {
+        sessionId, stopEventId: ev.id,
+        _testThrow: hook === 'throw', _testDelayMs: hook === 'slow' ? 5000 : 0,
+      });
+      if (res.timedOut) {
+        console.log(`  learn: detection passed its ${lt.DETECT_DEADLINE_MS}ms budget — skipped this stop (straggler abandoned)`);
+      } else if (res.candidates.length) {
+        console.log(`  learn: ${res.candidates.length} candidate(s) in this slice's window${res.truncated ? ' (window capped)' : ''}${res.skippedOversize ? ` (${res.skippedOversize} oversize line(s) skipped)` : ''}`);
+        for (const c of res.candidates.slice(0, 3)) {
+          console.log(`    - [${c.category}] ${String(c.failure || '').slice(0, 70)}`);
+        }
+        console.log(`    review: maddu learn digest --spine   · accept: maddu learn run --spine   · nothing is written until you run it`);
+      }
+    }
+  } catch { /* isolation contract: never affects the stop */ }
 
   // Rule-#9 gauntlet (shared): a single allowlist read for every auto-trigger
   // below. Prefers the gauntlet helper; falls back to an inline read if an

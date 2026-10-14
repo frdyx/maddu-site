@@ -23,9 +23,10 @@ Flags:
   --list        list selected test ids without running
   --only <ids>  run only comma-separated ids from the selected profile
   --skip <ids>  skip comma-separated ids from the selected profile
-  --bail        stop after first failed test
-  --json        print machine-readable output
-  --no-report   do not write .maddu/state/self-test-last-run.json
+  --bail          stop after first failed test
+  --json          print machine-readable output
+  --no-report     do not write .maddu/state/self-test-last-run.json
+  --fail-on-skip  a skipped task (optional dep absent) makes the suite RED (for CI)
 `);
 }
 
@@ -43,6 +44,72 @@ export default async function selfTest(argv) {
     process.exit(2);
   }
   const runner = await import(pathToFileURL(runnerPath).href);
+
+  // audit P3 — wrap the run in a VERIFICATION_STARTED → VERIFICATION_RAN pair so
+  // self-test-recent reads recency from the tamper-detecting spine, not the
+  // hand-writable self-test-last-run.json. Best-effort: if the spine libs can't
+  // load, the self-test still runs (the gate just reads "no receipt" → non-green).
+  // Parse the profile via the runner's own parser (handles the positional form,
+  // `maddu self-test smoke`) so the receipt records the ACTUAL profile; a parse
+  // failure (invalid args) means nothing runs → emit NO receipt (argsValid=false).
+  let profile = 'quick';
+  let argsValid = true;
+  try { profile = runner.parseSelfTestArgs(argv).profile; } catch { argsValid = false; }
+
+  let recordVerification = null;
+  let spine = null;
+  try {
+    const { resolveLibDir } = await import('./_libroot.mjs');
+    const dir = await resolveLibDir();
+    ({ recordVerification } = await import(pathToFileURL(join(dir, 'verification-recency.mjs')).href));
+    ({ spine } = await import(pathToFileURL(join(dir, 'spine.mjs')).href).then((m) => ({ spine: m })));
+  } catch { recordVerification = null; }
+
+  // --list runs nothing, so it must NOT emit a verification receipt.
+  const isList = argv.includes('--list');
+  if (recordVerification && spine && spine.append && !isList && argsValid) {
+    let captured = null;
+    // The verification receipt names an ACTOR, so the grammar is not enough:
+    // a closed or never-registered ambient id would sign off a self-test run it
+    // had nothing to do with (audit C2). Same three-state policy as the command
+    // actors, fail-open to the old grammar-only read if the resolver is absent.
+    let stActor = (spine.isRefId && spine.isRefId(process.env.MADDU_SESSION_ID)) ? process.env.MADDU_SESSION_ID : null;
+    try {
+      const { resolveReceiptSid } = await import('./_spine.mjs');
+      // Round 1 F3: resolve against frameworkRoot — the spine this receipt is
+      // written TO. Resolving from process.cwd() meant running the framework's
+      // CLI from another repo classified the id against THAT repo's spine, so a
+      // legitimate live session was dropped and the receipt could name a
+      // session never registered in its own destination.
+      if (typeof resolveReceiptSid === 'function') {
+        const resolved = await resolveReceiptSid(frameworkRoot);
+        if (resolved !== undefined) stActor = resolved;
+      }
+    } catch {}
+    const out = await recordVerification(frameworkRoot, { spine, actor: stActor, lane: process.env.MADDU_LANE || null }, {
+      kind: 'self-test', profile,
+      run: async () => runner.runSelfTestCli(argv, { frameworkRoot, onResult: (r) => { captured = r; } }),
+      // null → emit no receipt (a config/usage error ran nothing, captured stays null).
+      // audit P4 — derive `result` from the runner's FINAL verdict (captured.ok),
+      // never from counts.fail alone: a --fail-on-skip red has counts.fail===0 but
+      // ok===false, and must be recorded as a fail (and complete:false), so a
+      // skipped suite can never satisfy self-test-recent.
+      derive: () => captured ? {
+        complete: captured.complete !== false,
+        result: captured.ok === true ? 'pass' : 'fail',
+        // Same provenance as the report files: the receipt is the tamper-
+        // detecting half of the pair, so it must be able to say which
+        // invocation it is a receipt FOR.
+        argv: Array.isArray(captured.argv) ? captured.argv : null,
+        cwd: typeof captured.cwd === 'string' ? captured.cwd : null,
+        pid: Number.isInteger(captured.pid) ? captured.pid : null,
+        counts: captured.counts
+          ? { pass: captured.counts.pass, fail: captured.counts.fail, total: captured.counts.total, taskSkipped: captured.counts.taskSkipped || 0 }
+          : null,
+      } : null,
+    });
+    process.exit(out.result);
+  }
   const exitCode = await runner.runSelfTestCli(argv, { frameworkRoot });
   process.exit(exitCode);
 }

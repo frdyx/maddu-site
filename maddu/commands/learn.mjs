@@ -8,13 +8,18 @@
 //
 // Subcommands:
 //   run [--runtime <name>] [--since <iso>] [--slug <s>] [--no-auth-check]
-//       [--stub-only] [--root <dir>]
+//       [--stub-only] [--root <dir>] [--spine]
 //       Mine → emit LEARN_MINED → spawn a judgment worker (provider CLI as a
 //       subprocess; hard rule #5) → parent applies accepted corrections.
 //       Falls back to a review digest when no runtime/auth is available.
-//   digest [--json] [--since] [--slug] [--root]
+//   digest [--json] [--since] [--slug] [--root] [--spine]
 //       No-provider fallback: write the candidate digest, emit
 //       LEARN_DIGEST_WRITTEN. Reviewable by the operator or the live agent.
+//   --spine (EXP phase 4, learn v2): add the SPINE as a second corpus —
+//       TOOL_REFUSED→TOOL_COMPLETED pairs, GATE_RAN fail→ok arcs, and
+//       non-clean SLICE_REVIEWED findings, mined deterministically by
+//       lib/learn-spine.mjs (the same extraction `maddu evolve` consumes).
+//       Spine candidates ride the identical digest→judge→write pipeline.
 //   list                 show corrections written so far (from the spine).
 //   show <correctionId>  print one correction + its provenance.
 //   scan [--threshold N] [--recent-days N] [--root <dir>] [--json]
@@ -37,7 +42,7 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 
 import { parseFlags } from './_args.mjs';
-import { loadSpineLib, resolveRepoRoot } from './_spine.mjs';
+import { loadSpineLib, resolveRepoRoot, envActingSid } from './_spine.mjs';
 import { loadLib } from './_libroot.mjs';
 import { spawnWorker, isProviderSignedIn } from './_worker-spawn.mjs';
 
@@ -117,7 +122,7 @@ export default async function learnCmd(argv) {
   const { paths, spine, auth, runtimes, hindsight } = await loadSpineLib();
   const repoRoot = await resolveRepoRoot(paths);
   const learn = await loadLib('learn.mjs');
-  const actor = process.env.MADDU_SESSION_ID || null;
+  const actor = await envActingSid();
 
   const mineOpts = {
     root: flags.root && flags.root !== true ? String(flags.root) : undefined,
@@ -217,6 +222,14 @@ export default async function learnCmd(argv) {
     // re-runs idempotent; the vendor directory is never written. Preview by
     // default; --adopt appends facts + a VENDOR_MEMORY_IMPORTED event each
     // (fact carried on the event, so rebuilds replay it).
+    // Mutation-witness (Codex diff-review r1 F2): the no-op is declared ONLY
+    // in the genuinely append-free branches below (no vendor dir / nothing
+    // fresh / preview) — never up here, where it would permanently excuse the
+    // --adopt path whose VENDOR_MEMORY_IMPORTED appends must stay witnessed.
+    const witnessSyncNoop = async (reason) => {
+      const { loadLibOptional } = await import('./_libroot.mjs');
+      (await loadLibOptional('mutation-witness.mjs'))?.witnessNoop?.(reason);
+    };
     const vm = await loadLib('vendor-memory.mjs');
     const hindsight = await loadLib('hindsight.mjs');
     if (!vm?.readVendorMemories || !hindsight?.appendFactIfNew) {
@@ -226,6 +239,7 @@ export default async function learnCmd(argv) {
     const dirOverride = typeof flags.dir === 'string' ? flags.dir : null;
     const { dir, memories } = await vm.readVendorMemories(repoRoot, { dir: dirOverride });
     if (!dir) {
+      await witnessSyncNoop('vendor-sync:no-vendor-dir');
       console.log(`maddu learn sync  ${C.dim}no Claude Code memory directory found for this repo (nothing to import)${C.reset}`);
       return;
     }
@@ -239,10 +253,11 @@ export default async function learnCmd(argv) {
         facts: fresh.map((c) => ({ id: c.fact.id, file: c.memory.file, name: c.memory.name })),
         adopted: !!flags.adopt,
       }, null, 2) + '\n');
-      if (!flags.adopt) return;
+      if (!flags.adopt) { await witnessSyncNoop('vendor-sync:preview-only'); return; }
     } else {
       console.log(`maddu learn sync  ${C.dim}claude-memory: ${memories.length} memor${memories.length === 1 ? 'y' : 'ies'} in ${dir}${C.reset}`);
       if (!fresh.length) {
+        await witnessSyncNoop('vendor-sync:nothing-fresh');
         console.log(`  ${C.dim}nothing new — ${candidates.length} already imported (content-hash match)${C.reset}`);
         return;
       }
@@ -250,11 +265,13 @@ export default async function learnCmd(argv) {
         console.log(`  ${C.green}+${C.reset} ${c.memory.file}  ${C.dim}${(c.memory.description || c.memory.name || '').slice(0, 70)}${C.reset}`);
       }
       if (!flags.adopt) {
+        await witnessSyncNoop('vendor-sync:preview-only');
         console.log(`\n  ${C.dim}preview only — import as kind:'vendor' facts: maddu learn sync --from-claude-memory --adopt${C.reset}`);
         return;
       }
     }
     let imported = 0;
+    if (!fresh.length) await witnessSyncNoop('vendor-sync:nothing-fresh'); // --adopt with zero fresh facts
     for (const c of fresh) {
       await spine.append(repoRoot, {
         type: spine.EVENT_TYPES.VENDOR_MEMORY_IMPORTED,
@@ -290,13 +307,25 @@ export default async function learnCmd(argv) {
     }
     const result = fed.federate(local, foreignByRepo);
 
+    // Mutation-witness (Codex diff r2 F1): branch-local no-ops on the three
+    // append-free success returns ONLY — the --adopt path below appends
+    // LEARN_CORRECTION_WRITTEN and stays unexcused.
+    const witnessFedNoop = async (reason) => {
+      const { loadLibOptional } = await import('./_libroot.mjs');
+      (await loadLibOptional('mutation-witness.mjs'))?.witnessNoop?.(reason);
+    };
+
     if (flags.json) {
+      // JSON is report-only by design (it returns unconditionally, --adopt or
+      // not) — an append-free success.
+      await witnessFedNoop('federation-sync:json-report');
       process.stdout.write(JSON.stringify({ ...result, localCount: local.length, siblingsRead: read }, null, 2) + '\n');
       return;
     }
 
     console.log(`maddu learn sync  ${C.dim}${read} sibling repo(s) read · ${local.length} local lesson(s)${C.reset}`);
     if (!result.portable.length) {
+      await witnessFedNoop('federation-sync:nothing-portable');
       console.log(result.siloed
         ? `  ${C.dim}no NEW portable lessons (${result.siloed} single-repo lesson(s) stayed siloed)${C.reset}`
         : `  ${C.dim}no portable lessons found across the fleet${C.reset}`);
@@ -308,6 +337,7 @@ export default async function learnCmd(argv) {
       console.log(`      ${C.dim}${p.reason} · from ${p.sources.join(', ')}${C.reset}`);
     }
     if (!flags.adopt) {
+      await witnessFedNoop('federation-sync:preview-only');
       console.log(`\n  ${C.dim}preview only — adopt into CLAUDE.md (approval-only): maddu learn sync --adopt${C.reset}`);
       return;
     }
@@ -328,6 +358,39 @@ export default async function learnCmd(argv) {
 
   // ── mine (shared by run + digest) ──────────────────────────────────────────
   const digest = await learn.mineTranscripts(mineOpts);
+  // EXP phase 4 (--spine): the spine as a SECOND corpus. NOTE the digest
+  // semantics under --spine: `mined` stays transcript-file count while
+  // `paired` counts ALL candidates (transcript + spine) — paired > mined is
+  // legitimate on a spine-rich repo. The LEARN_MINED event shape is
+  // UNCHANGED (spinePaired lives only on the in-memory digest/artifact,
+  // deliberately off the event — contract discipline). learn-spine.mjs is
+  // the shared extraction (`maddu evolve`'s detectors consume the same
+  // functions), producing candidates in the exact transcript-candidate shape
+  // so the digest→judge→write pipeline below runs unchanged. Content-hashed
+  // ids keep re-mining idempotent; dedup against transcript candidates by id.
+  if (flags.spine) {
+    const learnSpine = await loadLib('learn-spine.mjs');
+    const events = await spine.readAll(repoRoot);
+    const spineCands = learnSpine.spineCandidates(events);
+    // Dedup BOTH ways: vs transcript candidates AND spine-internal — two
+    // identical refusal->completion pairs (same tool + same redacted argv)
+    // content-hash to the SAME id, and the uniqueness invariant the transcript
+    // corpus upholds via its seen-set must hold here too (red-team F1).
+    const known = new Set(digest.candidates.map((c) => c.id));
+    const fresh = [];
+    for (const c of spineCands) {
+      if (known.has(c.id)) continue;
+      known.add(c.id);
+      fresh.push(c);
+    }
+    // Keep the digest's global category/id grouping (transcript candidates
+    // arrive sorted; spine ones join the same order contract).
+    fresh.sort((a, b) => a.category.localeCompare(b.category) || a.id.localeCompare(b.id));
+    digest.candidates.push(...fresh);
+    digest.paired += fresh.length;
+    digest.spinePaired = fresh.length;
+    for (const c of fresh) digest.counts[c.category] = (digest.counts[c.category] || 0) + 1;
+  }
   await spine.append(repoRoot, {
     type: spine.EVENT_TYPES.LEARN_MINED,
     actor,
@@ -338,7 +401,7 @@ export default async function learnCmd(argv) {
   if (sub === 'digest') {
     const { mdPath } = await writeDigest(repoRoot, paths, learn, digest, spine, actor);
     if (flags.json) { process.stdout.write(JSON.stringify(digest, null, 2) + '\n'); return; }
-    console.log(`maddu learn: ${digest.paired} candidate correction(s) from ${digest.scannedFiles} session file(s).`);
+    console.log(`maddu learn: ${digest.paired} candidate correction(s) from ${digest.scannedFiles} session file(s)${digest.spinePaired !== undefined ? ` + the spine (${digest.spinePaired} spine candidate(s))` : ''}.`);
     console.log(`  digest: ${mdPath}`);
     if (digest.paired) console.log('  Review, then run `maddu learn run` to judge + write, or promote manually.');
     return;

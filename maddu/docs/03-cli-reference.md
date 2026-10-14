@@ -11,7 +11,8 @@ The CLI is invoked via the `maddu` binary (installed by `maddu init` or via `npx
 - Comma-separated lists are accepted where flags expect arrays.
 - For `slice-stop --learnings` and `--next`, separators are **semicolons** (because entries often contain commas).
 - Most write subcommands accept an optional `--by <id>` for the actor field.
-- *(v1.1.1)* `--help` / `-h` is detected at the dispatcher before any flag validation. `maddu <verb> --help` always returns help text — never `--<flag> required` errors. Verbs with bespoke usage (start, stop, workspace, plan, lane, install) print their own; others fall back to the global discovery surface (`maddu help`).
+- *(v1.1.1)* `--help` / `-h` is detected at the dispatcher before any flag validation. `maddu <verb> --help` always returns help text — never `--<flag> required` errors. Verbs with bespoke usage (start, stop, workspace, plan, lane, install, task, review, self-test, agents, bridges, global, hooks, insights, plugin, trust) print their own; others fall back to the global discovery surface (`maddu help`).
+- *(v1.122.0)* Unknown flags are a hard error (exit 2); `MADDU_STRICT_FLAGS=0` downgrades that to a warning during a migration. **Five verbs are deliberately exempt** — `format`, `git`, `install`, `lint`, `test` — because they forward argv verbatim to git / npm / eslint / your project test runner, so those flags belong to the underlying tool rather than to Máddu (guarding them would break `maddu git commit --amend`). The open set is a curated constant, never inferred, precisely so a newly added verb cannot drift into it.
 
 ## `maddu init`
 
@@ -34,6 +35,8 @@ $ maddu upgrade [--force] [--dry-run]
 - `--dry-run` — print the plan and stop.
 - `--force` — overwrite locally-modified framework files (warns either way).
 
+*(v1.127.0)* Locally-modified files are skipped, but the framework version still moves — so the install is **partially** upgraded. That outcome now says so: the run prints `Upgraded to vX — PARTIAL` with the count and the remedy, and records the skipped paths as `partial_upgrade` in `maddu.json`. Until they are resolved, a later `maddu upgrade` reports the stranded files and **exits 1** instead of answering "Already on framework vX. Nothing to do." — which was false while files were still outstanding. `--force` applies them and clears the marker.
+
 See [upgrade-policy.md](upgrade-policy.md).
 
 ## `maddu doctor`
@@ -49,6 +52,8 @@ Reports PASS / WARN / FAIL per check. Appends a `DOCTOR_REPORT` event. Exits 1 o
 If a workspace registry exists at `~/.config/maddu/workspaces.json`, doctor validates its shape unconditionally. By default per-rule checks run for the cwd repo. Pass `--all` to run every check for every registered workspace; check rows are prefixed with `[<workspace-id>]`.
 
 **Gate runner *(v0.16+)*.** Doctor is a fan-out runner over `template/maddu/runtime/gates/builtin/*.mjs` (framework) plus `<repo>/.maddu/gates/*.mjs` (operator). Each gate emits a `GATE_RAN` event. `--gate <id>` runs only one gate (e.g. `--gate spine-integrity`). `--severity <level>` filters by severity. Operator gates with the same id as a built-in override the built-in. See [20-governance.md](20-governance.md#authoring-gates).
+
+**Activation funnel *(v1.102.0)*.** After the summary, doctor prints the repo's activation stage — the lifetime furthest step reached on the ritual path `installed → healthy → session → claimed → slice → repeating` (≥3 slice-stops) — plus the ONE next action for any repo not yet repeating. Derived read-only from the spine; passive gate/doctor traffic and imported backfill never count as adoption; the funnel never decays. `maddu fleet` shows the same stage as a column across every registered workspace.
 
 ## `maddu start`
 
@@ -122,14 +127,17 @@ Print a state snapshot — repo root, spine event count, active sessions, lane c
 
 ```bash
 $ maddu status
+$ maddu status --line     # one-line on-goal/drift + goal progress (v1.97.0) — wire into a status line via `maddu hooks --statusline`
 ```
+
+`--line` emits a single glanceable segment (e.g. `maddu · on goal +1.00 · goal 4/4`) for the [Operator Plane](53-operator-plane.md) — reading the CLI-cached success-eval, never re-running it.
 
 ## `maddu register` *(v0.17)*
 
 Zero-keystroke session bootstrap. The agent's mandatory first command of every turn.
 
 ```bash
-$ maddu register [<label>] [--parent <sessionId>] [--role <role>] [--runtime <name>]
+$ maddu register [<label>] [--parent <sessionId>] [--role <role>]
 ```
 
 - Defaults: label from cwd-basename, role=`implementer`, focus=label.
@@ -177,9 +185,12 @@ The cache is a *UX hint*, not source of truth — the spine is authoritative. If
 Claim / release / list lanes.
 
 ```bash
-$ maddu lane list
+$ maddu lane list                              # (unused) marks never-claimed catalog entries (v1.103.0)
 $ maddu lane claim --lane <id> --session <sid> [--focus "<f>"]
 $ maddu lane release --lane <id> --session <sid>
+$ maddu lane suggest [--json]                  # catalog vs observed claims; adoptable ad-hoc ids (v1.103.0)
+$ maddu lane suggest --adopt <id>              # graduate a ≥3-claim ad-hoc lane into the catalog (LANE_ADDED)
+$ maddu lane suggest --prune <id>              # remove a never-claimed catalog entry (LANE_REMOVED)
 ```
 
 `claim` exits 3 if the lane is already held by another session.
@@ -224,7 +235,7 @@ $ maddu architecture mass --baseline   # record today's monoliths as the shrink-
   [--repo <dir>] [--fail-on none|new|any] [--json] [--force]
 ```
 
-`scan` records an `ARCHITECTURE_SCANNED` event with a `driftScore`. The `architecture-drift` gate (run by `doctor`/`audit`) and the `scan` exit code honor `options.failOn`: `none` warns + ratchets (default), `new` fails only on violations not in the baseline, `any` fails on all. Adoption: `init → edit → scan → baseline → failOn:"new"`. *(v1.18.0)* — `mass` adds a structural-mass dimension (monolith + duplicate-file detection) with its own shrink-only baseline, enforced by the `architecture-mass` gate; see [40-architecture-drift.md](40-architecture-drift.md) §"Structural mass". *(v1.26.0)*
+`scan` records an `ARCHITECTURE_SCANNED` event with a `driftScore`. The `architecture-drift` gate (run by `doctor`/`audit`) and the `scan` exit code honor `options.failOn`: `none` warns + ratchets (default), `new` fails only on violations not in the baseline, `any` fails on all. Adoption: `init → edit → scan → baseline → failOn:"new"`. *(v1.18.0)* — `mass` adds a structural-mass dimension (monolith + duplicate-file detection) with its own shrink-only baseline, enforced by the `architecture-mass` gate; see [40-architecture-drift.md](40-architecture-drift.md) §"Structural mass". *(v1.23.0)*
 
 ## `maddu focus`
 
@@ -361,13 +372,13 @@ $ maddu runtime list
 $ maddu runtime show <name>
 $ maddu runtime register --name <n> --binary <b> [--args a,b] [--detect "<cmd>"] \
                          [--display "<d>"] [--mcp] [--streaming] [--approval per-tool] \
-                         [--lanes a,b] [--notes "<n>"] [--auto-register]
+                         [--lanes a,b] [--notes "<n>"]
 $ maddu runtime detect [<name>]                     # no arg → detect-all
 $ maddu runtime spawn <name> [--session <sid>] [--lane <id>] [--args a,b]
 $ maddu runtime remove <name>
 ```
 
-**`--auto-register`** *(v0.17)* sets `kind: 'reviewer'`-style behavior: every `spawnWorker` call against this runtime first registers a fresh child session (linked to the caller via `parentSessionId`), then injects the new id into the child's `MADDU_SESSION_ID` env. Fan-out orchestration produces N distinct sessions in the tree instead of one shared session. Editable post-register by hand-editing `.maddu/runtimes/<name>.json` and setting `autoRegister: true`.
+**`autoRegister`** *(v0.17, descriptor field — there is no CLI flag)* sets `kind: 'reviewer'`-style behavior: every `spawnWorker` call against a runtime whose descriptor carries `autoRegister: true` first registers a fresh child session (linked to the caller via `parentSessionId`), then injects the new id into the child's `MADDU_SESSION_ID` env. Fan-out orchestration produces N distinct sessions in the tree instead of one shared session. Enable it by hand-editing `.maddu/runtimes/<name>.json` and setting `autoRegister: true`.
 
 ## `maddu schedule`
 
@@ -388,11 +399,20 @@ $ maddu schedule remove <id>
 
 ## `maddu spine`
 
-Verify integrity of the append-only event spine, or look up a single event by id. Read-only — never mutates `.maddu/events/`.
+Verify integrity of the append-only event spine, look up a single event by id, or (opt-in) share the spine with teammates through the repo's git remote.
 
 ```bash
 $ maddu spine verify [--json]
+$ maddu spine verify --replay <commit>  # clean-checkout replay of the repo's declared verification (v1.109.0)
 $ maddu spine show <eventId>
+$ maddu spine anchor [--status]     # stamp a spine receipt into Bitcoin via OpenTimestamps (v1.108.0 — see 54-spine-anchor.md)
+$ maddu spine anchor --assess       # operator consume ceremony: record an assurance level (v1.110.0)
+$ maddu spine identity show         # workspace identity (v1.117.0): derived from the genesis line, stamped into every event's hash preimage
+$ maddu spine identity resolve --keep <ws_...>   # operator ceremony for sync-mode identity conflicts
+$ maddu spine oversight [--json]    # non-technical readout: skills fed/withheld + why, on-goal, record-intact (v1.97.0 — see 52-oversight.md)
+$ maddu spine sync init [--json]    # opt into git-native team sync (one-time per checkout)
+$ maddu spine sync [--json]         # audited round-trip: commit own segments → pull → validate → push
+$ maddu spine import [--json]       # validate git-synced partitions (read-only)
 ```
 
 `verify` walks every segment under `.maddu/events/` and runs the checks described in the *Verifiable, not just declared* paragraph of [hard-rules.md](hard-rules.md) — parseability, envelope shape, event-id uniqueness, id-format (with exemptions for well-known fixed-suffix events like `evt_…_init00`), timestamp monotonicity within each segment, schema-version consistency, segment continuity, and referential integrity (orphan `APPROVAL_DECIDED`, never-claimed or duplicate `LANE_RELEASED`, unknown-session `SESSION_CLOSED`, etc.).
@@ -404,6 +424,8 @@ Exit code: `0` on a clean run or WARN-only run; `1` if any FAIL. `--json` emits 
 `maddu doctor` calls into the verifier on every run, up to a 50k-event cap (configurable in the verifier's `maxEvents` option). Above the cap, doctor emits a `WARN` pointing at `maddu spine verify` for the full pass — keeps doctor fast on long-running repos without dropping the check entirely.
 
 The verifier is strictly read-only. If it flags an issue, the operator decides remediation (manual edit + slice-stop, `maddu checkpoint rollback`, etc.). There is no `maddu spine repair` — and won't be, by design.
+
+`sync init` *(#12c)* opts this checkout into git-native team sync: secret-gate scan, mint a replicaId, migrate the flat segments into `.maddu/events/by-replica/<replicaId>/`, write the (never-committed) `.maddu/config/replica.json`, template `.gitignore`/`.gitattributes` marker blocks. `sync` runs the audited round-trip — commit own partition segments (explicit pathspec) → pull → `import`-validate → push (explicit refspec, pre-push path+content audit refuses any non-sync-owned commit). `import` is the read-only validator over every partition after a pull: chain forks, structural damage, within-partition duplicate ids, and secret hits are fatal; cross-partition id collisions and quarantined torn lines are tolerated and reported. All three exit `0` on ok, `1` on refusal (`2` when the subcommand itself is malformed or the install predates team-sync); `--json` emits the machine report. See [49-team-sync.md](49-team-sync.md) for the model, the audit, and the failure vocabulary.
 
 ## `maddu search`
 
@@ -450,10 +472,22 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`, `cancelled`. Completing a ta
 Declare the agent's current objective. Latest `GOAL_DECLARED` wins in the projection and surfaces in `maddu brief` / `#orientation`.
 
 ```bash
-$ maddu goal set "<obj>" [--constraint "<c>" --constraint "<c>" …]
+$ maddu goal set "<obj>" [--constraint "<c>" --constraint "<c>" …] \
+                         [--success "<cmd>::<text>" …] \
+                         [--oracle "<glob>" …] [--impl "<glob>" …]
 #   (`--objective "<obj>"` is accepted as an alias for the positional objective)
 $ maddu goal show
 ```
+
+`--oracle` / `--impl` *(v1.120.0)* declare the goal's **acceptance sets** — the
+files that must stay frozen and the files that must move for a success
+condition's command to earn a RED→GREEN proof. Both are repeatable and both
+must be present for a goal to be acceptance-active; declaring neither leaves a
+legacy goal that still evaluates its conditions but records no acceptance
+receipts. Shape is validated at declaration (non-blank strings, ≤256 patterns,
+≤1024 chars each — exit 2 otherwise); containment, symlink and zero-match
+refusals are decided at observation time. `goal show` renders both sets. Full
+semantics: [56-acceptance-proof.md](56-acceptance-proof.md).
 
 ## `maddu phase` *(v0.16; per-phase strictness v1.91.0)*
 
@@ -512,10 +546,10 @@ Expansion bound defaults to `+5 files OR +30%`. After `approve-functional`, only
 
 ## `maddu sources` *(v0.16)*
 
-Tracked SSOT files driven by `.maddu/config/tracked-sources.json`. `rebuild` snapshots current hashes onto the spine; the `tracked-source-drift` gate fails when any tracked file diverges from the recorded hash.
+Tracked SSOT files driven by `.maddu/config/tracked-sources.json`. `rebuild` snapshots current hashes onto the spine; the `warn`-severity `tracked-source-drift` gate reports when any tracked file diverges from the recorded hash.
 
 ```bash
-$ maddu sources rebuild      # emits SOURCE_HASH_RECOMPUTED { count, paths[] }
+$ maddu sources rebuild --reason "why"   # emits SOURCE_HASH_RECOMPUTED { count, paths[], reason, by } — refused without --reason
 $ maddu sources status       # exits 1 on drift / unrecorded / missing
 ```
 
@@ -646,7 +680,18 @@ $ maddu cost --by day                   # per day
 $ maddu cost --by model                 # per model
 $ maddu cost --unreported-count         # just the gap count
 $ maddu cost --json                     # machine-readable
+$ maddu cost --usd                      # provenance-honest dollars (v1.118.0)
+$ maddu cost --usd --json               # group-shaped usd buckets + pricing metadata
 ```
+
+`--usd` prices a row **only when provable**: it needs a `pricingIdentity`
+(stamped by wrappers only from a descriptor-declared authority plus a
+parser-proven model), an exact match in the embedded pricing manifest, and
+reported token counts. Wire-reported and manifest-estimated dollars are
+never merged; unpriced rows carry a named reason. Rates can be overridden
+via `.maddu/config/pricing.json` — an invalid override fails loudly
+(exit 2), never falls back silently. Estimates are read-time presentation,
+never written to the spine.
 
 ## `maddu usage import` *(v0.19.1)*
 
@@ -661,6 +706,10 @@ $ maddu usage import --from claude-code              # commit the import
 $ maddu usage import --from claude-code --session 21f43c48   # filter by session UUID
 $ maddu usage import --from claude-code --since 2026-04-01   # skip older lines
 ```
+
+Imported rows are **never priced** by `cost --usd` — a transcript cannot
+prove which endpoint served it (api.anthropic.com vs Bedrock/Vertex), so
+they land in the unpriced bucket with reason `no-pricing-identity`.
 
 Full reference: [27-transcript-import.md](27-transcript-import.md).
 
@@ -687,16 +736,18 @@ $ maddu governance reset
 
 # Receipt log (Phase 4)
 $ maddu log [--since iso] [--lane id] [--op T] [--rebuild] [--json]
+$ maddu log --window [--json]   # invocation-receipts corpus: retention window,
+#   receipt/drop counts, rotation cap (v1.101.0 — see 31-operations-log.md)
 
 # Plans + kanban (Phase 5)
 $ maddu plan new "<title>" [--phases "a,b,c"] [--goal "..."]
 $ maddu plan list
 $ maddu plan show <plan-id>
 $ maddu plan add-phase <plan-id> "<intent>"   # auto-numbers the next phase
-#   (or pin the number explicitly: --phase <n> [--intent "..."])
+#   (or pin the name explicitly: --phase <name|n> [--intent "..."])
 $ maddu plan complete-phase <plan-id>          # completes the next open phase
-#   (or target one: <plan-id> <n>  /  <plan-id> --phase <n> [--summary "..."])
-$ maddu plan block-phase <plan-id> --phase <n> --reason "..."
+#   (or target one: <plan-id> <name|n>  /  <plan-id> --phase <name|n> [--summary "..."])
+$ maddu plan block-phase <plan-id> --phase <name|n> --reason "..."
 $ maddu plan revise <plan-id> --note "..."
 $ maddu plan complete <plan-id> [--summary "..."]
 $ maddu plan cancel <plan-id> [--reason "..."]
@@ -708,18 +759,50 @@ $ maddu plan kanban
 # emits a one-time stderr warning. `maddu plan kanban` now aggregates
 # phase status — completed/pending/blocked phases each surface in their
 # own column.
+#
+# v1.124.0 — phase reference resolution. `--phase` accepts either the
+# phase NAME or a 1-based ORDINAL, resolved in that order:
+#
+#   1. exact name    — `--phase audit`, and plans whose phases really are
+#                      named "1","2","3" (what add-phase auto-numbering
+#                      produces) keep matching by name first
+#   2. 1-based ordinal — `--phase 1` on a plan with phases
+#                      audit/redesign/verify resolves to `audit`
+#   3. otherwise     — refuses with exit 3 and lists the actual phases
+#
+# There is deliberately NO case-insensitive and NO prefix matching:
+# `--phase Audit` and `--phase aud` are refused, not guessed.
+#
+# Every plan subcommand also validates the plan id (exit 3 on unknown), and
+# add-phase refuses a duplicate phase name rather than discarding the new
+# intent. Before v1.124.0 all of these appended an event the projection
+# silently dropped, printed green success, and exited 0 — see FIXED-IN.
 
 # Loops (Phase 6)
 # v1.1.1: verify exit=0 → completes; non-zero → iterates; identical fail
 # signature twice → halts with reason=stuck-detection; exceeding --max-iter
 # → halts with reason=max-iter-reached. Regression-tested in the synthetic
 # stress harness scenario `ralph-always-fail-halts`.
-$ maddu loop ralph --goal "..." --verify "<cmd>" [--iterate "<cmd>"]
+$ maddu loop ralph --goal "..." --verify "<cmd>" --oracle "<glob>" --impl "<glob>" [--iterate "<cmd>"]
+$ maddu loop ralph --from-goal [--iterate "<cmd>"]
 $ maddu loop plan  --plan <id> [--max-iter N]
 $ maddu loop status / cancel
 
 # Ralph + adaptive project tests
-$ maddu loop ralph --goal "fix tests until green" --verify "maddu test --profile quick --bail"
+$ maddu loop ralph --goal "fix tests until green" \
+    --verify "maddu test --profile quick --bail" --oracle "test/**" --impl "src/**"
+#
+# v1.120.0 — ralph is acceptance-declared and refuses at the door rather than
+# iterating toward something it could never prove:
+#   --from-goal            adopt the ACTIVE goal's verifiable conditions + sets
+#                          (label comes from the objective; never inferred)
+#   --from-goal + --verify → exit 2 (two answers to one question)
+#   neither flag           → exit 2 (nothing to verify)
+#   --verify without both --oracle and --impl → exit 2
+#   --from-goal with no goal / a closed goal / no verifiable condition /
+#     no declared sets → exit 3
+# BREAKING: a bare `ralph --verify "<cmd>"` (no sets) now exits 2 instead of
+# burning every iteration to the cap on `no-verify-supplied`.
 
 # Coordinator (Phase 7)
 $ maddu coordinator <plan-id> [--dry-run | --synthetic-cmd "..." | --runtime <n>]
@@ -743,6 +826,30 @@ $ maddu lane claim --lane <id> --session <sid> --force [--reason "..."]
 # Slice-stop lineage (Phase 5)
 $ maddu slice-stop --triggered-by plan:<plan-id> --summary "..."
 ```
+
+**A `$MADDU_SESSION_ID` is a candidate, not an answer (v1.134.0).** Passing the
+grammar is no longer enough to act as a session: the id is classified against
+the spine first.
+
+| state | meaning | result |
+|---|---|---|
+| live | a registration for it, no later close | used |
+| not-live | closed, or absent from a COMPLETE replay | dropped, one line on stderr, attribution falls back to the verified active-session cache |
+| unverified | the spine could not be read, or the replay had parse errors | the candidate is KEPT |
+
+An id that fails the grammar is unchanged: it falls through silently, as before.
+So does an absent one. This changes what a DEAD id does, not what a missing one
+does — a closed or never-registered id used to own every event, breach row and
+receipt it touched.
+
+The `unverified` state is deliberate: a replay that could not be read completely
+must never condemn an id, or a partial read would strip attribution from a live
+session. An EMPTY replay counts as unverified too — every real repo carries a
+genesis event, so zero events means you are not looking at a spine.
+
+If the fallback finds no live session either, the command has no session and
+says so, rather than proceeding under a name that is not doing the work.
+
 
 Full coverage: [28-default-tools.md](28-default-tools.md),
 [29-mcp-templates.md](29-mcp-templates.md),
@@ -830,6 +937,8 @@ $ maddu learn retrieve <briefingId>  # full original of a curated (reversible) b
 $ maddu learn scan                   # read-only: hedged completion claims w/o observed proof
 $ maddu learn sync                   # fleet lesson federation (preview; --adopt writes)
 $ maddu learn sync --from-claude-memory [--adopt]  # import Claude Code auto-memory (v1.90.0)
+$ maddu learn run --spine            # ALSO mine the spine: TOOL_REFUSED→COMPLETED +
+$ maddu learn digest --spine         #   GATE_RAN fail→ok arcs, id-deduped into the digest (EXP)
 ```
 
 `run` mines deterministically, then spawns the configured runtime **CLI** as a
@@ -861,6 +970,12 @@ so chains survive `maddu memory extract --rebuild`.
 Opt-in reversible briefing: persists the full handoff original and prints a
 budget-bounded view plus a `maddu learn retrieve <id>` pointer (emits
 `BRIEFING_CURATED`). Default `maddu orient` stays read-only.
+
+### `maddu orient --digest` *(v1.97.0)*
+
+The "while you were away" summary — what changed since you last looked (slices
+landed, gates failing, goal state) — for the [Operator Plane](53-operator-plane.md).
+Read-only; also rendered by the cockpit `digest` route.
 
 ## v1.72.0 commands
 
@@ -896,14 +1011,20 @@ and `slice-stop` with no `--session`/`$MADDU_SESSION_ID`.
 ```bash
 $ maddu hooks install        # merge SessionStart(auto-register) + SessionEnd(close)
                              #   + PreCompact(compaction checkpoint, v1.89.0)
+                             #   + PreToolUse(discipline enforcement, v1.97.0)
+$ maddu hooks install --statusline   # also wire `maddu status --line` into the status line (opt-in)
 $ maddu hooks status         # which Máddu hooks are installed
 $ maddu hooks remove         # strip only Máddu's hook entries (keeps yours)
+$ maddu hooks uninstall      # alias for `remove` — the fast off-switch for the discipline gate
 ```
 
 The `PreCompact` hook writes a `COMPACTION_CHECKPOINT` to the spine before
 every context compaction (manual or auto) — `maddu orient` auto-announces the
 latest one, and `maddu doctor` warns when the installed stanza is partial or
-stale. It **fails open** (never blocks compaction).
+stale. It **fails open** (never blocks compaction). The `PreToolUse` hook
+enforces session discipline (allow / nudge / **deny** a mutating edit when a
+ritual is stale), tier-scaled, fail-open, remedies never gated — full detail in
+[44-session-hooks.md](44-session-hooks.md#discipline-enforcement-the-pretooluse-gate).
 
 `install` is idempotent and surgical — it writes the **host** file
 `.claude/settings.json` (outside `.maddu/`), preserves your own hooks/settings,
@@ -933,6 +1054,77 @@ a rung change, deduped against the spine itself. Relax recommendations are
 live recommendation also surfaces in `maddu orient`, `maddu governance show`,
 and the cockpit. Thresholds: `.maddu/config/autonomy.json` (hashed onto every
 event as `configHash`). Full guide: [47-earned-autonomy.md](47-earned-autonomy.md).
+
+## Experience & evolution *(EXP)*
+
+### `maddu experience`
+
+The spine as a normalized **experience ledger** — session trajectories of
+typed steps with late-bound outcome signals. Pure read-time derivation: zero
+writes, step ids ARE event ids, deterministic for identical spines.
+
+```bash
+$ maddu experience                 # trajectory manifest (one row per session + env)
+$ maddu experience show <id>       # one trajectory's steps (--lane <id>, --limit <n>)
+$ maddu experience stats           # totals, role/kind counts, signals, absent-by-design axes
+$ maddu experience export --format atdp --out exp.atdp.json [--since <id>] [--until <id>]
+```
+
+`export` is the **governed sharing boundary**: refuse-on-hit secret gate over
+the selected range (**no flag to skip it** — unknown flags are hard errors),
+`--out` confined to the repo on the realpath basis (never `.maddu/`, `maddu/`,
+`maddu.json`, never over an existing non-ATDP file), deterministic bytes with
+no clock — `--until <manifest.range.lastEventId>` reproduces a past export
+byte-for-byte — and `trainingEligibility: false` hard on the manifest.
+
+### `maddu evolve`
+
+The **recommend-only** evolution planner over the experience ledger. Four
+deterministic detectors (tool-correction, gate-flap, recurring-learning,
+uncorrected-gate), evidence thresholds (≥3 occurrences across ≥2 scopes),
+prior-art dedup against adopted corrections, content-addressed rec ids. Thin
+evidence → the honest **no-op**, stated with its full why.
+
+```bash
+$ maddu evolve plan                          # detectors → recommendations (or the no-op)
+$ maddu evolve adopt <recId>                 # operator-gated; EXISTING write paths only
+$ maddu evolve adopt <recId> --to memory     # correction-class → memory fact
+$ maddu evolve adopt <recId> --to agent-file # correction-class → CLAUDE.md marker block
+```
+
+Nothing auto-applies — the earned-autonomy precedent governs (compute,
+recommend, stop). Full guide: [50-experience-evolve.md](50-experience-evolve.md).
+
+## SLM governance *(SLM)*
+
+### `maddu model`
+
+The SLM-factory governance verb — every write sub-verb validates + sha256-pins
+a host-repo manifest (refuse-on-hit secret gate, **no skip flag**) and appends
+contract-1.1.0 `MODEL_*` events; every verb RECORDS what external tools did
+(`train start` starts nothing, `eval record` runs nothing).
+
+```bash
+$ maddu model dataset snapshot <m.json>    # → MODEL_DATASET_SNAPSHOT_RECORDED
+$ maddu model train start <m.json>         # → MODEL_TRAINING_RUN_STARTED (dataset must be recorded)
+$ maddu model train complete <m.json>      # → MODEL_TRAINING_RUN_COMPLETED (checkpoint + metrics required)
+$ maddu model checkpoint register <m.json> # → MODEL_CHECKPOINT_REGISTERED (sha256 identity key)
+$ maddu model eval record <m.json>         # → MODEL_EVAL_RAN + MODEL_REGRESSION_FOUND per critical regression
+$ maddu model regression ack <eval-id> --reason "…"   # → MODEL_REGRESSION_ACKNOWLEDGED (secret-scanned)
+$ maddu model promote <m.json> [--wait]    # → APPROVAL_REQUESTED first, then MODEL_PROMOTION_PROPOSED
+$ maddu model promote --confirm <proposal-id>          # → MODEL_PROMOTION_APPROVED (exact binding)
+$ maddu model release <m.json>             # → MODEL_RELEASED (requires derived stage released + rollback plan)
+$ maddu model rollback <m.json> [--reverted-to <stage>]  # → MODEL_ROLLED_BACK (strictly downward)
+$ maddu model status [--model <id>] · maddu model list <datasets|runs|checkpoints|evals|promotions>
+$ maddu model gates install [--force-list] # 12-gate operator starter pack into .maddu/gates/
+```
+
+Checkpoint stages (`experiment → candidate → canary → released`) are always
+DERIVED from the spine — a manifest's `from_stage` is checked, never
+trusted. Promotion is an always-on approvals ride; ⚠ standing approval
+policies auto-decide **only** `experiment → candidate` — a policy on the
+canary/released tool keys is deliberately inert (the safety property, not a
+bug). Full guide: [51-slm-governance.md](51-slm-governance.md).
 
 ## Slash commands (v0.18, expanded v0.19.1)
 
@@ -977,3 +1169,73 @@ on line 1.
 See [22-slash-commands.md](22-slash-commands.md) for the full
 reference, including the raw-frontmatter rationale and how to add
 your own slash commands.
+
+
+## Environment variables and `MADDU_*` identifiers (v1.139.0 reference)
+
+Every `MADDU_*` identifier that `bin/`, `commands/` or the shipped runtime reads, sets or
+declares. Until v1.139.0 most of these appeared in no document (audit register D4); the
+`residual-closure` self-test row derives the identifier set from the code at row time and
+fails when a name appears in **no shipped document** — this section aims to be that one place,
+and a name documented only elsewhere (for example `MADDU_STRICT_FLAGS` above, or
+`MADDU_SESSION_ID` in [44-session-hooks.md](44-session-hooks.md)) still satisfies the row.
+Four kinds are listed, because the identifier grammar does not tell them apart:
+**operator/agent environment variables** you may set, **environment Máddu sets on spawned
+workers**, **test seams**, and **non-environment identifiers** (error codes and constants)
+that share the prefix but are never read from the environment.
+
+### Operator and agent environment
+
+| Variable | Read by | Meaning |
+|---|---|---|
+| `MADDU_SESSION_ID` | every verb | the acting session; grammar-gated, liveness-checked against the spine (a dead id is dropped, never trusted). See [44-session-hooks.md](44-session-hooks.md). |
+| `MADDU_STATE_ROOT` | `commands/_resolve.mjs`, receipts | override the `.maddu` state root instead of walking up from cwd; a misconfigured value is a hard doctor finding. |
+| `MADDU_STRICT_FLAGS` | `bin/maddu.mjs` | `0` downgrades unknown-flag errors to warnings during a migration (see above). |
+| `MADDU_LANE` | `orient`, `self-test` receipts | the lane stamped on a verification receipt and on `orient`'s readout; read directly from the environment (no claim lookup happens first). |
+| `MADDU_LANE_ID` | MCP descriptors (`lib/mcp.mjs`) | the slot name an MCP registration declares for a lane id. Descriptor metadata today: `maddu mcp test` spawns the server without injecting it, and `visibleFor()` notes the spawn-time wiring as future work. |
+| `MADDU_CI_PROFILE` | `maddu ci` | redirect WHERE the pinned required-gate profile is read from — a CI/test seam, documented here because CI recipes may set it. |
+| `MADDU_LOCK_BODYLESS_GRACE_MS` | `lib/append-lock.mjs`, `lib/acceptance-observe.mjs` | RAISE-ONLY: lengthen the append-lock's bodyless-grace reclaim on saturated runners (the CI workflow sets 20000). Values below the default are ignored. |
+| `MADDU_WRAPPER_APPEND_WAIT_MS` | runtime wrappers | RAISE-ONLY: lengthen the token-usage wrapper's bounded funnel wait (the CI workflow sets 15000). |
+| `MADDU_WORKTREE_LOCK_WAIT_MS` | `lib/worktree-lock.mjs` | how long a worktree attach/detach waits for the publish lock before refusing. |
+| `MADDU_WORKTREE_RECOVER_COOLDOWN_MS` | `lib/worktrees.mjs` | minimum spacing between two runs of the workspace-wide `janitor:worktrees` recovery trigger (the auto-fired sweep), checked inside the global lock. A manual `lane worktree --recover` is not rate-limited by it. |
+| `MADDU_PRICING_AUTHORITY` | `lib/runtimes.mjs` spawn → wrappers | the pricing authority declared on the runtime descriptor. The spawn path sets it on the worker (an inherited value is discarded) and the wrapper stamps it on each `TOKEN_USAGE_REPORTED` row so the price's provenance is on the record. |
+| `MADDU_PORT` | `lib/bridge-bootstrap.mjs` | the port the bridge binds when `--port` is not given (validated; falls back to 4177). |
+| `MADDU_PARENT_SESSION_ID` | `register`, `session register` | ambient parent for a child registration you may set in a spawned shell; malformed or unknown → dropped with a note (see [44-session-hooks.md](44-session-hooks.md)). |
+
+### Set BY Máddu on spawned workers (read them, do not set them)
+
+| Variable | Set by | Meaning |
+|---|---|---|
+| `MADDU_WORKER_ID` | `lib/runtimes.mjs` spawn | the worker's id; wrappers name it in their error log (`TOKEN_USAGE_REPORTED` rows are attributed by session, not worker). |
+| `MADDU_BRIDGE_URL` | `lib/runtimes.mjs` spawn | the bridge the worker may call (`http://127.0.0.1:4177` by default). |
+| `MADDU_RUNTIME` | `lib/runtimes.mjs` spawn | the runtime descriptor name the worker was spawned under. |
+| `MADDU_TASK` | `lib/runtimes.mjs` spawn | the task text, passed as env instead of interpolated into argv. |
+| `MADDU_REPO_ROOT` | `lib/runtimes.mjs` spawn, `lib/review.mjs` | the repo root a worker or reviewer subprocess acts on; wrappers append token usage to that spine (falls back to cwd). |
+| `MADDU_SLICE_EVENT_ID` | `lib/review.mjs` | the slice-stop event a spawned reviewer is reviewing. |
+| `MADDU_MODEL_HINT` | `lib/runtimes.mjs` spawn | the resolved model preference for this spawn's stage (see [25-model-routing.md](25-model-routing.md)). |
+| `MADDU_COORDINATOR_PLAN_ID`, `MADDU_COORDINATOR_PHASE`, `MADDU_COORDINATOR_ID` | `lib/coordinator.mjs` spawn | set on each phase worker the coordinator spawns: the plan, the phase name and the coordinator run id, so a worker can record which phase it is executing (see [33-loops-and-coordinator.md](33-loops-and-coordinator.md)). |
+
+### Test seams
+
+Four of these act only under `MADDU_SELF_TEST=1`; the last two act whenever set, and are
+safe to leave documented because neither can make a run pass that would otherwise fail.
+
+| Variable | Read by | Effect | Gated by `MADDU_SELF_TEST=1`? |
+|---|---|---|---|
+| `MADDU_SELF_TEST` | several | `1` marks a self-test process; the gated seams below check it first. | — |
+| `MADDU_HOOK_TEST_THROW` | `lib/harness/fire-core.mjs` | `bootstrap` or `handler`: throw at that stage to prove the hook fails open. | yes |
+| `MADDU_TEST_MINT_HOLD_MS` | `lib/harness/fire-core.mjs` | hold the recovery mint for N ms to widen a race window. | yes |
+| `MADDU_TEST_ADDPHASE_RACE` | `lib/plans.mjs` | `1`: inject the add-phase race the plan rows pin. | yes |
+| `MADDU_TEST_LEARN_DETECTOR` | `slice-stop`, `session close` | `throw` or `slow`: make the learn detector misbehave under test. | yes |
+| `MADDU_REPLAY_TEST_CLEANUP_FAIL` | `lib/verify-replay.mjs` | `1`: replay cleanup reports failure without deleting — direction-safe, it can only make a replay FAIL harder. | **no** — acts whenever set |
+| `MADDU_ASSESS_TEST_STDIN` | `maddu spine anchor --assess` | `1`: accept piped stdin for the operator-interactive assessment ceremony instead of refusing a non-TTY. | **no** — acts whenever set; the ceremony is a self-attestation either way |
+
+### Non-environment identifiers that share the prefix
+
+| Identifier | Where | What it is |
+|---|---|---|
+| `MADDU_LIB_NOT_FOUND` | `commands/hooks.mjs`, `_libroot` | the error `code` a lib loader raises when nothing resolves; hooks treat it as "not installed", every other error as a fault. |
+| `MADDU_PLAN_REF` | `commands/plan.mjs`, `lib/plans.mjs` | the error `code` for a referential refusal (a phase or plan id that does not exist); rendered as a clean exit-3 CLI error. |
+| `MADDU_HOOKS` | `lib/claude-hooks.mjs` | the exported table of Claude Code hook events Máddu installs (`SessionStart`, `SessionEnd`, `PreToolUse`, `PreCompact`), consulted by `doctor`. |
+| `MADDU_SENTINEL` | `lib/claude-hooks.mjs` | the substring (`hooks fire`) that marks a settings.json hook command as Máddu-owned, so install stays idempotent. |
+| `MADDU_STANZA_MARKERS` | `lib/harness-capabilities.mjs` | the markers (`maddu.mjs`, `hooks fire`) that identify Máddu's own stanza in an agent-instruction file. |

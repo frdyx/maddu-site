@@ -76,8 +76,34 @@ export default async function command(argv) {
     let injected = [];
     if (triggers.length || tags.length) {
       const skillsList = await loadSkillsForInjection(repoRoot);
-      const matched = agentCtxMod.matchSkillsForContext(skillsList, { triggers, tags });
-      injected = matched;
+      // Load-time trust enforcement (docs/34 scenario 5): a skill is injected
+      // only if it is trusted-provenance AND locally resident. A skill is
+      // withheld when its provenance is untrusted (imported without `maddu skill
+      // trust`, or no provenance) OR it points off-box without an
+      // `external_refs: allowed` acknowledgment (the URL-swap surface). Blocked
+      // skills are matched separately purely to witness the refusal on the
+      // spine — they never reach the agent's context, and they never consume an
+      // injection slot from an injectable skill.
+      const skillRefusalReason = (s) =>
+        !s.trusted ? 'untrusted-provenance'
+        : s.hasUnackedExternalRefs ? 'unacknowledged-external-refs'
+        : null;
+      const injectable = skillsList.filter((s) => !skillRefusalReason(s));
+      const blocked = skillsList.filter((s) => skillRefusalReason(s));
+      injected = agentCtxMod.matchSkillsForContext(injectable, { triggers, tags });
+      const refused = agentCtxMod.matchSkillsForContext(blocked, { triggers, tags });
+      if (refused.length > 0 && !flags['dry-run']) {
+        const refusedRows = refused.map((s) => ({ id: s.id, provenance: s.provenance, reason: skillRefusalReason(s) }));
+        await spine.append(repoRoot, {
+          type: spine.EVENT_TYPES.SKILL_INJECTION_REFUSED,
+          actor: baseCtx.activeSession?.id || null,
+          data: {
+            sessionId: baseCtx.activeSession?.id || null,
+            reason: [...new Set(refusedRows.map((r) => r.reason))].join(','),
+            refused: refusedRows,
+          },
+        });
+      }
       if (injected.length > 0 && !flags['dry-run']) {
         const totalBytes = injected.reduce((n, s) => n + (s.body || '').length, 0);
         await spine.append(repoRoot, {
@@ -93,7 +119,94 @@ export default async function command(argv) {
         });
       }
     }
-    const ctxWithSkills = { ...baseCtx, injectedSkills: injected };
+    // v1.115.0 memory-recall track — bounded, trust-gated fact recall.
+    // Mirrors the skill-injection pattern above: recall.mjs is the single
+    // eligibility seam (approved-only, rows+bytes hard caps), MEMORY_INJECTED
+    // witnesses what was fed, MEMORY_INJECTION_REFUSED witnesses what was
+    // withheld (never silently dropped). Older installs without the libs
+    // degrade to a brief without the recall section.
+    let recallPacket = null;
+    try {
+      const { hindsight, recall } = await loadSpineLib();
+      // r2 major 3: --dry-run must not become an unwitnessed agent-context
+      // path — under dry-run no fact text renders at all (the operator
+      // inspection surface is `maddu memory recall`, which has no injection
+      // semantics). Witnessed or absent; never silent.
+      if (!flags['dry-run'] && hindsight?.factsWithTrust && recall?.buildRecallPacket) {
+        const facts = await hindsight.factsWithTrust(repoRoot);
+        const activeLane = (baseCtx.laneClaims || []).find((c) => c.sessionId === baseCtx.activeSession?.id)?.lane
+          || (baseCtx.laneClaims || [])[0]?.lane || null;
+        recallPacket = recall.buildRecallPacket({ facts, query: '', lane: activeLane, tags });
+        if (recallPacket.items.length > 0) {
+          // TOCTOU shrink (Codex r4 blocker 1): re-derive trust IMMEDIATELY
+          // before witnessing and rebuild the packet from the fresh view — a
+          // fact revoked/superseded between selection and witness must not
+          // render. Full atomicity across two files is impossible; the fresh
+          // rebuild plus per-fact approval hashes ON THE WITNESS (verified by
+          // the gate against the approval state at that spine position) close
+          // the detection gap; maddu's single-writer model closes the rest.
+          const fresh = await hindsight.factsWithTrust(repoRoot);
+          recallPacket = recall.buildRecallPacket({ facts: fresh, query: '', lane: activeLane, tags });
+          // The witness references the APPROVAL EVENT by id (r5 major 2) so
+          // validation survives cross-partition team-sync reordering.
+          const trustMap = hindsight.trustStates(await spine.readAll(repoRoot));
+          const hashById = new Map(fresh.filter((f) => f.trust === 'approved').map((f) => [f.id, {
+            sha256: hindsight.factContentHash(f),
+            approvalEvent: trustMap.get(f.id)?.evId || null,
+          }]));
+          // FAIL CLOSED (Codex r1 major 4): if the MEMORY_INJECTED witness
+          // cannot be appended, the facts must NOT reach the rendered brief —
+          // an unwitnessed injection is invisible to the critical gate.
+          try {
+            if (recallPacket.items.length > 0) {
+              await spine.append(repoRoot, {
+                type: spine.EVENT_TYPES.MEMORY_INJECTED,
+                actor: baseCtx.activeSession?.id || null,
+                lane: activeLane,
+                data: {
+                  sessionId: baseCtx.activeSession?.id || null,
+                  factIds: recallPacket.items.map((it) => it.id),
+                  facts: recallPacket.items.map((it) => ({ id: it.id, ...(hashById.get(it.id) || { sha256: null, approvalEvent: null }) })),
+                  totalBytes: recallPacket.totalBytes,
+                  query: '',
+                  lane: activeLane,
+                },
+              });
+            }
+          } catch (err) {
+            console.error(`  memory recall withheld: injection witness could not be recorded (${err.message})`);
+            recallPacket = null;
+          }
+        }
+        const trustWithheld = (recallPacket?.withheld || []).filter((w) => w.reason === 'not-approved' || w.reason === 'revoked');
+        const trustWithheldTotal = (recallPacket?.withheldByReason?.['not-approved'] || 0) + (recallPacket?.withheldByReason?.['revoked'] || 0);
+        if (trustWithheldTotal > 0) {
+          // Refusal witness stays fail-open by design (safe asymmetry, per
+          // Codex r2: withheld content is NOT rendered either way). Rows are
+          // the packet's sanitized capped list; counts are complete.
+          try {
+            await spine.append(repoRoot, {
+              type: spine.EVENT_TYPES.MEMORY_INJECTION_REFUSED,
+              actor: baseCtx.activeSession?.id || null,
+              lane: activeLane,
+              data: {
+                sessionId: baseCtx.activeSession?.id || null,
+                reason: [...new Set(trustWithheld.map((w) => w.reason))].join(',') || 'not-approved',
+                refused: trustWithheld.map((w) => ({ id: w.id, kind: w.kind, reason: w.reason })),
+                refusedTotal: trustWithheldTotal,
+              },
+            });
+          } catch { /* witness-only; nothing withheld ever renders */ }
+        }
+      }
+    } catch {
+      // FAIL CLOSED on ANY recall-path error (Codex r7 major 1): a throw
+      // after the packet was built but before the witness appended must not
+      // leave a populated packet to render unwitnessed. The brief itself
+      // survives; the recall section is witnessed or absent — never silent.
+      recallPacket = null;
+    }
+    const ctxWithSkills = { ...baseCtx, injectedSkills: injected, recallPacket };
     const block = agentCtxMod.renderAgentContextText(ctxWithSkills);
     process.stdout.write(block);
     return;
@@ -179,14 +292,20 @@ function parseCsv(v) {
 // Load the full skill set from .maddu/skills/, parsing frontmatter
 // triggers/tags. Returns [{ id, title, triggers, tags, body, updated, provenance }].
 //
-// v1.2.0 Phase 4 — skills without a `provenance` field are REFUSED for
-// auto-injection. Pre-v1.2 skills are grandfathered with
-// provenance: 'pre-v1.2-grandfathered' on first read so existing installs
-// keep working.
+// v1.2.0 Phase 4 — every skill carries a computed `trusted` flag from its
+// provenance (framework/operator/grandfathered = trusted; imported = trusted
+// only with `trusted: true`). The caller injects trusted skills and refuses the
+// rest (emitting SKILL_INJECTION_REFUSED); this loader just reports the flag.
+// Pre-v1.2 skills are grandfathered with provenance: 'pre-v1.2-grandfathered'
+// on first read so existing installs keep working.
 async function loadSkillsForInjection(repoRoot) {
   const skillsDir = path.join(repoRoot, '.maddu', 'skills');
   let entries;
   try { entries = await fs.readdir(skillsDir, { withFileTypes: true }); } catch { return []; }
+  // Shared external-reference detector (same lib the skill-no-external-refs gate
+  // uses, so audit-time and inject-time can't disagree). Absent → degrade to
+  // "no external-ref blocking" (the doctor gate still catches it on disk).
+  const skillRefs = await loadSkillRefs(repoRoot);
   const out = [];
   for (const ent of entries) {
     if (!ent.isFile() || !ent.name.endsWith('.md')) continue;
@@ -208,10 +327,27 @@ async function loadSkillsForInjection(repoRoot) {
               || provenance === 'operator'
               || /^operator-trusted/.test(provenance)
               || (provenance === 'imported' && parsed.fm.trusted === true),
+        // URL-swap surface: a non-framework skill pointing off-box without an
+        // `external_refs: allowed` acknowledgment is refused injection.
+        hasUnackedExternalRefs: skillRefs?.skillHasUnacknowledgedExternalRefs
+          ? skillRefs.skillHasUnacknowledgedExternalRefs({ provenance, fm: parsed.fm, body: parsed.body })
+          : false,
       });
     } catch {}
   }
   return out;
+}
+
+async function loadSkillRefs(repoRoot) {
+  const candidates = [
+    path.join(repoRoot, 'maddu', 'runtime', 'lib', 'skill-refs.mjs'),
+    path.resolve(import.meta.dirname || path.dirname(new URL(import.meta.url).pathname),
+                 '..', 'template', 'maddu', 'runtime', 'lib', 'skill-refs.mjs'),
+  ];
+  for (const p of candidates) {
+    try { await fs.stat(p); return await import(pathToFileURL(p).href); } catch {}
+  }
+  return null;
 }
 
 // Minimal frontmatter parser. Mirrors lib/skills.mjs#parseSkill but kept

@@ -17,7 +17,7 @@ One compromised npm package on one developer's machine got access to
 ("local-first, files-only, no hosted backend, no provider SDKs in
 framework code, device-bound tokens") into enforced gates.
 
-## The 10 attack scenarios
+## The 15 attack scenarios
 
 Each scenario lists the attack, what Máddu enforces, what it does NOT
 enforce, and the concrete gate / spine event family that catches it
@@ -119,10 +119,16 @@ GitHub, lives in the repo history forever. The spine also logs
 
 **Máddu enforcement:**
 
-- `template/maddu/runtime/lib/secret-scan.mjs` — pure regex engine
-  for AWS access keys, OpenAI keys, Anthropic keys, GitHub tokens
-  (4 prefix variants), GitLab PATs, Slack tokens, Stripe keys, plus
-  a high-entropy-adjacent-to-secret-key fallback.
+- `template/maddu/runtime/lib/secret-scan.mjs` — one canonical pure-regex
+  detector for AWS access keys, OpenAI keys, Anthropic keys, GitHub tokens
+  (classic `ghp_`/`ghs_`/`gho_` + user-to-server `ghu_` + refresh `ghr_` +
+  fine-grained `github_pat_`), GitLab PATs, Slack tokens, Google API keys
+  (`AIza…`), Stripe live/test secret+restricted keys, PEM private-key blocks
+  (whole block, incl. a truncated/unterminated key), plus a
+  high-entropy-adjacent-to-secret-key fallback and a key-name-aware rule for an
+  opaque value under an unmistakably-sensitive field. The **same** detector
+  backs the spine write-boundary redactor, the argv scanner, and the safe
+  importer — no second, drifting pattern list.
 - Tool wrapper (`runTool` in `tools.mjs`) scans argv before spawn.
   Match → refuse with `TOOL_REFUSED reason: 'secret-detected'`.
   The MATCHED VALUE IS NEVER LOGGED. Only `pattern_type` +
@@ -141,6 +147,13 @@ GitHub, lives in the repo history forever. The spine also logs
 - Operator running `git commit` directly (outside `maddu git`).
 - Secrets in files the operator writes by hand. Argv scan is the
   argv path; file content is the operator's.
+- **Worker subprocess stdout/stderr log files.** Worker output is teed to
+  `.maddu/state/worker-logs/<id>.log` by direct file descriptor (a live stream),
+  so the record-level redactor — which scrubs discrete, fully-buffered writes —
+  cannot see it. A secret a worker prints to its own stdout lands in that log
+  raw. Scrubbing it correctly needs a chunk-boundary-safe streaming redactor
+  (a secret or PEM block can straddle read boundaries); that is future work.
+  Treat worker logs as untrusted and rotate any credential a worker echoed.
 
 ### 5. Imported skill contains malicious instructions
 
@@ -153,9 +166,20 @@ orientation digest; agent dutifully follows.
 
 - Skill frontmatter required field: `provenance:
   framework-starter-pack-vX | operator | imported` (P4).
-- `commands/brief.mjs#loadSkillsForInjection` refuses skills with
-  no provenance, OR `provenance: 'imported'` without `trusted:
-  true`. Emits `SKILL_INJECTION_REFUSED`.
+- Load-time refusal in `commands/brief.mjs`: a skill is injected into
+  the orientation digest only if it is **trusted-provenance AND locally
+  resident**. A skill is withheld when its provenance is untrusted (no
+  provenance, or `provenance: 'imported'` without `trusted: true`)
+  `reason: 'untrusted-provenance'` — OR it points off-box without an
+  `external_refs: allowed` acknowledgment `reason:
+  'unacknowledged-external-refs'` (the inject-time twin of the
+  `skill-no-external-refs` gate, via the shared `skill-refs.mjs`
+  detector). Either way the refusal is **witnessed on the spine** as
+  `SKILL_INJECTION_REFUSED` (`{ reason, refused: [{ id, provenance,
+  reason }] }`), never a silent drop. The refused payload rides the
+  central `spine.append` secret sweep like every event, and the captured
+  refs are query/fragment-stripped so a secret-bearing `?token=…` is
+  never even staged.
 - `maddu skill import <path>` requires explicit `--trust` flag,
   injects `provenance: imported`, `trusted: false`, and computes
   SHA256.
@@ -163,14 +187,38 @@ orientation digest; agent dutifully follows.
   promotion. Emits `SKILL_TRUSTED`.
 - `skill-provenance-required` doctor gate (P4). FAIL on missing
   provenance; WARN on imported-pending-trust.
+- `skill-no-external-refs` doctor gate. The **URL-swap** variant of
+  this attack (cybernews, 2026: a fake "brand landing page" skill
+  hijacked ~26,000 agents) keeps the skill file clean at review time
+  and points its body at an **external** instruction link, then swaps
+  the content behind that link after approval — the reviewed markdown
+  never changes, a dependency it references does. The gate scans each
+  auto-injectable `operator`/`imported` skill body for off-box
+  references (http/https URLs, `curl`/`wget` fetches): an `imported`
+  skill with an unacknowledged external ref FAILs; an `operator` one
+  WARNs. Framework-origin skills are skipped (install-integrity covers
+  tampering). The operator acknowledges a legitimate reference — after
+  reading it — with frontmatter `external_refs: allowed`.
 - Migration: pre-v1.2 skills auto-grandfathered with
   `provenance: 'pre-v1.2-grandfathered'` at load time.
+- **Made visible to the operator (v1.97.0):** a `SKILL_INJECTION_REFUSED`
+  was witnessed on the spine but invisible to a non-technical operator.
+  The [oversight surface](52-oversight.md) now surfaces every skill
+  **fed vs withheld** with a plain-language reason — so a blocked
+  URL-swap skill is something the person on the hook can actually see,
+  not just something the record holds.
 
 **Máddu does NOT enforce:**
 
 - Whether the skill content is actually safe. Trust is an operator
   decision; the gate ensures every auto-injection has an auditable
   lineage but does not semantically inspect the content.
+- Whether the content *behind* an acknowledged external reference is
+  safe. `skill-no-external-refs` makes the off-box surface visible and
+  forces an operator signature on it — it is the *formally-checkable*
+  half (is this skill locally resident?). The *semantic* half (is the
+  remote content malicious?) is unverifiable for natural language and
+  stays an operator + OS-level-egress concern.
 - Operator copy-pasting a skill into a `skill create` invocation.
 
 ### 6. Strict mode says "approvals required" but install ignores it
@@ -305,16 +353,397 @@ the operator's machine" remit.
 - Stdlib header checks only — zero new dependencies, no proxy, every
   hard rule respected.
 
-**Máddu does NOT enforce:**
+**Capability token on writes (v1.98.0):**
 
-- A non-browser process on the machine talking to the bridge. Requests
-  with no `Host` header (curl, the CLI probe) are allowed by design —
-  the threat is specifically the *browser*, which always sends `Host`.
-  Process-level isolation is the OS's job (see *Integration with
-  OS-level defenses*).
+- Loopback-origin enforcement stops a *browser*, but on its own it let
+  *any* local process POST a mutation (Host-absent requests are allowed
+  by design). So mutating routes (every `POST`/`PUT`/`PATCH`/`DELETE`,
+  plus the two read-path refreshers `GET /bridge/operations` and
+  `GET /bridge/projection`) and any **cross-workspace** request now also
+  require a per-boot capability token (`X-Maddu-Bridge-Token`, else
+  `401`). The token is delivered same-origin into the served cockpit HTML
+  and to a `0600` per-port file the CLI reads. A cross-workspace request
+  that is authorized appends a rate-limited `BRIDGE_CROSS_WORKSPACE`
+  event, so one repo reaching into another's spine is on the record.
+
+**What the capability token is — and is NOT:**
+
+- It is a **loopback CSRF** boundary, and only that: a cross-origin page
+  the operator visits cannot set a custom request header, and CORS blocks
+  it from reading the `GET /` that would leak the token — so it cannot
+  forge a mutation against the bridge.
+- It is **NOT** authentication against another process running as the
+  *same user*, and does not try to be. The token is embedded in the
+  cockpit HTML served over an **unauthenticated `GET /`**, so any local
+  process can fetch the page and read it (the `0600` capability file is
+  likewise same-user-readable, and on Windows is not a per-process ACL).
+  It therefore does **not** block another local process from driving a
+  mutation, and does **not** defend the stored-XSS chain — same-origin
+  XSS reads the token too; escaping the cockpit sinks does that (see
+  scenario 10). Process-level isolation between same-user processes
+  remains the OS's job (see *Integration with OS-level defenses*).
 - The operator deliberately binding the bridge to a non-loopback
   interface. That hostname is then accepted; exposing the bridge to a
   network is an explicit operator choice outside the rebinding model.
+
+### 11. An agent (or the operator) edits `.maddu/events/*.ndjson` directly
+
+**Attack:** the spine is plain NDJSON files on disk. A compromised
+worker, a rogue local process, or a careless hand-edit rewrites an
+interior event, deletes one, inserts a forged one, reorders them, or
+strips the `prev_hash` keys — to hide what happened or fabricate a record
+of work that never ran.
+
+**Máddu enforcement (tamper-DETECTING, unkeyed):** every event carries a
+forward `prev_hash` (the sha256 of the previous stored line). A chain is
+held to STRICT rules once it is *post-cutover* — it shows a
+`FRAMEWORK_INSTALLED`/`FRAMEWORK_UPGRADED` at/after v1.98.0 (the release
+that locked the flat append path) or a `SPINE_CUTOVER` anchor. On such a
+chain `maddu spine verify` returns a **FAIL** (nonzero exit; reds the
+`spine-integrity` gate) for an interior edit, deletion, insertion,
+reorder, or `prev_hash`-strip. Pre-cutover history stays a WARN
+(`chain_fork`/`chain_gap`) because the old unlocked flat path could
+legitimately fork and legacy events were written without keys. Nothing is
+ever auto-repaired — the operator decides.
+
+**Máddu does NOT enforce (the unkeyed limit — the OS's job):** the chain
+is a plain hash, not an HMAC/signature, so a **determined local actor who
+recomputes the whole forward chain** after editing (or rewrites the
+`FRAMEWORK`/`SPINE_CUTOVER` anchor) produces a spine that verifies clean.
+Likewise **truncating a contiguous tail** (removing the final event or
+segment) leaves no dangling link, **editing only the last event** (no
+successor to notice), **appending a forged well-linked event** (the
+correct `prev_hash` is publicly computable), **stripping every key from a
+legacy-rooted chain**, and **whole-partition deletion in sync mode**
+(verify enumerates only present partitions) all pass silently.
+These are the classic limits of an unkeyed, file-enumerating record: it
+catches naive/accidental edits and partial interior tampering, not an
+adversary who rewrites a contiguous whole. Keyed integrity and
+process-level isolation remain the OS's job (see *Integration with
+OS-level defenses*). The point Máddu does guarantee: **the actor is not
+the sole witness** — a naive after-the-fact rewrite leaves a detectable
+break, on the record, that an independent `spine verify` surfaces.
+
+**Workspace identity closes the cross-workspace splice (v1.117.0):**
+every post-cutover event is stamped with a `ws` identity derived from
+the spine's own committed genesis line (flat mode) or frozen by an
+in-band `WS_IDENTITY_ANCHORED` event (sync mode). The stamp rides
+*inside* the stored line — and therefore inside the next event's
+`prev_hash` — so a chain-valid line lifted from ANOTHER workspace's
+spine, or an entire internally-consistent foreign partition, now FAILs
+(`ws_mismatch`) instead of passing: re-homing it requires re-stamping
+every line AND recomputing the whole forward chain. That wholesale
+recompute remains the unkeyed limit above — but in flat mode an
+OpenTimestamps anchor (scenario 13) pins the genesis line in time, so
+even a full recompute cannot back-date the identity it fabricates.
+Conflicting sync-mode anchors freeze writes until the operator resolves
+them (`maddu spine identity resolve`); ws-less legacy events are
+tolerated forward-only, exactly like `prev_hash`.
+
+### 12. An agent weakens its own verification (the verdict machinery)
+
+**Attack:** the artifacts that decide pass/fail — test files, gate
+definitions, `.maddu/config/ci.json`, the CI workflow, and the verifier
+code itself — are ordinary files in the repo. An agent that has completed
+the ritual (session registered, lane claimed, goal set) can edit any of
+them and then truthfully report "the suite is green". Variants: alter an
+assertion; mark tests skipped; narrow the runner's scope; delete a test
+file; drop a gate id from `requiredGates`; downgrade a gate's severity;
+drop an operator gate under `.maddu/gates/` that shadows a builtin by id
+(`lib/gates.mjs` — later wins); or edit `verify.mjs`/`gates.mjs` so the
+verdict logic itself lies. **This is the "actor is the sole witness"
+failure in its purest form** — the actor moves the yardstick and then
+reads it.
+
+**Máddu's signal (verdict-machinery drift DETECTION, cooperative):** the
+operator declares a pin set in `.maddu/config/tracked-sources.json`
+(literals and/or globs). `maddu sources rebuild --reason "…"` snapshots
+those files' hashes onto the spine as `SOURCE_HASH_RECOMPUTED`, carrying
+`reason` and `by` as **listed contract fields** (contract 1.9.0). Be
+precise about what that means: listed fields are **type-checked when
+present**, not schema-required — the guarantee that `reason` is never
+null comes from the CLI, which refuses a reasonless rebuild outright
+(exit 3; there is no `--force` waiver, and a malformed `--reason` exits
+2). If the spine append fails, the re-pin aborts rather than proceeding
+unrecorded. The `tracked-source-drift` gate ships at severity **`warn`**
+— a cooperative drift signal, deliberately NOT `critical` and NOT in this
+repo's required set, because an actor who can edit the pinned files can
+re-pin them too; `critical` would falsely lend it trust-boundary weight.
+Note that `maddu ci pin` only accepts fail-capable gates, so a warn gate
+CANNOT be promoted to required; an operator who wants a blocking variant
+must shadow it with a fail-capable operator gate under `.maddu/gates/` —
+a local-only mechanism with its own caveats (below). It reports four drift classes:
+`changed`, `missing`, `unpinned` (a NEW file matching a *pinned pattern*),
+and `removed` (a pinned file no longer declared — which is what stops
+"delete the test *and* drop it from the pin set" reading clean). A pin
+set that matches zero files reports failure, and an EMPTY config reports
+"nothing pinned" — neither is ever a pass, so misconfiguration cannot
+read as clean.
+
+**Máddu's second signal (acceptance proofs — narrower, and about the
+oracle itself):** `tracked-source-drift` watches the machinery that
+decides what a result *means*. It says nothing about whether the check
+itself has ever rejected anything — which is the other half of this
+scenario: write (or relax) a test that passes unconditionally, then
+truthfully report green. **Acceptance proofs** (v1.121.0,
+[56-acceptance-proof.md](56-acceptance-proof.md)) address exactly that
+half and nothing more. An operator declares, on the goal, a command plus
+an **oracle** set and an **implementation** set (`maddu goal set
+--success … --oracle "<glob>" --impl "<glob>"`); `maddu orient` and
+`maddu loop ralph` observe that command and append
+`VERIFICATION_STARTED`/`VERIFICATION_RAN` receipts carrying the
+acceptance identity. A proof is then **derived** — every time somebody
+looks — from two receipts: the command **exited nonzero** and later
+**exited zero**, while the declared oracle bytes stayed identical and
+the declared implementation bytes moved. The `acceptance-proven` gate
+renders that state wherever gates run, and is green only when *every*
+verifiable condition is `live`.
+
+What that closes, precisely: **RED-then-edit-the-test.** Editing the
+oracle between the RED and the GREEN means the pair fails the
+frozen-oracle clause — the two observations recorded different oracle
+digests, so **no qualifying pair ever forms**. (`oracle-changed` is the
+*post-proof* stale reason: an already-formed proof whose oracle moves
+afterwards drops out of `live`.) There is **no re-baseline verb** —
+unlike `sources rebuild`, no command exists that re-greens an
+acceptance. The only route back is to observe the new test exit nonzero
+and then exit zero, which is the work you were avoiding. `historically-proven` (the pair exists but the implementation
+has moved since) is explicitly **not** green, so a stale proof cannot
+keep rendering over code the GREEN never ran.
+
+What it does not close is larger than what it does, so state it in the
+same breath: the guarantee is scoped to the **declared sets** and to the
+**process exit code**, and nothing more.
+
+**Máddu does NOT enforce (say this plainly):**
+
+- **Re-baselining is permitted.** Any actor can run `maddu sources
+  rebuild --reason "refactor"` and the gate goes green again. This is
+  bounded by **visibility, not by construction** — the re-pin is on the
+  spine with a reason (and the session id when one is active; `by` is
+  null otherwise), but nothing stops it. *(Acceptance proofs have no
+  such verb — but the actor can re-declare the GOAL, which changes the
+  acceptance identity and simply leaves the new declaration unproven,
+  visibly, rather than green.)*
+- **Hash chaining authenticates continuity, not truthful appends.** A
+  validly chained event can still be a dishonest one (see scenario 11).
+- **Test bodies under `scripts/test/` are deliberately NOT pinned.** They
+  change in most PRs, so pinning them would force a reflexive re-pin every
+  time — and a pin that is rebuilt by reflex asserts nothing. What is
+  pinned is the machinery that decides what a result *means* — which is
+  why this feature is named verdict-machinery drift detection, not "oracle
+  integrity": **test assertions ARE the oracle, and they are not covered
+  by `tracked-source-drift`.** That statement remains true and is not
+  softened by acceptance proofs: acceptance binds only the oracle set an
+  operator explicitly *declared on a goal*, for the window between one
+  observation and the next, and only for the specific command that
+  declaration names. Every test body outside a declared set — and every
+  test at all on a repo with no acceptance-active goal — is covered by
+  nothing. Independent review of test bodies is an external possibility
+  (CODEOWNERS + required code-owner review), currently INERT in this
+  repo — see below.
+- **Same-count, same-name tests can be gutted.** Emptying a test file's
+  assertions while keeping the file is invisible to a hash pin of *other*
+  files, and skip/`only` detection does not exist at all. Within a
+  *declared* oracle set an acceptance proof narrows this: gutting the
+  oracle after the fact moves its digest and reads `oracle-changed`, not
+  green. It does **not** stop the same trick done *before* the RED — an
+  assertion checking almost nothing, observed nonzero for an unrelated
+  reason and then zero, yields an entirely honest and entirely worthless
+  proof (`A WEAK ORACLE PROVEN RED→GREEN IS STILL A WEAK ORACLE`).
+- **An undeclared set is not a covered set.** A goal with no `--oracle` /
+  `--impl` is a legacy goal: it evaluates its conditions and records no
+  acceptance receipts at all. The `acceptance-proven` gate reports that
+  as a distinct refusal rather than a pass — nothing-declared never
+  renders like proven-clean — but the reporting is the whole of the
+  protection.
+- **Acceptance proofs are refused, not degraded, in team-sync mode.** A
+  proof rests on one totally-ordered history in which a RED provably
+  precedes a GREEN; a partitioned (replica-synced) spine has no such
+  order. Derivation returns `unsupported: team-sync` and observations are
+  persisted as **void** receipts (`refusal_reason:
+  unsupported-team-sync`). Neither `orient` nor the gate ever renders
+  team-sync as green — but equally, a team-synced repo gets no acceptance
+  coverage whatsoever.
+- **The full acceptance residuals are exported, not summarized.** The
+  authoritative list is `ACCEPTANCE_HONEST_LIMITS`
+  (`template/maddu/runtime/lib/acceptance.mjs`), reproduced verbatim in
+  [56-acceptance-proof.md](56-acceptance-proof.md) and rendered as a
+  pointer beside every proof readout. The residuals that bear directly on
+  *this* scenario: **endpoint equality, not continuous immutability** — a
+  run that mutates the oracle or the implementation and restores it
+  before the post-hash is not detected and leaves no recorded difference;
+  **mutation from outside Máddu is unbounded** — only Máddu's own
+  sanctioned concurrency is serialized, so a concurrent iterate editing
+  declared bytes mid-observation is invisible; **a receipt is a
+  cooperative actor's assertion that it ran something** — the spine chain
+  is an unkeyed SHA-256, so fabricated receipts carrying a correctly
+  computed `prev_hash` verify, and deriving a proof rather than storing
+  it removes the minting verb, not the forgery; **no commit binding** —
+  nothing ties a proof to a reviewable commit; **no causation** — a moved
+  implementation digest proves co-occurrence only.
+- **`.maddu/gates/` is NOT in the default pin patterns at all** — the
+  `unpinned` class only sees new files matching *pinned* patterns, so gate
+  shadowing under `.maddu/gates/` is invisible to this gate unless the
+  operator explicitly pins that path. Independently, `.maddu/*` is
+  gitignored, so a shadow gate never reaches a PR diff or a CI checkout
+  (**CODEOWNERS structurally cannot cover a gitignored path**): shadowing
+  is a LOCAL-ONLY threat to local `maddu ci`/`doctor` verdicts, and on the
+  local machine it is currently an UNWATCHED one.
+- **The PreToolUse hook does not participate.** It decides on ritual state
+  only and is fail-open by law (`lib/discipline.mjs`); it does not know
+  which file is being edited. An actor able to disable or modify the hook
+  is not constrained by it.
+- **CI executes PR-controlled code.** `.github/workflows/maddu-ci.yml`
+  checks out the PR and runs `node bin/maddu.mjs ci`, so an agent that
+  edits the verifier can change the verdict in the same PR. Closing this
+  requires the required check to run from the protected base branch or an
+  immutable action. **Not solved here.**
+- **CODEOWNERS is an enumeration here, not a control.** Requiring
+  independent code-owner review on `main` would put designated
+  verification changes behind a second reviewer — but that is a GitHub
+  setting, it is deliberately NOT enabled on this repo, and for a solo
+  maintainer it is UNSATISFIABLE (GitHub forbids self-approval). Even
+  where enabled, it is defeated by admin/bypass credentials, by an owner
+  approving a bad change, and entirely on local, fork, and
+  unprotected-branch workflows. `.github/CODEOWNERS` in this repo is
+  documentation of the trusted computing base, nothing more.
+
+**The honest claim:** Máddu is a **cooperative accountability system
+inside the repository's existing authority boundary.** It records
+declared verification, surfaces verdict-machinery drift, derives — for
+declared oracle/implementation sets only — whether a command was ever
+observed to exit nonzero before it exited zero, and makes re-baselining a
+visible, reasoned act (attributed to the active session when one exists).
+It cannot prove those
+records or verdicts against an actor who can modify the repository, the
+verifier, the baseline, and the event history under the same OS
+authority. It does **not** prevent an authorized actor from weakening
+verification, and it does **not** prove that passing tests remain
+meaningful. Do not describe this as malicious-agent resistance,
+unbypassability, or trusted receipts.
+
+### 13. Faking an assurance level (the external witness and the ladder)
+
+**Attack:** the actor claims a verification result is better-evidenced
+than it is — asserts a receipt was externally anchored when it wasn't,
+re-stamps after rewriting history, forges the anchor bookkeeping, or
+records a consume-ceremony note for checks nobody ran.
+
+**The assurance ladder** (each rung names its evidence; no rung is
+granted by local state):
+
+- **actor-reported** — a `VERIFICATION_RAN` receipt. The actor ran its
+  own verifier; the spine preserves the claim.
+- **replayed** — `maddu spine verify --replay <sha>` re-ran the DECLARED
+  commands in a clean checkout of that exact commit and appended its own
+  strict receipt (v1.109.0).
+- **anchored** — an OpenTimestamps anchor commits a receipt (and chain
+  head) to Bitcoin, and the OPERATOR ran a Bitcoin-backed `ots verify`
+  themselves. `maddu spine anchor --assess <sha>` walks that ceremony and
+  records `ASSURANCE_ASSESSED` — a **non-authoritative ledger note**. The
+  tool's own checks (payload↔receipt↔SHA binding, chain continuity,
+  forged-event predicates, `witness.maxAnchorAge` staleness) can only
+  REFUSE; the positive evidence is the operator's pasted external verifier
+  output. Every consumer labels the event non-authoritative; nothing
+  gates on it.
+- **presence-attested** — deferred (PR 6b); does not exist yet.
+
+**Máddu enforcement:** the assess ceremony refuses on: mid-history
+anchor deletion/renumbering; payloads whose bytes are not their own
+canonical serialization; positions that don't hash to the receipt (with
+containment — path-shaped or symlinked segment references are refused,
+not followed); missing proofs; `ANCHOR_*` events whose payload digest is
+absent, non-string, or mismatched, and a newest event whose proof digest
+disk doesn't back; stale or future attestation dates under a declared
+`witness.maxAnchorAge`; and any state or policy change between the
+operator's checks and the append (the binding re-runs after the final
+confirm, immediately before the write).
+
+**Máddu does NOT enforce (the residuals, stated exactly):**
+
+1. **Suffix deletion** (dropping the newest anchors) and **all-history
+   deletion** are undetectable without a retained checkpoint — keep an
+   operator note of the latest anchor seq + payload digest outside the
+   repo.
+2. **Suppression**: anchoring is opt-in; work that is never stamped
+   leaves no anchor to check. Absence of an anchor is not evidence of
+   anything.
+3. **Superseded proof-digest claims are unverifiable**: upgrades replace
+   the proof file, so only the NEWEST anchor event's proof digest can be
+   checked against disk. A forged claim about a superseded proof asserts
+   something about bytes nobody — including Bitcoin — can re-examine.
+   (Payload digests, which never legitimately change, ARE checked on
+   every event.)
+4. **Explorer-mode trust reduction**: the JS client's lite mode trusts
+   block explorers, not proof-of-work directly. The ceremony asks the
+   operator to know and say which client they ran.
+5. **Everything an anchor doesn't cover** inherits scenario 11's unkeyed
+   limits: events after the anchored chain head are as rewritable as
+   ever, and an actor can re-anchor a rewritten history going forward.
+   An anchor proves a receipt existed by a time — not that the work was
+   good, and not that later history is honest.
+6. **Live filesystem races**: the containment checks refuse STATIC
+   adversarial states deterministically (symlinked leaves, symlinked
+   ancestors, path-shaped positions) and re-verify after every read, but
+   a writer RACING the syscalls — swapping a path component in and back
+   out inside the check window — can still win on any platform. That is
+   a live co-resident actor with repo write authority, who is outside
+   the cooperative boundary anyway (they can rewrite the record
+   wholesale instead).
+
+The `ASSURANCE_ASSESSED` event itself is writable by anyone with repo
+access (like every spine event); that is why every consumer prints it as
+a non-authoritative ledger note and the real consume gate is the
+operator re-running the ceremony themselves.
+
+### 14. A mutating seam succeeds while recording nothing
+
+**Attack:** the inverse of scenario 11 — instead of rewriting the
+record, the actor simply never writes one. A CLI verb or bridge write
+route mutates state and exits 0 without appending any event: work
+happened, the spine is silent, and silence is indistinguishable from
+idleness.
+
+**Máddu enforcement (v1.116.0, the mutation-witness guard):** every
+mutating CLI dispatch and bridge write route runs under a witness. A
+seam that claims success with zero spine appends and no *declared*
+no-op reason breaches: `MUTATION_UNWITNESSED` lands on the spine (CLI
+breaches spool crash-safely and are drained by the next dispatcher run;
+bridge breaches append inline after the 2xx), the exit code is forced
+to 1, and the `command-tier-discipline` census stays red while breach
+evidence is undrained. ~40 legitimately append-free paths (idempotent
+early returns, delegated mutations, read-shaped subverbs) carry
+declared, census-verified reasons instead of silent exemptions.
+
+**Máddu does NOT enforce:** a command that crashes (non-zero exit)
+after partially mutating is a transactionality problem, not a witness
+problem — MUTATION_UNWITNESSED means "reported success while recording
+nothing". Worker-child token accounting is best-effort by design and
+is not witnessed.
+
+### 15. Mispriced or fabricated cost figures
+
+**Attack:** the accounting layer lies pleasantly — an estimated dollar
+figure is presented as a provider-reported fact, a stale price is baked
+into the permanent record, garbage is coerced into the totals, or an
+unpriceable row is silently zeroed so the spend looks known.
+
+**Máddu enforcement (v1.118.0, cost provenance):** `cost --usd` prices
+a row only when PROVABLE — a `pricingIdentity` stamped from a
+descriptor-declared endpoint authority (inherited env scrubbed at the
+spawn seam) plus a model the wrapper parsed from the provider's own
+stream, an exact pricing-manifest match, and reported token counts.
+Wire-reported and manifest-estimated dollars never merge; estimates are
+read-time presentation and are never written to the append-only spine;
+null ≠ zero ≠ omitted end-to-end; IEEE overflow/underflow fail loudly
+rather than serialize a fabricated zero or empty bucket; an invalid
+pricing override is a loud exit 2, never a silent fallback.
+
+**Máddu does NOT enforce:** the embedded manifest's rates being
+CURRENT (the manifest is versioned and surfaced with every estimate —
+stale rates produce honestly-labeled stale estimates), and rows
+emitted before v1.118.0 stay unpriced with a named reason.
 
 ## Operator responsibilities
 
@@ -392,3 +821,32 @@ maddu trust report
 
 See also: `docs/06-hard-rules.md` for the 8+1 immutable rules; the
 cockpit `Trust` route at `?` → Trust for the live posture view.
+
+## The embedded runtime (v1.147.0–v1.151.0)
+
+The fifteen scenarios above cover the **developer-machine** posture: the
+CLI, the bridge, the cockpit and the spine under `.maddu/`. The opt-in
+embedded runtime (`maddu/runtime`, [58-embedded-runtime.md](58-embedded-runtime.md))
+runs inside a **product process** instead, and the RFC that designed it
+([57-product-runtime-rfc.md](57-product-runtime-rfc.md) §10) listed the
+threats that posture adds. Each is now a tested row rather than a scenario
+here, because the runtime's attack surface is an API a host calls, not a
+process an operator runs:
+
+| Threat the runtime adds | Where it is tested | What remains the host's |
+|---|---|---|
+| Model or tool output injects tenant ids, paths or policy text | `runtime-execution-observe`, pilot scenario B | identity comes from the host context; nothing parses model output for it |
+| A decision handle is forged, reused, or replayed with a changed scope | `runtime-decision-policy`, `runtime-boundary-execute` | custody of the signing key |
+| An action runs after a missing gate, a throwing gate, or a swallowed evidence append | `runtime-lifecycle-run`, `runtime-boundary-execute` | a check that spawns its own side effects |
+| A receipt is replaced wholesale or has its tail dropped | `runtime-core-receipt` | receipts are **unsigned**; the verifier says so on every result |
+| A handle or approval is reused across runs or tenants | `runtime-boundary-execute` | store-level tenant isolation in the host's adapter |
+| A crash between intent, effect and receipt duplicates the effect | `runtime-boundary-execute`, pilot scenario A | the durable idempotency state that `reconcile()` reads |
+| Concurrent appends, a stale writer, a torn write | `runtime-execution-store` | multi-process fencing in the host's adapter |
+| Output streams past a boundary that promised pre-release checks | pilot scenario A | the outbox is the host's; the runtime only makes the decided artifact the one with a handle |
+| A public claim exceeds the tested scope | `runtime-external-consumer` | — |
+
+The residual the RFC names as a non-goal stays a non-goal: a host
+administrator who controls the process, the credentials and the store can
+bypass an in-process runtime. That is a cooperation boundary, not an
+isolation boundary (RFC §6.1), and docs/58 says so under *Threat-model
+delta*.

@@ -29,7 +29,230 @@
 // 'array' | 'any'; a trailing '?' marks a field that may be absent; '|null'
 // marks a nullable value (the key is present).
 
-export const EVENT_CONTRACT_VERSION = '1.0.0';
+// 1.1.0 (SLM-governance p2): +11 MODEL_* types — the one deliberate MINOR
+// bump the phase-0 design commits to (docs/research/slm-governance-design.md
+// §5/§11). Additive only; no existing type or field changed.
+// 1.2.0 — added SKILL_INJECTION_REFUSED (load-time untrusted-skill refusal is
+// now witnessed on the spine). Additive: a new event type, no existing type or
+// field changed → minor bump.
+// 1.3.0 — added GOAL_COMPLETED (goal lifecycle: a finished goal is closed
+// instead of lingering forever). Additive → minor bump.
+// 1.4.0 (audit P0b) — added BRIDGE_CROSS_WORKSPACE (a bridge request selected a
+// non-active workspace). Additive → minor bump; baseline refreshed so a
+// consumer caching 1.3.0 never sees the extra type under an unchanged version.
+// 1.5.0 (audit P1) — added SPINE_CUTOVER (a chain-local tamper-detection cutover
+// anchor, seeded into a freshly-minted sync partition so verify holds it to the
+// post-cutover strict rules even with no migrated FRAMEWORK marker). Additive.
+// 1.6.0 (audit P2) — added DISCIPLINE_SKIPPED, ENFORCEMENT_ERROR, and
+// GOVERNANCE_OVERRIDE_CHANGED so a discipline bypass / fail-open / off-switch
+// change always leaves a spine witness (the "actor not sole witness" north star).
+// Additive → minor bump; baseline refreshed at release.
+// 1.7.0 (audit P3) — added VERIFICATION_STARTED + VERIFICATION_RAN so a
+// verification outcome (goal success-eval, project/self test, heavy suite) is a
+// tamper-detecting spine RECEIPT appended from the in-process result, read back
+// by the recency/success readouts — not a hand-writable state file the actor
+// re-reads (the "verification, not actor-witness" tier). Additive → minor bump.
+// 1.8.0 (usage-audit Tier 1) — INBOX_MESSAGE, SKILL_CREATED and SKILL_UPDATED
+// gain optional `source` so every `import submit` path that touches the spine
+// (inbox-note content; skill lifecycle receipts) stamps itself the same way
+// `usage import` stamps TOKEN_USAGE_REPORTED, letting insights' import/native
+// segmentation key on one data field. Added fields to existing types →
+// minor bump; baseline refreshed with this release.
+// 1.9.0 (verdict-machinery pins) — SOURCE_HASH_RECOMPUTED gains `reason` and `by`. Re-pinning
+// the tracked-source set is the escape hatch for every check built on those
+// hashes: it makes whatever is on disk right now the new truth. Listing the
+// fields makes them TYPE-CHECKED WHEN PRESENT (the contract's rule) — the
+// guarantee that `reason` is a non-empty string comes from the CLI, which
+// refuses a reasonless or whitespace-only rebuild; `by` is the session id when
+// one is active, null otherwise. Added fields to an existing type → minor
+// bump; baseline refreshed with this release.
+// 1.10.0 (witness PR 4) — added ANCHOR_STAMPED, ANCHOR_UPGRADED, and
+// ASSURANCE_ASSESSED: the Tier-1 external-witness events. This bump covers
+// ONLY the three events whose producers ship in PR 4–6a (ANCHOR_* now,
+// ASSURANCE_ASSESSED's ceremony producer in PR 6a); ATTESTATION_RECORDED
+// waits for a SECOND bump after PR 6b's parser/ceremony spikes are proven —
+// honest sequencing beats bump-count vanity. ASSURANCE_ASSESSED's per-level
+// REQUIRED evidence shapes are enforced by the producer through
+// spine-anchor.mjs validateAssuranceEvidence (the schema grammar below
+// declares field types; the per-level requirement has one canonical checker),
+// and every consumer labels the event non-authoritative. Additive → minor
+// bump; baseline refreshed with this release.
+// 1.11.0 (PR-D worktree two-resource recovery) — added WORKTREE_DETACHING (the
+// durable "a removing detach was authorized and begun" intent that makes a
+// crash between the git remove and the terminal WORKTREE_DETACHED recoverable),
+// plus a per-worktree physical-identity token `worktreeInstanceId` on
+// WORKTREE_ATTACHED / WORKTREE_DETACHING / WORKTREE_DETACHED and the recovery
+// provenance pair `recoveryActor` / `attachmentOwner` on WORKTREE_DETACHED (an
+// operator `--recover` records who ran it AND whose attachment it closed, never
+// impersonating the closed owner). All additions are additive and legacy-
+// compatible (spelled `?` — absent on old records → unverifiable/legacy);
+// schemaVersion stays 1 on the two existing frozen shapes. Additive → minor
+// bump; baseline refreshed with this release.
+// 1.12.0 (memory-recall track, Phase 3) — added MEMORY_FACT_APPROVED and
+// MEMORY_FACT_REVOKED: event-sourced fact trust states. Every extracted fact
+// is implicitly `asserted` (no event); operator approval makes it eligible
+// for recall injection, revocation excludes it. Trust lives on the spine so
+// it survives rebuildMemory and is never inferred from kind/actor/chain.
+// Additive → minor bump; baseline refresh at the next release.
+// 1.13.0 (memory-recall track, Phase 4) — added MEMORY_INJECTED and
+// MEMORY_INJECTION_REFUSED: bounded recall-injection witnesses mirroring the
+// skill-injection pair. Only approved facts are injectable (recall.mjs is the
+// single eligibility seam; the critical memory-injection-bounded gate
+// re-verifies every injection row). Codex r1 hardening (same unreleased
+// bump): MEMORY_FACT_APPROVED gains required `sha256` — the approval is bound
+// to the approved CONTENT, so a hand-edited memory.ndjson row with a
+// preserved id can never ride an old approval into agent context. Additive →
+// minor bump; baseline refresh at the next release.
+// 1.14.0 (buzz-steals S1, mutation-witness) — added MUTATION_UNWITNESSED: a
+// mutating seam (CLI verb or bridge write endpoint) exited claiming success
+// with zero spine appends and no declared no-op — silence made loud, the
+// runtime complement to the static tier census (DISCIPLINE_SKIPPED's sibling:
+// that one witnesses a bypassed check, this one witnesses an unrecorded
+// mutation). CLI breaches are recorded synchronously at process exit into a
+// spool (.maddu/state/mutation-breaches/) because spine.append cannot run in
+// an exit handler, then drained onto the spine by the next dispatcher run
+// (via:'breach-drain'); bridge breaches append inline (via:'inline').
+// `breachId` dedupes the at-least-once drain across a crash window. Additive
+// → minor bump; baseline refresh at the next release.
+// 1.15.0 (buzz-steals S2, workspace identity) — the envelope gains an
+// OPTIONAL `ws` (workspace identity, `ws_` + 16 hex of the genesis line's
+// sha256 via hashLine semantics): it rides inside the stored NDJSON line, so
+// it lands inside prev_hash with zero new hashing code — a line lifted from
+// another workspace's spine can no longer re-chain without wholesale
+// recompute, which the OTS anchor then pins in time (flat mode). Forward-only
+// exactly like prev_hash: ws-less legacy events are tolerated; ws NEVER
+// enters ENVELOPE_REQUIRED (that would be a major bump and would contradict
+// the tolerance). Genesis/bootstrap lines are deliberately ws-less (an
+// identity cannot be the hash of a line containing it). Two new types:
+// WS_IDENTITY_ANCHORED (sync mode's in-band authority — nominates the
+// merge-first genesis by immutable partition position + hash; published once
+// by the first S2 writer, before any stamping) and WS_IDENTITY_RESOLVED (the
+// forward-only conflict ceremony: while conflicting anchors exist it is the
+// ONLY appendable type; it binds every conflicting anchor and selects one
+// EXISTING identity). Additive → minor bump; baseline refresh at the next
+// release.
+// 1.16.0 (buzz-steals S4, cost provenance) — TOKEN_USAGE_REPORTED gains three
+// honest-optional fields: `pricingIdentity` ({authority, model} — recorded
+// only when the emitter can PROVE the endpoint, via the descriptor-declared
+// MADDU_PRICING_AUTHORITY env at the spawn seam, and the model string is real,
+// not a `-unknown` fallback), plus contract-ready `costUsd` +
+// `costProvenance:'wire-reported'` for a provider that ever reports wire cost
+// (no emitter does today). USD estimation is READ-time only (`cost --usd`
+// over the embedded pricing manifest in lib/pricing.mjs) — an estimate is
+// presentation over the factual record and is NEVER written to the spine,
+// because writing one would bake a stale price into append-only history.
+// Estimated vs reported dollars are never merged; null ≠ zero ≠ omitted
+// survives end-to-end (Object.hasOwn threading through the tokenLedger
+// reducer). Transcript import always omits pricingIdentity — a transcript
+// cannot distinguish api.anthropic.com from Bedrock/Vertex. Additive → minor
+// bump; baseline refresh at the next release.
+// 1.17.0 (2026-08-09, PR-1 receipt task-plan fingerprint) — VERIFICATION_RAN
+// gains DIRECT identity fields so two receipts for different test sets stop
+// being indistinguishable: planDigest / planTaskCount / tasksTruncated for
+// kind:'project-test', and conditionPlanDigest / conditionCount for
+// kind:'success-eval'. Identity is DIRECT, never nested: contractShape records
+// only direct data fields and generated schemas leave array items
+// unconstrained, so a nested `plan.digest` could be dropped later without a
+// MAJOR bump. The existing `conditions` array is deliberately UNCHANGED —
+// resolveSuccessView returns those rows verbatim to two public bridge
+// responses.
+//
+// WHY MINOR, since `data` is an OPEN object and declaring a field does narrow
+// what validates. This was reviewed, argued as MAJOR, and settled as MINOR:
+//
+//   - The argument for MAJOR proves too much. `data` is open on EVERY type, so
+//     if declaring a field is breaking then NO field can ever be added below
+//     major, and the scheme becomes major-only. Five prior bumps (1.9.0 and
+//     others) shipped exactly this shape as minor.
+//   - MAJOR should mean "something you depend on changed". Spending it on an
+//     addition destroys that signal: a consumer diffing the versions hunts for
+//     removals and finds none.
+//   - The distinction that matters is GENERIC vs DISTINCTIVE names. A generic
+//     name IS a real risk — which is why the bounded `tasks` diagnostics array
+//     is deliberately NOT declared: a plugin could plausibly carry its own
+//     `tasks` on its own kind, and typing it would have broken that payload.
+//     The five fields above are framework-minted names on a framework-owned
+//     event type. The load-bearing property is OWNERSHIP, not a fixed kind
+//     list: every in-tree emitter is the framework itself — recordVerification's
+//     callers (the test/self-test commands), success-eval, replay, and the
+//     heavy test harnesses — and NO plugin emits it. (The recency GATES are not
+//     emitters: project-test-recent and self-test-recent only READ receipts via
+//     readVerifiedEvents + recencyGateVerdict. Kinds
+//     observed across ALL trees at 2026-08-09: project-test, self-test,
+//     success-eval, replay, stress, upgrade-matrix. An earlier revision of this
+//     comment named only the first four, because the census that produced it
+//     excluded scripts/ — do not re-derive this list from a partial tree.)
+//     A payload the five fields could break would have been squatting on
+//     undefined framework namespace.
+//
+// If that reasoning is ever rejected, the fix is to change `classifyChange` so
+// narrowing-by-declaration reports major CONTRACT-WIDE — not to price one
+// release differently from its five predecessors. Additive → minor.
+// 1.18.0 (2026-08-11, PR-2 acceptance proof — the observation's shape) — the
+// four types the acceptance proof reads or writes gain their declared fields.
+// This is the contract's ONE bump for PR-2: every shape change the track needs
+// lands here, and the gate campaign that follows adds no event shape.
+//   - GOAL_DECLARED += `oracle` / `implementation`: the declared sets, whose
+//     patterns are identity terms of every acceptance the goal declares. Both
+//     are declared WITHOUT `?`, matching `success` (v1.6.0): every event this
+//     CLI writes carries them, and a pre-W1 event's absence is handled by the
+//     projection's array guard, exactly as `success` has been since it landed.
+//   - LOOP_STARTED += `baselineRequested` / `verifySource` / `verifyOverride`:
+//     the loop's declared verification INTENT, so the record says which answer
+//     a loop was given (goal-adopted or ad-hoc flags) and whether it overrode
+//     an active goal. Optional — plan loops and acceptance-less ralph loops
+//     write the same five-field payload they always have.
+//   - VERIFICATION_STARTED += the acceptance IDENTITY fields. `deriveProofs`
+//     checks identity agreement across the STARTED→RAN pair, so these are not
+//     decoration: a STARTED without them reads as a mismatch and voids the
+//     receipt.
+//   - VERIFICATION_RAN += the same identity fields plus the observation's own
+//     result — `observation_status`/`refusal_reason` (eligible vs void and
+//     why), the process outcome (`exit`, `signal`, `timed_out`, `spawn_error`,
+//     `duration_ms`, `outcome_class`), the redacted `command`, the two set
+//     records `oracle`/`impl`, and the conditional `subject`.
+//     NULLABILITY IS TRANSCRIBED FROM THE PRODUCER, not guessed: a no-run path
+//     (lock-busy) writes the keys with `exit`/`signal`/`duration_ms`/
+//     `outcome_class` null rather than omitting them, so the payload shape
+//     never depends on which branch produced it — declaring those non-nullable
+//     would red the contract on the exact receipts that record a refusal.
+//     `subject` is the one genuinely conditional field (written only for a
+//     supported tier policy).
+// EVERY addition is OPTIONAL (`?`) except the two on GOAL_DECLARED, because
+// VERIFICATION_STARTED / VERIFICATION_RAN carry several kinds — a project-test
+// receipt has no `exit` and never will — and LOOP_STARTED's three ride only the
+// acceptance-wired ralph branch. The 1.17.0 ownership argument applies
+// unchanged: these are framework-minted names on framework-owned event types
+// whose every in-tree emitter is the framework itself, so the generic-looking
+// ones (`command`, `exit`, `subject`) squat on no plugin's namespace.
+// Additive → minor bump; baseline refreshed with this change.
+//
+// 1.19.0 (2026-08-11, PR-2 gate campaign, funnel r7): GATE_RAN.data gains
+// `workRoot?` — the CHECKOUT a verdict describes. Gate receipts moved to the
+// SHARED state-root spine (funnel r6), so two checkouts' receipts collapse in
+// latest-per-gate readouts unless scoped; readers filter by it, and a legacy
+// receipt without it stays visible in every scope. Optional because every
+// pre-1.19.0 receipt lacks it. Framework-minted name on a framework-owned
+// event (the 1.17.0 ownership argument); additive → minor.
+//
+// 1.20.0 (2026-08-12, harness-parity PR1) — added HARNESS_CAPABILITY_OBSERVED:
+// the reading `maddu runtime doctor` takes when it compares the repo-versioned
+// harness capability manifest against what is actually installed. The payload
+// is deliberately shaped so the RECORD carries the honesty, not the presenter:
+// `status` ('verified' | 'assumed' | 'not-installed') and `drift` (why a claim
+// was held back) travel with every capability, so a consumer reading the spine
+// months later cannot mistake an assumed surface for a verified one, and a
+// not-installed harness is a VALID observation rather than a missing row.
+// `workRoot` scopes the config half of the reading to the checkout it was taken
+// in — the same lesson GATE_RAN learned in 1.19.0, applied before two checkouts
+// can collapse into one another's answer. Nullable fields are transcribed from
+// the producer: `cliVersion` is null when nothing parsed, `drift`/`probeFailure`
+// are null on a clean verified reading, `configPath` is null when every
+// candidate is absent — the payload shape never depends on which branch
+// produced it. Framework-minted names on a framework-owned event type (the
+// 1.17.0 ownership argument); a new event type → additive → minor bump;
+// baseline refreshed with this change.
+export const EVENT_CONTRACT_VERSION = '1.21.0';
 
 // The shared envelope — every spine event carries exactly these top-level keys.
 // Single source of truth for BOTH the generated JSON Schema / Markdown envelope
@@ -47,6 +270,7 @@ export const EVENT_ENVELOPE = {
   lane: 'string|null',
   prev_hash: 'string|null',
   triggered_by: 'object|null',
+  ws: 'string?',
   data: 'object',
 };
 
@@ -72,7 +296,7 @@ export const EVENT_SCHEMA = {
   LANE_DEFAULTS_SET: { summary: "Default lane assignments were configured.", data: { defaults: 'object' } },
   LANE_POLICY_SET: { summary: "A per-lane governance policy was set.", data: { policy: 'object' } },
   SLICE_STOP: { summary: "A slice boundary was recorded with its summary, deliverables, and next step.", data: { action: 'string|null', gates: 'array', learnings: 'array', next: 'array', paths: 'array', reason: 'string|null', summary: 'string', targets: 'array', risk: 'object|null', deliverables: 'object|null' } },
-  INBOX_MESSAGE: { summary: "A message was written to a session inbox.", data: { kind: 'string', message: 'string', reason: 'string', scheduleId: 'string', scope: 'string', text: 'string', to: 'string' } },
+  INBOX_MESSAGE: { summary: "A message was written to a session inbox.", data: { kind: 'string', message: 'string', reason: 'string', scheduleId: 'string', scope: 'string', source: 'string?', text: 'string', to: 'string' } },
   APPROVAL_REQUESTED: { summary: "An action was submitted for operator approval.", data: { action: 'string|null', payload: 'object|null', summary: 'string|null', tool: 'string' } },
   APPROVAL_DECIDED: { summary: "A pending approval was approved or denied.", data: { approvalId: 'string', decision: 'string', reason: 'string|null', tool: 'string|null' } },
   APPROVAL_POLICY_SET: { summary: "A standing approval policy for a tool was set.", data: { decision: 'string', tool: 'string', lane: 'string|null' } },
@@ -81,8 +305,8 @@ export const EVENT_SCHEMA = {
   TASK_CREATED: { summary: "A task was created on the dependency-aware board.", data: { id: 'string', blockedBy: 'array', description: 'string', metadata: 'object', owner: 'string|null', status: 'string', tags: 'array', title: 'string' } },
   TASK_UPDATED: { summary: "A task's fields or status were updated.", data: { id: 'string', by: 'string' } },
   TASK_COMPLETED: { summary: "A task was marked complete.", data: { id: 'string' } },
-  SKILL_CREATED: { summary: "A skill was authored and added to the gallery.", data: { title: 'string' } },
-  SKILL_UPDATED: { summary: "An existing skill was edited.", data: {} },
+  SKILL_CREATED: { summary: "A skill was authored and added to the gallery.", data: { source: 'string?', title: 'string' } },
+  SKILL_UPDATED: { summary: "An existing skill was edited.", data: { source: 'string?' } },
   SKILL_DELETED: { summary: "A skill was removed from the gallery.", data: { id: 'string' } },
   SKILL_APPLIED: { summary: "A skill body was applied during a session.", data: { id: 'string', sessionId: 'string', title: 'string' } },
   WORKER_SPAWNED: { summary: "A sub-worker subprocess was launched.", data: { id: 'string', args: 'array', command: 'string|null', error: 'string|null', log: 'string', modelHint: 'string|null', pid: 'number|null', runtime: 'string', sessionId: 'string|null', stage: 'string|null', wrapper: 'string|null' } },
@@ -133,8 +357,9 @@ export const EVENT_SCHEMA = {
   EMAIL_SENT: { summary: "An email was sent.", data: { length: 'number', to: 'string' } },
   EMAIL_OUTBOUND_FAILED: { summary: "An outbound email failed to send.", data: { error: 'string', reason: 'string', to: 'string' } },
   FOLLOWUP_OPENED: { summary: "A follow-up was opened from a slice review finding.", data: { draftScope: 'array', fromReviewEventId: 'string', severity: 'string' } },
-  GATE_RAN: { summary: "A verification gate ran and recorded its verdict.", data: { durationMs: 'number', evidence: 'object|null', gateId: 'string', ok: 'boolean', severity: 'string', sliceId: 'string', status: 'string' } },
-  GOAL_DECLARED: { summary: "A goal with success conditions and constraints was declared.", data: { constraints: 'array', objective: 'string', success: 'array' } },
+  GATE_RAN: { summary: "A verification gate ran and recorded its verdict.", data: { durationMs: 'number', evidence: 'object|null', gateId: 'string', ok: 'boolean', severity: 'string', sliceId: 'string', status: 'string', workRoot: 'string?' } },
+  GOAL_DECLARED: { summary: "A goal with success conditions and constraints was declared, plus the acceptance sets (oracle / implementation) its success conditions are proven against.", data: { constraints: 'array', implementation: 'array', objective: 'string', oracle: 'array', success: 'array' } },
+  GOAL_COMPLETED: { summary: "A declared goal was marked done or abandoned, closing the goal lifecycle.", data: { note: 'string|null', objective: 'string|null', outcome: 'string' } },
   PENDING_ACTION_DRAINED: { summary: "A queued pending action was drained (executed or resolved).", data: { actionId: 'string', detail: 'string', kind: 'string', outcome: 'string', payload: 'object' } },
   PENDING_ACTION_ENQUEUED: { summary: "An action was enqueued for later draining.", data: { actionId: 'string', kind: 'string', payload: 'object' } },
   PHASE_DECLARED: { summary: "A plan phase was entered, optionally raising the governance tier.", data: { name: 'string', notes: 'string|null', tier: 'string|null' } },
@@ -143,7 +368,7 @@ export const EVENT_SCHEMA = {
   SLICE_REVIEWED: { summary: "A slice review completed with a verdict and findings.", data: { findingsCount: 'number', reviewPath: 'string', reviewerRuntime: 'string', sliceEventId: 'string', verdict: 'string' } },
   SLICE_SCOPE_DECLARED: { summary: "A slice locked its intended file scope.", data: { expansionBound: 'object', lockedScopeHash: 'string', scope: 'array', sliceId: 'string' } },
   SLICE_SCOPE_EXPANDED: { summary: "A slice's locked scope was expanded with a reason.", data: { addedPaths: 'array', newHash: 'string', reason: 'string', sliceId: 'string' } },
-  SOURCE_HASH_RECOMPUTED: { summary: "Source-file hashes were recomputed for drift tracking.", data: { count: 'number', paths: 'array' } },
+  SOURCE_HASH_RECOMPUTED: { summary: "Source-file hashes were recomputed for drift tracking.", data: { by: 'string|null', count: 'number', paths: 'array', reason: 'string|null' } },
   TRIGGER_FIRED: { summary: "A registered trigger fired and dispatched its target.", data: { cooldownMs: 'number', depsHash: 'string', escalated: 'boolean', planId: 'string', reason: 'string', risk: 'string|null', sliceEventId: 'string', sourceEventId: 'string|null', tag: 'string', target: 'string', triggerId: 'string', verdict: 'string', triggered_by: 'object|null' } },
   AGENT_FILE_SYNCED: { summary: "Agent instruction files were synced.", data: { action: 'string', files: 'array', perFile: 'object' } },
   SESSION_AUTO_CLOSED: { summary: "A stale session was auto-closed by the janitor.", data: { ageMs: 'number', lastHeartbeatAt: 'string', reason: 'string', sessionId: 'string' } },
@@ -164,12 +389,14 @@ export const EVENT_SCHEMA = {
   PIPELINE_HALTED: { summary: "A pipeline run halted before completion.", data: { pipelineRunId: 'string', reason: 'string' } },
   ADVISOR_INVOKED: { summary: "An advisor (external CLI) was invoked in a subprocess.", data: { advisorId: 'string', authProvider: 'string', binary: 'string', kind: 'string', parentSessionId: 'string|null', prompt: 'string', runtime: 'string', timeoutSec: 'number' } },
   ADVISOR_ARTIFACT_WRITTEN: { summary: "An advisor wrote its result artifact.", data: { advisorId: 'string', artifactPath: 'string', exitCode: 'number|null', status: 'string' } },
-  TOKEN_USAGE_REPORTED: { summary: "Token usage for a session/model was reported to the ledger.", data: { cacheCreation: 'number|null', cacheRead: 'number|null', importHash: 'string', inputTokens: 'number|null', model: 'string|null', outputTokens: 'number|null', runtime: 'string|null', sessionId: 'string|null', source: 'string', ts: 'string', unreportedTokens: 'boolean' } },
+  TOKEN_USAGE_REPORTED: { summary: "Token usage for a session/model was reported to the ledger.", data: { cacheCreation: 'number|null', cacheRead: 'number|null', costProvenance: 'string?', costUsd: 'number|null?', importHash: 'string', inputTokens: 'number|null', model: 'string|null', outputTokens: 'number|null', pricingIdentity: 'object?', runtime: 'string|null', sessionId: 'string|null', source: 'string', ts: 'string', unreportedTokens: 'boolean' } },
   SKILL_INJECTED: { summary: "Skill bodies were auto-injected into an orientation digest.", data: { sessionId: 'string|null', skillIds: 'array', tags: 'array', totalBytes: 'number', triggers: 'array' } },
+  SKILL_INJECTION_REFUSED: { summary: "A matching skill was withheld from injection for untrusted provenance.", data: { reason: 'string', refused: 'array', sessionId: 'string|null' } },
   TOOL_INVOKED: { summary: "A default framework tool invocation started.", data: { argv: 'array', mode: 'string', sessionId: 'string|null', tool: 'string', lane: 'string|null' } },
   TOOL_COMPLETED: { summary: "A default framework tool invocation exited.", data: { argv: 'array', durationMs: 'number', exitCode: 'number|null', sessionId: 'string|null', tool: 'string', lane: 'string|null' } },
   TOOL_REFUSED: { summary: "A tool invocation was refused (allowlist or dangerous form).", data: { argv: 'array', argv_index: 'number', detail: 'string', pattern_type: 'string', reason: 'string', sessionId: 'string|null', source: 'string', tool: 'string', lane: 'string|null' } },
   GOVERNANCE_MODE_CHANGED: { summary: "The workspace governance tier changed.", data: { by: 'string|null', from: 'string', reason: 'string|null', to: 'string' } },
+  GOVERNANCE_OVERRIDE_CHANGED: { summary: "A governance behavior-override key was changed or cleared (recorded write-ahead so the discipline off-switch is always on the record).", data: { by: 'string|null', from: 'string|null', key: 'string', reason: 'string|null', to: 'string|null' } },
   PLAN_CREATED: { summary: "A persisted plan was created.", data: { goal: 'string|null', intent: 'string', name: 'string', phases: 'array', planId: 'string', title: 'string' } },
   PLAN_PHASE_ADDED: { summary: "A phase was added to a plan.", data: { at: 'string', intent: 'string', name: 'string', planId: 'string' } },
   PLAN_PHASE_COMPLETED: { summary: "A plan phase was completed.", data: { name: 'string', planId: 'string', summary: 'string|null' } },
@@ -177,7 +404,7 @@ export const EVENT_SCHEMA = {
   PLAN_REVISED: { summary: "A plan was revised (phases added/removed/modified).", data: { planId: 'string', by: 'string|null', diff: 'object' } },
   PLAN_COMPLETED: { summary: "A plan was completed.", data: { planId: 'string' } },
   PLAN_CANCELLED: { summary: "A plan was cancelled.", data: { planId: 'string', reason: 'string|null' } },
-  LOOP_STARTED: { summary: "A loop (ralph or plan-loop) started.", data: { loopId: 'string', kind: 'string', goal: 'string', maxIter: 'number', cooldownMs: 'number' } },
+  LOOP_STARTED: { summary: "A loop (ralph or plan-loop) started. The three intent fields ride only an acceptance-wired ralph loop: where its verification came from, whether a baseline observation was requested, and whether ad-hoc flags overrode an active goal's conditions.", data: { loopId: 'string', kind: 'string', goal: 'string', maxIter: 'number', cooldownMs: 'number', baselineRequested: 'boolean?', verifySource: 'string?', verifyOverride: 'boolean?' } },
   LOOP_ITERATION_STARTED: { summary: "A loop iteration started.", data: { loopId: 'string', kind: 'string', iter: 'number' } },
   LOOP_ITERATION_COMPLETED: { summary: "A loop iteration completed.", data: { loopId: 'string', kind: 'string', iter: 'number', ok: 'boolean', signature: 'string|null', summary: 'string|null' } },
   LOOP_HALTED: { summary: "A loop halted before its goal.", data: { loopId: 'string', kind: 'string|null', iter: 'number|null', reason: 'string', signature: 'string' } },
@@ -208,8 +435,25 @@ export const EVENT_SCHEMA = {
   LEARN_JUDGED: { summary: "A correction candidate was judged by a worker.", data: { candidateId: 'string', category: 'string', destination: 'string', verdict: 'string', workerId: 'string' } },
   LEARN_CORRECTION_WRITTEN: { summary: "A typed correction was written to an agent file or memory.", data: { agent: 'string', category: 'string', correctionId: 'string', destination: 'string', file: 'string', memory: 'string', target: 'string' } },
   MEMORY_FACT_SUPERSEDED: { summary: "A memory fact was superseded by a newer fact.", data: { fact: 'object', factId: 'string', kind: 'string', reason: 'string', supersedes: 'string' } },
+  MEMORY_FACT_APPROVED: { summary: "An operator approved a memory fact for recall injection (sha256 binds the approval to the approved content).", data: { factId: 'string', kind: 'string', reason: 'string?', sha256: 'string' } },
+  MEMORY_FACT_REVOKED: { summary: "An operator revoked a memory fact from recall.", data: { factId: 'string', kind: 'string', reason: 'string' } },
+  MEMORY_INJECTED: { summary: "Approved memory facts were injected into an agent brief (bounded recall packet; facts[] rows {id, sha256, approvalEvent} bind each fed fact to its approval event and content-hash).", data: { factIds: 'array', facts: 'array', lane: 'string|null', query: 'string', sessionId: 'string|null', totalBytes: 'number' } },
+  MEMORY_INJECTION_REFUSED: { summary: "Context-relevant memory facts were withheld from injection (trust or budget).", data: { refused: 'array', refusedTotal: 'number?', reason: 'string', sessionId: 'string|null' } },
   BRIEFING_CURATED: { summary: "A curated orient/handoff briefing persisted its original for retrieval.", data: { briefingId: 'string', dropped: 'string', handoff: 'object', kind: 'string', orient: 'string', originalRef: 'string' } },
   BRIDGE_ORIGIN_REJECTED: { summary: "The bridge rejected a request with a non-loopback Host/Origin.", data: { host: 'string|null', method: 'string', origin: 'string|null', path: 'string', reason: 'string' } },
+  BRIDGE_CROSS_WORKSPACE: { summary: "A bridge request selected a workspace other than the active one.", data: { active: 'string', method: 'string', path: 'string', workspace: 'string' } },
+  SPINE_CUTOVER: { summary: "A chain-local tamper-detection cutover anchor (seeded into a freshly-minted sync partition so verify holds it to the post-cutover strict rules).", data: { version: 'string' } },
+  WS_IDENTITY_ANCHORED: { summary: "Sync mode's in-band workspace-identity authority: nominates the merge-first genesis line by immutable partition position + hash and derives spineIdentity from it. Published once by the first S2-aware writer BEFORE any ws stamping (the event itself is ws-less by protocol); once present, verify resolves authority from the anchor, never from the evolving partition set. Conflicting anchors fail verify and freeze writers until WS_IDENTITY_RESOLVED.", data: { genesis: 'object', spineIdentity: 'string', v: 'number' } },
+  WS_IDENTITY_RESOLVED: { summary: "The forward-only anchor-conflict ceremony (maddu spine identity resolve --keep): while conflicting anchors exist it is the ONLY appendable type; it binds EVERY known conflicting anchor by eventId+genesisHash (canonically sorted) and selects one EXISTING identity as authority. `cutover` records the exact per-partition chain heads at ceremony time — losing-identity events stamped at-or-before their bound head are grandfathered by verify (forward-only recovery for conflicts where both sides already stamped work); everything after must carry the selected identity. Appended ws-less; stamping resumes after it. Conflicting resolutions, or a later anchor conflicting with a resolution, fail verify.", data: { conflicts: 'array', cutover: 'array?', selected: 'string' } },
+  DISCIPLINE_SKIPPED: { summary: "A mutating tool was let through without a discipline check (enforcement off, a self-disable attempt, or the enforcement hook uninstalled) — a witness so a bypass is never silent.", data: { blocked: 'boolean?', enforcement: 'string|null', reason: 'string', sessionId: 'string|null', tool: 'string|null' } },
+  DISCIPLINE_DENIED: { summary: "A mutating tool call was BLOCKED by the discipline gate — DISCIPLINE_SKIPPED's opposite number: that one witnesses a check that did not run, this one witnesses a check that bit. `blocker` is the ritual rung that stopped it (session, lane, goal/plan, slice-stop, commit) and `targetScope` records whether the write's target could be placed inside the repo, outside it, or not at all. Appended before the deny is written and inside its own try/catch, so an unwritable spine costs the record but never the block.", data: { blocker: 'string|null', kind: 'string|null', targetScope: 'string|null', tool: 'string|null' } },
+  MUTATION_UNWITNESSED: { summary: "A mutating seam exited claiming success with zero spine appends and no declared no-op — silence made loud. CLI breaches are spooled synchronously at exit and drained onto the spine by the next dispatcher run (via:'breach-drain'); bridge breaches append inline (via:'inline'). breachId dedupes the at-least-once drain.", data: { breachId: 'string', breachTs: 'string', exitCode: 'number|null', label: 'string', method: 'string|null', path: 'string|null', sessionId: 'string|null', sub: 'string|null', surface: 'string', verb: 'string|null', via: 'string' } },
+  ENFORCEMENT_ERROR: { summary: "The self-discipline enforcement path threw and fell open — recorded so a persistent enforcement bug can't hide behind a silent fail-open.", data: { reason: 'string', sessionId: 'string|null', tool: 'string|null' } },
+  VERIFICATION_STARTED: { summary: "A verification run (goal success-eval, project/self test, or heavy suite) was opened before it ran — a dangling STARTED with no paired RAN is read as non-green, so a crash can't leave a stale pass authoritative. An acceptance observation additionally carries its declaration identity here, because the proof derivation requires the STARTED and the RAN to agree on it.", data: { kind: 'string', profile: 'string|null', acceptanceId: 'string?', commandSha256: 'string?', declEventId: 'string|null?', declSource: 'string?', loopId: 'string|null?', phase: 'string|null?', scopeNonce: 'string|null?' } },
+  VERIFICATION_RAN: { summary: "A verification RECEIPT appended from the runner's in-process result (never a re-read state file) and referencing its paired VERIFICATION_STARTED — the recency/success readouts trust this tamper-detecting spine receipt, not a hand-writable projection. An acceptance observation adds its declaration identity, its eligibility verdict (observation_status / refusal_reason), the process outcome, the redacted command, and the two declared set records; a path that recorded a receipt WITHOUT running (lock-busy) writes the outcome fields null rather than omitting them.", data: { conditionCount: 'number?', conditionPlanDigest: 'string?', planDigest: 'string?', planTaskCount: 'number?', tasksTruncated: 'boolean?', allMet: 'boolean?', complete: 'boolean', conditions: 'array?', counts: 'object|null', kind: 'string', metCount: 'number?', objective: 'string|null?', pendingCount: 'number?', profile: 'string|null', result: 'string', setAt: 'string|null?', startedId: 'string', verifiable: 'number?', acceptanceId: 'string?', commandSha256: 'string?', declEventId: 'string|null?', declSource: 'string?', loopId: 'string|null?', phase: 'string|null?', scopeNonce: 'string|null?', observation_status: 'string?', refusal_reason: 'string|null?', command: 'string?', exit: 'number|null?', signal: 'string|null?', timed_out: 'boolean?', spawn_error: 'boolean?', duration_ms: 'number|null?', outcome_class: 'string|null?', oracle: 'object?', impl: 'object?', subject: 'object?', argv: 'array?', cwd: 'string?', pid: 'number?' } },
+  ANCHOR_STAMPED: { summary: "A spine receipt was stamped into the OpenTimestamps calendars as a new anchor.", data: { seq: 'number', payload_digest: 'string', calendars: 'array', proof_files: 'array' } },
+  ANCHOR_UPGRADED: { summary: "An anchor's OpenTimestamps proof file changed (partial merge or completed Bitcoin attestation).", data: { seq: 'number', payload_digest: 'string', complete: 'boolean', proof_files: 'array' } },
+  ASSURANCE_ASSESSED: { summary: "An operator-run consume ceremony recorded an assurance assessment — ledger convenience only, labeled non-authoritative by every consumer.", data: { subject_sha: 'string', receipt_digest: 'string', level: 'string', evidence: 'object', assessed_by: 'string', note: 'string?' } },
   BLUEPRINT_DISTILLED: { summary: "A blueprint skeleton was distilled into prose by a provider CLI.", data: { distilledBytes: 'number', outPath: 'string', provider: 'string', runtime: 'string', skeletonBytes: 'number', slug: 'string' } },
   DEBT_SCANNED: { summary: "The source tree was scanned for deliberate-shortcut debt markers.", data: { files: 'number', ledgerPath: 'string|null', markers: 'number', noTrigger: 'number' } },
   ARCHITECTURE_SCANNED: { summary: "The declared architecture contract was checked against the import graph.", data: { blocking: 'boolean', cycles: 'number', driftScore: 'number', edges: 'number', failOn: 'string', forbidden: 'number', modules: 'number', newViolations: 'number', uncovered: 'number', undeclared: 'number' } },
@@ -217,8 +461,28 @@ export const EVENT_SCHEMA = {
   DRIFT_FLAGGED: { summary: "Sustained un-returned drift raised a swap/revert/continue flag.", data: { cleared: 'boolean', continue: 'string', deterministic: 'boolean', enriched: 'boolean', menu: 'array', reason: 'string', revert: 'string', runs: 'number', swap: 'string', workerId: 'string', triggered_by: 'object|null' } },
   AUTONOMY_SCORED: { summary: "Per-lane earned-autonomy trust scores were computed over the record.", data: { schemaVersion: 'number', asOf: 'string|null', attribution: 'string', configHash: 'string', totalSlices: 'number', lanes: 'array' }, frozen: true },
   AUTONOMY_RECOMMENDATION: { summary: "An autonomy rung change was recommended (recommend-only).", data: { schemaVersion: 'number', asOf: 'string|null', lane: 'string', fromRung: 'string', toRung: 'string', wilson: 'number', n: 'number', coverage: 'number', recommendation: 'string', muted: 'boolean', mutedReason: 'string|null', configHash: 'string' }, frozen: true },
-  WORKTREE_ATTACHED: { summary: "A worktree checkout was attached to a lane claim.", data: { schemaVersion: 'number', attachmentId: 'string', claimEventId: 'string|null', lane: 'string', session: 'string', pathRepoRel: 'string', pathAbs: 'string', branchRef: 'string', baseRef: 'string|null', baseHeadAtAttach: 'string', created: 'boolean', reused: 'boolean', dirty: 'boolean', gitCommonDir: 'string|null', platform: 'string' }, frozen: true },
-  WORKTREE_DETACHED: { summary: "A worktree was detached from a lane claim with a disposition.", data: { schemaVersion: 'number', attachmentId: 'string', lane: 'string', pathRepoRel: 'string', disposition: 'string', branchHead: 'string|null', integrationRef: 'string|null', integrationHead: 'string|null', ancestorCheck: 'string', dirtyAtDetach: 'boolean', reason: 'string|null' }, frozen: true },
+  WORKTREE_ATTACHED: { summary: "A worktree checkout was attached to a lane claim.", data: { schemaVersion: 'number', attachmentId: 'string', claimEventId: 'string|null', lane: 'string', session: 'string', pathRepoRel: 'string', pathAbs: 'string', branchRef: 'string', baseRef: 'string|null', baseHeadAtAttach: 'string', created: 'boolean', reused: 'boolean', dirty: 'boolean', gitCommonDir: 'string|null', platform: 'string', worktreeInstanceId: 'string?' }, frozen: true },
+  WORKTREE_DETACHING: { summary: "A removing worktree detach (merged|abandoned) was authorized and begun (durable intent; the attachment stays LIVE until WORKTREE_DETACHED).", data: { schemaVersion: 'number', intentId: 'string', attachmentId: 'string', lane: 'string', pathRepoRel: 'string', worktreeInstanceId: 'string', disposition: 'string', integrationRef: 'string|null', integrationHead: 'string|null', branchHead: 'string|null', ancestorCheck: 'string', dirtyAtDetach: 'boolean', reason: 'string|null' }, frozen: true },
+  WORKTREE_DETACHED: { summary: "A worktree was detached from a lane claim with a disposition.", data: { schemaVersion: 'number', attachmentId: 'string', lane: 'string', pathRepoRel: 'string', disposition: 'string', branchHead: 'string|null', integrationRef: 'string|null', integrationHead: 'string|null', ancestorCheck: 'string', dirtyAtDetach: 'boolean', reason: 'string|null', worktreeInstanceId: 'string?', recoveryActor: 'string?', attachmentOwner: 'string?' }, frozen: true },
+  // ── SLM-governance MODEL_ family (contract 1.1.0, plan pln_20260706133422_0f60) ──
+  // Máddu records an SLM factory's manifests + lifecycle; it never trains,
+  // serves, or evaluates. manifestPath/manifestHash are PINNED first-hand at
+  // ingest (lib/model-manifests.mjs); every artifact hash inside a manifest is
+  // the author's DECLARATION recorded verbatim. checkpointKey is the normalized
+  // lowercase sha256:<hex> identity (design §4.5). MODEL_REGRESSION_ACKNOWLEDGED
+  // and MODEL_PROMOTION_APPROVED are verb-emitted (no manifest of their own).
+  MODEL_DATASET_SNAPSHOT_RECORDED: { summary: "A dataset-snapshot manifest was validated, hash-pinned, and recorded.", data: { schemaVersion: 'number', manifestPath: 'string', manifestHash: 'string', dataset_id: 'string', source: 'string', license: 'string', hash: 'string', synthetic: 'boolean' }, frozen: true },
+  MODEL_TRAINING_RUN_STARTED: { summary: "An externally-run training run was recorded as started from its manifest.", data: { schemaVersion: 'number', manifestPath: 'string', manifestHash: 'string', run_id: 'string', model_id: 'string', method: 'string', dataset_snapshot: 'string', base_model: 'object', seed: 'number', commit: 'string' }, frozen: true },
+  MODEL_TRAINING_RUN_COMPLETED: { summary: "A training run's completion (checkpoint + metrics) was recorded.", data: { schemaVersion: 'number', manifestPath: 'string', manifestHash: 'string', run_id: 'string', model_id: 'string', checkpoint: 'object', checkpointKey: 'string', metrics: 'object' }, frozen: true },
+  MODEL_CHECKPOINT_REGISTERED: { summary: "A model checkpoint was registered under its sha256 identity key.", data: { schemaVersion: 'number', manifestPath: 'string', manifestHash: 'string', model_id: 'string', checkpoint: 'object', checkpointKey: 'string', run_id: 'string?' }, frozen: true },
+  MODEL_EVAL_RAN: { summary: "An externally-run benchmark eval of a checkpoint was recorded.", data: { schemaVersion: 'number', manifestPath: 'string', manifestHash: 'string', eval_id: 'string', checkpointKey: 'string', benchmark: 'string', harness_version: 'string?', pass_rate: 'number', regressions: 'array?' }, frozen: true },
+  MODEL_REGRESSION_FOUND: { summary: "An eval manifest declared a critical regression (one event per regression).", data: { schemaVersion: 'number', eval_id: 'string', checkpointKey: 'string', metric: 'string', delta: 'number', critical: 'boolean', vs: 'string?' }, frozen: true },
+  MODEL_REGRESSION_ACKNOWLEDGED: { summary: "An operator acknowledged an eval's critical regressions with a recorded reason.", data: { schemaVersion: 'number', eval_id: 'string', reason: 'string' }, frozen: true },
+  MODEL_PROMOTION_PROPOSED: { summary: "A stage promotion was proposed; its approval request rides the spine first.", data: { schemaVersion: 'number', manifestPath: 'string', manifestHash: 'string', model_id: 'string', checkpointKey: 'string', from_stage: 'string', to_stage: 'string', approvalRequestId: 'string' }, frozen: true },
+  MODEL_PROMOTION_APPROVED: { summary: "A proposed promotion was confirmed against its own allowing approval decision.", data: { schemaVersion: 'number', proposalId: 'string', approval_ref: 'string', model_id: 'string', checkpointKey: 'string', to_stage: 'string' }, frozen: true },
+  MODEL_RELEASED: { summary: "A checkpoint approved to released was recorded as released with a rollback plan.", data: { schemaVersion: 'number', manifestPath: 'string', manifestHash: 'string', model_id: 'string', checkpointKey: 'string', rollback_plan: 'string' }, frozen: true },
+  MODEL_ROLLED_BACK: { summary: "A released checkpoint was rolled back to an earlier stage.", data: { schemaVersion: 'number', manifestPath: 'string', manifestHash: 'string', model_id: 'string', checkpointKey: 'string', reverted_to: 'string' }, frozen: true },
+  HARNESS_CAPABILITY_OBSERVED: { summary: "A harness's native hook surface was compared against the repo-versioned capability manifest — an observation, not an enforcement receipt.", data: { harness: 'string', status: 'string', cliVersion: 'string|null', manifestVersion: 'string', capabilities: 'array', enforcementCeiling: 'string', drift: 'string|null', probeFailure: 'string|null', volatile: 'object|null', configPath: 'string|null', configs: 'array', workRoot: 'string|null' } },
 };
 
 // Parity + shape validation used by the event-schema-complete gate and the

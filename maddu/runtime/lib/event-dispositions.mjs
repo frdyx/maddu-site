@@ -27,8 +27,8 @@ export const EVENT_DISPOSITIONS = {
   SESSION_CLOSED: { disp: 'active' },
   LANE_CLAIMED: { disp: 'active' },
   LANE_RELEASED: { disp: 'active' },
-  LANE_ADDED: { disp: 'dormant', reason: "lane catalog is authored by hand; admin verbs fire only when used" },
-  LANE_REMOVED: { disp: 'dormant', reason: "lane catalog is authored by hand; admin verbs fire only when used" },
+  LANE_ADDED: { disp: 'dormant', reason: "catalog admin — fires on `lane suggest --adopt` (Tier 4a) or the bridge admin route; only when used" },
+  LANE_REMOVED: { disp: 'dormant', reason: "catalog admin — fires on `lane suggest --prune` (Tier 4a) or the bridge admin route; only when used" },
   LANE_DEFAULTS_SET: { disp: 'dormant', reason: "lane catalog is authored by hand; admin verbs fire only when used" },
   LANE_POLICY_SET: { disp: 'dormant', reason: "lane catalog is authored by hand; admin verbs fire only when used" },
   SLICE_STOP: { disp: 'active' },
@@ -95,6 +95,7 @@ export const EVENT_DISPOSITIONS = {
   FOLLOWUP_OPENED: { disp: 'active' },
   GATE_RAN: { disp: 'active' },
   GOAL_DECLARED: { disp: 'active' },
+  GOAL_COMPLETED: { disp: 'active' },
   PENDING_ACTION_DRAINED: { disp: 'dormant', reason: "deferred-action queue; fires only when the queue is drained" },
   PENDING_ACTION_ENQUEUED: { disp: 'dormant', reason: "deferred-action queue; fires only when an action is deferred" },
   PHASE_DECLARED: { disp: 'active' },
@@ -126,6 +127,12 @@ export const EVENT_DISPOSITIONS = {
   ADVISOR_ARTIFACT_WRITTEN: { disp: 'active' },
   TOKEN_USAGE_REPORTED: { disp: 'active' },
   SKILL_INJECTED: { disp: 'dormant', reason: "skill lifecycle — skills are hand-authored (`maddu skill create`/`from-slice`); the auto-detector was retired (#5/F2, v1.81.0)" },
+  // Tier-1 classification decision (2026-07-16 audit rec #10): the emitter is
+  // live (commands/brief.mjs injection path) but fires only when a MATCHING
+  // skill is withheld for untrusted provenance — a security refusal witness,
+  // absent in healthy fleets by design. Dormant, not dead; never remove it for
+  // silence alone (its silence is the good outcome).
+  SKILL_INJECTION_REFUSED: { disp: 'dormant', reason: "security refusal witness; fires only when a matching skill is withheld from injection for untrusted provenance" },
   TOOL_INVOKED: { disp: 'active' },
   TOOL_COMPLETED: { disp: 'active' },
   TOOL_REFUSED: { disp: 'active' },
@@ -168,8 +175,26 @@ export const EVENT_DISPOSITIONS = {
   LEARN_JUDGED: { disp: 'dormant', reason: "fires only when a `maddu learn` judgment worker runs" },
   LEARN_CORRECTION_WRITTEN: { disp: 'dormant', reason: "fires only when `maddu learn` writes a correction" },
   MEMORY_FACT_SUPERSEDED: { disp: 'dormant', reason: "fires only when a memory fact is superseded" },
+  MEMORY_FACT_APPROVED: { disp: 'dormant', reason: "fires only when an operator approves a fact via `maddu memory approve`" },
+  MEMORY_FACT_REVOKED: { disp: 'dormant', reason: "fires only when an operator revokes a fact via `maddu memory revoke`" },
+  MEMORY_INJECTED: { disp: 'dormant', reason: "fires only when `brief --for-agent` feeds ≥1 approved fact" },
+  MEMORY_INJECTION_REFUSED: { disp: 'dormant', reason: "security/trust refusal witness — fires only when relevant facts are withheld from injection" },
   BRIEFING_CURATED: { disp: 'dormant', reason: "fires only under a curated (--curate) orient/handoff briefing" },
   BRIDGE_ORIGIN_REJECTED: { disp: 'active' },
+  BRIDGE_CROSS_WORKSPACE: { disp: 'dormant', reason: "fires only when a request targets a non-active workspace (multi-workspace bridge)" },
+  SPINE_CUTOVER: { disp: 'dormant', reason: "fires only when a fresh sync partition is minted (spine sync init)" },
+  WS_IDENTITY_ANCHORED: { disp: 'dormant', reason: "fires once per sync workspace — the first S2-aware writer publishes the in-band identity anchor; absent in flat mode (pure derivation) and after the anchor exists" },
+  WS_IDENTITY_RESOLVED: { disp: 'dormant', reason: "fires only in the operator's anchor-conflict ceremony (spine identity resolve) — absent unless two offline first-writers raced the bootstrap" },
+  DISCIPLINE_SKIPPED: { disp: 'dormant', reason: "fires only when a discipline bypass is witnessed (enforcement off / self-disable / hook uninstalled) — absent in a healthy disciplined run" },
+  DISCIPLINE_DENIED: { disp: 'dormant', reason: "fires only when the discipline gate BLOCKS a mutating tool call — absent in a run where the rituals were kept, and its sibling DISCIPLINE_SKIPPED covers the checks that never ran" },
+  MUTATION_UNWITNESSED: { disp: 'dormant', reason: "fires only when a mutating seam exits successfully with zero spine appends and no declared no-op (the mutation-witness guard's breach witness) — absent in a healthy witnessed run" },
+  ENFORCEMENT_ERROR: { disp: 'dormant', reason: "fires only when the enforcement path throws and falls open — absent unless there's an enforcement bug" },
+  GOVERNANCE_OVERRIDE_CHANGED: { disp: 'dormant', reason: "fires only when a governance behavior-override key is changed/cleared (e.g. the discipline off-switch)" },
+  VERIFICATION_STARTED: { disp: 'active' },
+  VERIFICATION_RAN: { disp: 'active' },
+  ANCHOR_STAMPED: { disp: 'dormant', reason: "fires only when the operator runs `maddu spine anchor` (external-witness stamping is an explicit opt-in ritual)" },
+  ANCHOR_UPGRADED: { disp: 'dormant', reason: "fires only on `maddu spine anchor --upgrade` when a proof file actually changed" },
+  ASSURANCE_ASSESSED: { disp: 'dormant', reason: "producer ships in witness PR 6a (operator consume ceremony); declared in contract 1.10.0 ahead of it" },
   BLUEPRINT_DISTILLED: { disp: 'dormant', reason: "blueprint --distill emits it; not exercised in registered projects" },
   DEBT_SCANNED: { disp: 'active' },
   ARCHITECTURE_SCANNED: { disp: 'active' },
@@ -178,7 +203,24 @@ export const EVENT_DISPOSITIONS = {
   AUTONOMY_SCORED: { disp: 'active' },
   AUTONOMY_RECOMMENDATION: { disp: 'dormant', reason: "fires only on a rung change — a lane's record crossing (or falling from) a trust-ladder threshold" },
   WORKTREE_ATTACHED: { disp: 'dormant', reason: "registered + verifier-covered ahead of the attach flow (roadmap #12a phase 3); emitted once `lane claim --worktree` lands (phase 4)" },
+  WORKTREE_DETACHING: { disp: 'dormant', reason: "PR-D durable detach intent; fires only on a removing (merged|abandoned) `lane release --worktree`, never on kept" },
   WORKTREE_DETACHED: { disp: 'dormant', reason: "registered + verifier-covered ahead of the attach flow (roadmap #12a phase 3); emitted once `lane release --worktree` lands (phase 5)" },
+  // SLM-governance MODEL_ family (contract 1.1.0): fires only in repos
+  // running an SLM factory through `maddu model` (plan pln_20260706133422_0f60)
+  // — dormant by design on every ordinary spine, exactly so `maddu insights`
+  // never reads the family as dead surface.
+  MODEL_DATASET_SNAPSHOT_RECORDED: { disp: 'dormant', reason: "fires only in repos governing an SLM factory via `maddu model` (phase 3)" },
+  MODEL_TRAINING_RUN_STARTED: { disp: 'dormant', reason: "fires only in repos governing an SLM factory via `maddu model` (phase 3)" },
+  MODEL_TRAINING_RUN_COMPLETED: { disp: 'dormant', reason: "fires only in repos governing an SLM factory via `maddu model` (phase 3)" },
+  MODEL_CHECKPOINT_REGISTERED: { disp: 'dormant', reason: "fires only in repos governing an SLM factory via `maddu model` (phase 3)" },
+  MODEL_EVAL_RAN: { disp: 'dormant', reason: "fires only in repos governing an SLM factory via `maddu model` (phase 3)" },
+  MODEL_REGRESSION_FOUND: { disp: 'dormant', reason: "fires only when an eval manifest declares a critical regression (`maddu model eval record`, phase 3)" },
+  MODEL_REGRESSION_ACKNOWLEDGED: { disp: 'dormant', reason: "fires only on explicit operator judgment (`maddu model regression ack`, phase 3)" },
+  MODEL_PROMOTION_PROPOSED: { disp: 'dormant', reason: "fires only on `maddu model promote` (phase 3); the paired APPROVAL_REQUESTED rides first" },
+  MODEL_PROMOTION_APPROVED: { disp: 'dormant', reason: "fires only on `maddu model promote --confirm` against an allowing decision (phase 3)" },
+  MODEL_RELEASED: { disp: 'dormant', reason: "fires only on `maddu model release` after an approved promotion to released (phase 3)" },
+  MODEL_ROLLED_BACK: { disp: 'dormant', reason: "fires only on `maddu model rollback` of a released checkpoint (phase 3)" },
+  HARNESS_CAPABILITY_OBSERVED: { disp: 'dormant', reason: "fires only on `maddu runtime doctor` — an operator-run observation of a harness's hook surface, not part of any automatic flow" },
 };
 
 export const DISP_KINDS = new Set(['active', 'dormant', 'plugin']);

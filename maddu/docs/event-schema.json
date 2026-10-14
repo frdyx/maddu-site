@@ -3,7 +3,7 @@
   "$id": "https://github.com/frdyx/maddu/blob/main/docs/event-schema.json",
   "title": "Máddu spine event",
   "description": "The published contract for a single append-only spine event. Generated from template/maddu/runtime/lib/event-schema.mjs — do not edit by hand. Data fields are typed when present; the payload is open (extra keys are valid, additive-only within a MAJOR).",
-  "x-contractVersion": "1.0.0",
+  "x-contractVersion": "1.21.0",
   "type": "object",
   "required": [
     "v",
@@ -106,6 +106,7 @@
         "FOLLOWUP_OPENED",
         "GATE_RAN",
         "GOAL_DECLARED",
+        "GOAL_COMPLETED",
         "PENDING_ACTION_DRAINED",
         "PENDING_ACTION_ENQUEUED",
         "PHASE_DECLARED",
@@ -137,10 +138,12 @@
         "ADVISOR_ARTIFACT_WRITTEN",
         "TOKEN_USAGE_REPORTED",
         "SKILL_INJECTED",
+        "SKILL_INJECTION_REFUSED",
         "TOOL_INVOKED",
         "TOOL_COMPLETED",
         "TOOL_REFUSED",
         "GOVERNANCE_MODE_CHANGED",
+        "GOVERNANCE_OVERRIDE_CHANGED",
         "PLAN_CREATED",
         "PLAN_PHASE_ADDED",
         "PLAN_PHASE_COMPLETED",
@@ -179,8 +182,25 @@
         "LEARN_JUDGED",
         "LEARN_CORRECTION_WRITTEN",
         "MEMORY_FACT_SUPERSEDED",
+        "MEMORY_FACT_APPROVED",
+        "MEMORY_FACT_REVOKED",
+        "MEMORY_INJECTED",
+        "MEMORY_INJECTION_REFUSED",
         "BRIEFING_CURATED",
         "BRIDGE_ORIGIN_REJECTED",
+        "BRIDGE_CROSS_WORKSPACE",
+        "SPINE_CUTOVER",
+        "WS_IDENTITY_ANCHORED",
+        "WS_IDENTITY_RESOLVED",
+        "DISCIPLINE_SKIPPED",
+        "DISCIPLINE_DENIED",
+        "MUTATION_UNWITNESSED",
+        "ENFORCEMENT_ERROR",
+        "VERIFICATION_STARTED",
+        "VERIFICATION_RAN",
+        "ANCHOR_STAMPED",
+        "ANCHOR_UPGRADED",
+        "ASSURANCE_ASSESSED",
         "BLUEPRINT_DISTILLED",
         "DEBT_SCANNED",
         "ARCHITECTURE_SCANNED",
@@ -189,7 +209,20 @@
         "AUTONOMY_SCORED",
         "AUTONOMY_RECOMMENDATION",
         "WORKTREE_ATTACHED",
-        "WORKTREE_DETACHED"
+        "WORKTREE_DETACHING",
+        "WORKTREE_DETACHED",
+        "MODEL_DATASET_SNAPSHOT_RECORDED",
+        "MODEL_TRAINING_RUN_STARTED",
+        "MODEL_TRAINING_RUN_COMPLETED",
+        "MODEL_CHECKPOINT_REGISTERED",
+        "MODEL_EVAL_RAN",
+        "MODEL_REGRESSION_FOUND",
+        "MODEL_REGRESSION_ACKNOWLEDGED",
+        "MODEL_PROMOTION_PROPOSED",
+        "MODEL_PROMOTION_APPROVED",
+        "MODEL_RELEASED",
+        "MODEL_ROLLED_BACK",
+        "HARNESS_CAPABILITY_OBSERVED"
       ]
     },
     "actor": {
@@ -215,6 +248,9 @@
         "object",
         "null"
       ]
+    },
+    "ws": {
+      "type": "string"
     },
     "data": {
       "type": "object"
@@ -703,6 +739,9 @@
               "scope": {
                 "type": "string"
               },
+              "source": {
+                "type": "string"
+              },
               "text": {
                 "type": "string"
               },
@@ -988,6 +1027,9 @@
             "type": "object",
             "additionalProperties": true,
             "properties": {
+              "source": {
+                "type": "string"
+              },
               "title": {
                 "type": "string"
               }
@@ -1009,7 +1051,12 @@
           "data": {
             "description": "An existing skill was edited.",
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": true,
+            "properties": {
+              "source": {
+                "type": "string"
+              }
+            }
           }
         }
       }
@@ -2560,6 +2607,9 @@
               },
               "status": {
                 "type": "string"
+              },
+              "workRoot": {
+                "type": "string"
               }
             }
           }
@@ -2577,18 +2627,59 @@
       "then": {
         "properties": {
           "data": {
-            "description": "A goal with success conditions and constraints was declared.",
+            "description": "A goal with success conditions and constraints was declared, plus the acceptance sets (oracle / implementation) its success conditions are proven against.",
             "type": "object",
             "additionalProperties": true,
             "properties": {
               "constraints": {
                 "type": "array"
               },
+              "implementation": {
+                "type": "array"
+              },
               "objective": {
                 "type": "string"
               },
+              "oracle": {
+                "type": "array"
+              },
               "success": {
                 "type": "array"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "GOAL_COMPLETED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A declared goal was marked done or abandoned, closing the goal lifecycle.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "note": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "objective": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "outcome": {
+                "type": "string"
               }
             }
           }
@@ -2857,11 +2948,23 @@
             "type": "object",
             "additionalProperties": true,
             "properties": {
+              "by": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "count": {
                 "type": "number"
               },
               "paths": {
                 "type": "array"
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             }
           }
@@ -3610,6 +3713,15 @@
                   "null"
                 ]
               },
+              "costProvenance": {
+                "type": "string"
+              },
+              "costUsd": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
               "importHash": {
                 "type": "string"
               },
@@ -3630,6 +3742,9 @@
                   "number",
                   "null"
                 ]
+              },
+              "pricingIdentity": {
+                "type": "object"
               },
               "runtime": {
                 "type": [
@@ -3689,6 +3804,38 @@
               },
               "triggers": {
                 "type": "array"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "SKILL_INJECTION_REFUSED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A matching skill was withheld from injection for untrusted provenance.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "reason": {
+                "type": "string"
+              },
+              "refused": {
+                "type": "array"
+              },
+              "sessionId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             }
           }
@@ -3868,6 +4015,53 @@
               },
               "to": {
                 "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "GOVERNANCE_OVERRIDE_CHANGED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A governance behavior-override key was changed or cleared (recorded write-ahead so the discipline off-switch is always on the record).",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "by": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "from": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "key": {
+                "type": "string"
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "to": {
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             }
           }
@@ -4103,7 +4297,7 @@
       "then": {
         "properties": {
           "data": {
-            "description": "A loop (ralph or plan-loop) started.",
+            "description": "A loop (ralph or plan-loop) started. The three intent fields ride only an acceptance-wired ralph loop: where its verification came from, whether a baseline observation was requested, and whether ad-hoc flags overrode an active goal's conditions.",
             "type": "object",
             "additionalProperties": true,
             "properties": {
@@ -4121,6 +4315,15 @@
               },
               "cooldownMs": {
                 "type": "number"
+              },
+              "baselineRequested": {
+                "type": "boolean"
+              },
+              "verifySource": {
+                "type": "string"
+              },
+              "verifyOverride": {
+                "type": "boolean"
               }
             }
           }
@@ -5184,6 +5387,146 @@
       "if": {
         "properties": {
           "type": {
+            "const": "MEMORY_FACT_APPROVED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "An operator approved a memory fact for recall injection (sha256 binds the approval to the approved content).",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "factId": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "MEMORY_FACT_REVOKED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "An operator revoked a memory fact from recall.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "factId": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "MEMORY_INJECTED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "Approved memory facts were injected into an agent brief (bounded recall packet; facts[] rows {id, sha256, approvalEvent} bind each fed fact to its approval event and content-hash).",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "factIds": {
+                "type": "array"
+              },
+              "facts": {
+                "type": "array"
+              },
+              "lane": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "query": {
+                "type": "string"
+              },
+              "sessionId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "totalBytes": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "MEMORY_INJECTION_REFUSED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "Context-relevant memory facts were withheld from injection (trust or budget).",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "refused": {
+                "type": "array"
+              },
+              "refusedTotal": {
+                "type": "number"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "sessionId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
             "const": "BRIEFING_CURATED"
           }
         }
@@ -5252,6 +5595,656 @@
                 "type": "string"
               },
               "reason": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "BRIDGE_CROSS_WORKSPACE"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A bridge request selected a workspace other than the active one.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "active": {
+                "type": "string"
+              },
+              "method": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "workspace": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "SPINE_CUTOVER"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A chain-local tamper-detection cutover anchor (seeded into a freshly-minted sync partition so verify holds it to the post-cutover strict rules).",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "version": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "WS_IDENTITY_ANCHORED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "Sync mode's in-band workspace-identity authority: nominates the merge-first genesis line by immutable partition position + hash and derives spineIdentity from it. Published once by the first S2-aware writer BEFORE any ws stamping (the event itself is ws-less by protocol); once present, verify resolves authority from the anchor, never from the evolving partition set. Conflicting anchors fail verify and freeze writers until WS_IDENTITY_RESOLVED.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "genesis": {
+                "type": "object"
+              },
+              "spineIdentity": {
+                "type": "string"
+              },
+              "v": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "WS_IDENTITY_RESOLVED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "The forward-only anchor-conflict ceremony (maddu spine identity resolve --keep): while conflicting anchors exist it is the ONLY appendable type; it binds EVERY known conflicting anchor by eventId+genesisHash (canonically sorted) and selects one EXISTING identity as authority. `cutover` records the exact per-partition chain heads at ceremony time — losing-identity events stamped at-or-before their bound head are grandfathered by verify (forward-only recovery for conflicts where both sides already stamped work); everything after must carry the selected identity. Appended ws-less; stamping resumes after it. Conflicting resolutions, or a later anchor conflicting with a resolution, fail verify.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "conflicts": {
+                "type": "array"
+              },
+              "cutover": {
+                "type": "array"
+              },
+              "selected": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "DISCIPLINE_SKIPPED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A mutating tool was let through without a discipline check (enforcement off, a self-disable attempt, or the enforcement hook uninstalled) — a witness so a bypass is never silent.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "blocked": {
+                "type": "boolean"
+              },
+              "enforcement": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "sessionId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "tool": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "DISCIPLINE_DENIED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A mutating tool call was BLOCKED by the discipline gate — DISCIPLINE_SKIPPED's opposite number: that one witnesses a check that did not run, this one witnesses a check that bit. `blocker` is the ritual rung that stopped it (session, lane, goal/plan, slice-stop, commit) and `targetScope` records whether the write's target could be placed inside the repo, outside it, or not at all. Appended before the deny is written and inside its own try/catch, so an unwritable spine costs the record but never the block.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "blocker": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "kind": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "targetScope": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "tool": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "MUTATION_UNWITNESSED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A mutating seam exited claiming success with zero spine appends and no declared no-op — silence made loud. CLI breaches are spooled synchronously at exit and drained onto the spine by the next dispatcher run (via:'breach-drain'); bridge breaches append inline (via:'inline'). breachId dedupes the at-least-once drain.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "breachId": {
+                "type": "string"
+              },
+              "breachTs": {
+                "type": "string"
+              },
+              "exitCode": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "label": {
+                "type": "string"
+              },
+              "method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "path": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "sessionId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "sub": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "surface": {
+                "type": "string"
+              },
+              "verb": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "via": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "ENFORCEMENT_ERROR"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "The self-discipline enforcement path threw and fell open — recorded so a persistent enforcement bug can't hide behind a silent fail-open.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "reason": {
+                "type": "string"
+              },
+              "sessionId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "tool": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "VERIFICATION_STARTED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A verification run (goal success-eval, project/self test, or heavy suite) was opened before it ran — a dangling STARTED with no paired RAN is read as non-green, so a crash can't leave a stale pass authoritative. An acceptance observation additionally carries its declaration identity here, because the proof derivation requires the STARTED and the RAN to agree on it.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "profile": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "acceptanceId": {
+                "type": "string"
+              },
+              "commandSha256": {
+                "type": "string"
+              },
+              "declEventId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "declSource": {
+                "type": "string"
+              },
+              "loopId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "phase": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "scopeNonce": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "VERIFICATION_RAN"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A verification RECEIPT appended from the runner's in-process result (never a re-read state file) and referencing its paired VERIFICATION_STARTED — the recency/success readouts trust this tamper-detecting spine receipt, not a hand-writable projection. An acceptance observation adds its declaration identity, its eligibility verdict (observation_status / refusal_reason), the process outcome, the redacted command, and the two declared set records; a path that recorded a receipt WITHOUT running (lock-busy) writes the outcome fields null rather than omitting them.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "conditionCount": {
+                "type": "number"
+              },
+              "conditionPlanDigest": {
+                "type": "string"
+              },
+              "planDigest": {
+                "type": "string"
+              },
+              "planTaskCount": {
+                "type": "number"
+              },
+              "tasksTruncated": {
+                "type": "boolean"
+              },
+              "allMet": {
+                "type": "boolean"
+              },
+              "complete": {
+                "type": "boolean"
+              },
+              "conditions": {
+                "type": "array"
+              },
+              "counts": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "kind": {
+                "type": "string"
+              },
+              "metCount": {
+                "type": "number"
+              },
+              "objective": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "pendingCount": {
+                "type": "number"
+              },
+              "profile": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "result": {
+                "type": "string"
+              },
+              "setAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "startedId": {
+                "type": "string"
+              },
+              "verifiable": {
+                "type": "number"
+              },
+              "acceptanceId": {
+                "type": "string"
+              },
+              "commandSha256": {
+                "type": "string"
+              },
+              "declEventId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "declSource": {
+                "type": "string"
+              },
+              "loopId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "phase": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "scopeNonce": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "observation_status": {
+                "type": "string"
+              },
+              "refusal_reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "command": {
+                "type": "string"
+              },
+              "exit": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "signal": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "timed_out": {
+                "type": "boolean"
+              },
+              "spawn_error": {
+                "type": "boolean"
+              },
+              "duration_ms": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "outcome_class": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "oracle": {
+                "type": "object"
+              },
+              "impl": {
+                "type": "object"
+              },
+              "subject": {
+                "type": "object"
+              },
+              "argv": {
+                "type": "array"
+              },
+              "cwd": {
+                "type": "string"
+              },
+              "pid": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "ANCHOR_STAMPED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A spine receipt was stamped into the OpenTimestamps calendars as a new anchor.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "seq": {
+                "type": "number"
+              },
+              "payload_digest": {
+                "type": "string"
+              },
+              "calendars": {
+                "type": "array"
+              },
+              "proof_files": {
+                "type": "array"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "ANCHOR_UPGRADED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "An anchor's OpenTimestamps proof file changed (partial merge or completed Bitcoin attestation).",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "seq": {
+                "type": "number"
+              },
+              "payload_digest": {
+                "type": "string"
+              },
+              "complete": {
+                "type": "boolean"
+              },
+              "proof_files": {
+                "type": "array"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "ASSURANCE_ASSESSED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "An operator-run consume ceremony recorded an assurance assessment — ledger convenience only, labeled non-authoritative by every consumer.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "subject_sha": {
+                "type": "string"
+              },
+              "receipt_digest": {
+                "type": "string"
+              },
+              "level": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "object"
+              },
+              "assessed_by": {
+                "type": "string"
+              },
+              "note": {
                 "type": "string"
               }
             }
@@ -5665,6 +6658,80 @@
               },
               "platform": {
                 "type": "string"
+              },
+              "worktreeInstanceId": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "WORKTREE_DETACHING"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A removing worktree detach (merged|abandoned) was authorized and begun (durable intent; the attachment stays LIVE until WORKTREE_DETACHED).",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "schemaVersion": {
+                "type": "number"
+              },
+              "intentId": {
+                "type": "string"
+              },
+              "attachmentId": {
+                "type": "string"
+              },
+              "lane": {
+                "type": "string"
+              },
+              "pathRepoRel": {
+                "type": "string"
+              },
+              "worktreeInstanceId": {
+                "type": "string"
+              },
+              "disposition": {
+                "type": "string"
+              },
+              "integrationRef": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "integrationHead": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "branchHead": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ancestorCheck": {
+                "type": "string"
+              },
+              "dirtyAtDetach": {
+                "type": "boolean"
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             }
           }
@@ -5726,6 +6793,543 @@
                 "type": "boolean"
               },
               "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "worktreeInstanceId": {
+                "type": "string"
+              },
+              "recoveryActor": {
+                "type": "string"
+              },
+              "attachmentOwner": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "MODEL_DATASET_SNAPSHOT_RECORDED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A dataset-snapshot manifest was validated, hash-pinned, and recorded.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "schemaVersion": {
+                "type": "number"
+              },
+              "manifestPath": {
+                "type": "string"
+              },
+              "manifestHash": {
+                "type": "string"
+              },
+              "dataset_id": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "license": {
+                "type": "string"
+              },
+              "hash": {
+                "type": "string"
+              },
+              "synthetic": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "MODEL_TRAINING_RUN_STARTED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "An externally-run training run was recorded as started from its manifest.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "schemaVersion": {
+                "type": "number"
+              },
+              "manifestPath": {
+                "type": "string"
+              },
+              "manifestHash": {
+                "type": "string"
+              },
+              "run_id": {
+                "type": "string"
+              },
+              "model_id": {
+                "type": "string"
+              },
+              "method": {
+                "type": "string"
+              },
+              "dataset_snapshot": {
+                "type": "string"
+              },
+              "base_model": {
+                "type": "object"
+              },
+              "seed": {
+                "type": "number"
+              },
+              "commit": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "MODEL_TRAINING_RUN_COMPLETED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A training run's completion (checkpoint + metrics) was recorded.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "schemaVersion": {
+                "type": "number"
+              },
+              "manifestPath": {
+                "type": "string"
+              },
+              "manifestHash": {
+                "type": "string"
+              },
+              "run_id": {
+                "type": "string"
+              },
+              "model_id": {
+                "type": "string"
+              },
+              "checkpoint": {
+                "type": "object"
+              },
+              "checkpointKey": {
+                "type": "string"
+              },
+              "metrics": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "MODEL_CHECKPOINT_REGISTERED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A model checkpoint was registered under its sha256 identity key.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "schemaVersion": {
+                "type": "number"
+              },
+              "manifestPath": {
+                "type": "string"
+              },
+              "manifestHash": {
+                "type": "string"
+              },
+              "model_id": {
+                "type": "string"
+              },
+              "checkpoint": {
+                "type": "object"
+              },
+              "checkpointKey": {
+                "type": "string"
+              },
+              "run_id": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "MODEL_EVAL_RAN"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "An externally-run benchmark eval of a checkpoint was recorded.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "schemaVersion": {
+                "type": "number"
+              },
+              "manifestPath": {
+                "type": "string"
+              },
+              "manifestHash": {
+                "type": "string"
+              },
+              "eval_id": {
+                "type": "string"
+              },
+              "checkpointKey": {
+                "type": "string"
+              },
+              "benchmark": {
+                "type": "string"
+              },
+              "harness_version": {
+                "type": "string"
+              },
+              "pass_rate": {
+                "type": "number"
+              },
+              "regressions": {
+                "type": "array"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "MODEL_REGRESSION_FOUND"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "An eval manifest declared a critical regression (one event per regression).",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "schemaVersion": {
+                "type": "number"
+              },
+              "eval_id": {
+                "type": "string"
+              },
+              "checkpointKey": {
+                "type": "string"
+              },
+              "metric": {
+                "type": "string"
+              },
+              "delta": {
+                "type": "number"
+              },
+              "critical": {
+                "type": "boolean"
+              },
+              "vs": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "MODEL_REGRESSION_ACKNOWLEDGED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "An operator acknowledged an eval's critical regressions with a recorded reason.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "schemaVersion": {
+                "type": "number"
+              },
+              "eval_id": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "MODEL_PROMOTION_PROPOSED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A stage promotion was proposed; its approval request rides the spine first.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "schemaVersion": {
+                "type": "number"
+              },
+              "manifestPath": {
+                "type": "string"
+              },
+              "manifestHash": {
+                "type": "string"
+              },
+              "model_id": {
+                "type": "string"
+              },
+              "checkpointKey": {
+                "type": "string"
+              },
+              "from_stage": {
+                "type": "string"
+              },
+              "to_stage": {
+                "type": "string"
+              },
+              "approvalRequestId": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "MODEL_PROMOTION_APPROVED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A proposed promotion was confirmed against its own allowing approval decision.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "schemaVersion": {
+                "type": "number"
+              },
+              "proposalId": {
+                "type": "string"
+              },
+              "approval_ref": {
+                "type": "string"
+              },
+              "model_id": {
+                "type": "string"
+              },
+              "checkpointKey": {
+                "type": "string"
+              },
+              "to_stage": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "MODEL_RELEASED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A checkpoint approved to released was recorded as released with a rollback plan.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "schemaVersion": {
+                "type": "number"
+              },
+              "manifestPath": {
+                "type": "string"
+              },
+              "manifestHash": {
+                "type": "string"
+              },
+              "model_id": {
+                "type": "string"
+              },
+              "checkpointKey": {
+                "type": "string"
+              },
+              "rollback_plan": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "MODEL_ROLLED_BACK"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A released checkpoint was rolled back to an earlier stage.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "schemaVersion": {
+                "type": "number"
+              },
+              "manifestPath": {
+                "type": "string"
+              },
+              "manifestHash": {
+                "type": "string"
+              },
+              "model_id": {
+                "type": "string"
+              },
+              "checkpointKey": {
+                "type": "string"
+              },
+              "reverted_to": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "HARNESS_CAPABILITY_OBSERVED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "description": "A harness's native hook surface was compared against the repo-versioned capability manifest — an observation, not an enforcement receipt.",
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "harness": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "cliVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "manifestVersion": {
+                "type": "string"
+              },
+              "capabilities": {
+                "type": "array"
+              },
+              "enforcementCeiling": {
+                "type": "string"
+              },
+              "drift": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "probeFailure": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "volatile": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "configPath": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "configs": {
+                "type": "array"
+              },
+              "workRoot": {
                 "type": [
                   "string",
                   "null"

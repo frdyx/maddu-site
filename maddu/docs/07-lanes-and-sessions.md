@@ -4,6 +4,18 @@ A **session** is a registered agent instance. A **lane** is a mutually-exclusive
 
 The full default lane catalog is in [lanes.md](lanes.md).
 
+> **Ownership is serialized and authorization-gated (v1.113.0).** Every lane
+> writer — CLI `lane claim/release/force`, the bridge routes, the auto-claim
+> hook, and the janitor — decides and appends inside ONE serialized transaction
+> against a fresh snapshot taken under the lane-claims lock, so two writers can
+> never both act on the same stale view. A claim requires an **active,
+> registered session** and refuses if **any active rival** owns the lane; only
+> `--force` may evict an active holder (and stamps an audit-stable `forceGroup`
+> bundle). A **release only clears a claim you actually own** — releasing a lane
+> held by another session is refused, not silently applied. Under team-sync the
+> same rules hold per-owner (first-claimer holds; superseded owners may withdraw
+> only their own claim).
+
 ## Session lifecycle
 
 ```
@@ -55,12 +67,44 @@ $ maddu session close --session ses_... --handoff "Approvals route shipped; ledg
 
 ```bash
 $ maddu lane list
-LANES  (19)
-  architecture           High-level design, planning, architecture briefs.
-  cockpit-shell          The Máddu cockpit HTML, tokens, routes.   claimed by ses_...
-  bridge-server          maddu/runtime/server.js and harness wiring.
-  …
+LANES  (1)
+  general                The claim-anything fallback. Work here until patterns emerge…
 ```
+
+New installs seed a single `general` lane (v1.104.0 — see
+[lanes.md](lanes.md) for why); ad-hoc lane ids can be claimed freely, and
+`maddu lane suggest` graduates the ones you actually repeat into the
+catalog. A grown catalog looks like:
+
+```bash
+$ maddu lane list
+LANES  (3)
+  general                The claim-anything fallback…
+  payments-flow          Adopted from 5 observed ad-hoc claim(s)…   claimed by ses_...
+  onboarding             Adopted from 3 observed ad-hoc claim(s)…   (unused — never claimed; `maddu lane suggest` to review)
+```
+
+`lane list` marks catalog entries that were **never claimed in the repo's
+lifetime** with `(unused)` — the 2026-07-16 fleet audit found 76% of default
+catalog placements dead while most real claims were ad-hoc ids.
+
+### Suggest — let observed reality graduate into the catalog (v1.103.0)
+
+```bash
+$ maddu lane suggest              # catalog vs lifetime claims: dead entries + adoptable ad-hoc ids
+$ maddu lane suggest --adopt <id> # confirm: add a suggested ad-hoc lane to the catalog (emits LANE_ADDED)
+$ maddu lane suggest --prune <id> # remove a never-claimed catalog entry (emits LANE_REMOVED)
+$ maddu lane suggest --json
+```
+
+Suggestions come from **claim counts only**: an ad-hoc id claimed ≥3 times
+(lifetime, native events only) that isn't ephemeral (`auto/<x>`, `auto-<x>`,
+purely numeric ids never suggest). No repo-structure inference — work is
+feature-shaped, not directory-shaped. Adopt and prune are explicit operator
+confirmations: adopt refuses ids below the threshold, prune refuses any entry
+with a lifetime claim (history referenced it; it stays addressable).
+`maddu insights lanes` shows the same catalog-vs-reality table across every
+registered workspace.
 
 ### Claim
 
